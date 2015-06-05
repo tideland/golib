@@ -20,6 +20,64 @@ go get github.com/tideland/golib/audit
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/audit?status.svg)](https://godoc.org/github.com/tideland/golib/audit)
 
+### Errors
+
+The Tideland Go Library errors package allows to create more
+detailed errors than with errors.New() or fmt.Errorf().
+
+```
+go get github.com/tideland/golib/errors
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)
+
+### Identifier
+
+The Tideland Go Library identifier package provides different ways
+to produce identifiers like e.g. UUIDs.
+
+```
+go get github.com/tideland/golib/identifier
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/identifier?status.svg)](https://godoc.org/github.com/tideland/golib/identifier)
+
+### Logger
+
+The Tideland Go Library logger package provides a flexible
+way to log information with different levels and on different
+backends.
+
+```
+go get github.com/tideland/golib/logger
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/logger?status.svg)](https://godoc.org/github.com/tideland/golib/logger)
+
+### Loop
+
+The Tideland Go Library loop package is intended to support
+the developer implementing the typical Go idiom for
+concurrent applications running in a loop in the background
+and doing a select on one or more channels.
+
+```
+go get github.com/tideland/golib/loop
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)
+
+### Scene
+
+The Tideland Go Library scene package provides a shared access to common
+used data in a larger context.
+
+```
+go get github.com/tideland/golib/scene
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)
+
 ### Version
 
 The Tideland Go Library version package helps other packages to
