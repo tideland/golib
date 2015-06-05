@@ -14,7 +14,7 @@ package version_test
 import (
 	"testing"
 
-	"github.com/tideland/golib/testing"
+	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/version"
 )
 
@@ -25,7 +25,7 @@ import (
 // TestVersion tests the creation of a new versions and their
 // accessor ethods.
 func TestVersion(t *testing.T) {
-	assert := testing.NewTestingAssertion(t, true)
+	assert := audit.NewTestingAssertion(t, true)
 	tests := []struct {
 		id         string
 		vsn        version.Version
@@ -107,7 +107,7 @@ func TestVersion(t *testing.T) {
 
 // TestLess tests the comparing of two versions.
 func TestLess(t *testing.T) {
-	assert := testing.NewTestingAssertion(t, true)
+	assert := audit.NewTestingAssertion(t, true)
 	tests := []struct {
 		vsnA version.Version
 		vsnB version.Version
