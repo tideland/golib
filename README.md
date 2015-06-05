@@ -67,6 +67,17 @@ go get github.com/tideland/golib/loop
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)
 
+### Monitoring
+
+The Tideland Go Library monitoring package supports three kinds of 
+system monitoring.
+
+```
+go get github.com/tideland/golib/monitoring
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring)
+
 ### Scene
 
 The Tideland Go Library scene package provides a shared access to common
@@ -77,6 +88,16 @@ go get github.com/tideland/golib/scene
 ```
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)
+
+### Timex
+
+The Tideland Go Library timex package helps when working with times and dates.
+
+```
+go get github.com/tideland/golib/timex
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)
 
 ### Version
 

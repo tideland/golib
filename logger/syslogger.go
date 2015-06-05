@@ -39,29 +39,34 @@ func NewSysLogger(tag string) (Logger, error) {
 	return &SysLogger{writer}, nil
 }
 
-// Debug logs a message at debug level.
+// Debug is specified on the Logger interface.
 func (sl *SysLogger) Debug(info, msg string) {
 	sl.writer.Debug(info + " " + msg)
 }
 
-// Info logs a message at info level.
+// Info is specified on the Logger interface.
 func (sl *SysLogger) Info(info, msg string) {
 	sl.writer.Info(info + " " + msg)
 }
 
-// Warning logs a message at warning level.
+// Warning is specified on the Logger interface.
 func (sl *SysLogger) Warning(info, msg string) {
 	sl.writer.Warning(info + " " + msg)
 }
 
-// Error logs a message at error level.
+// Error is specified on the Logger interface.
 func (sl *SysLogger) Error(info, msg string) {
 	sl.writer.Err(info + " " + msg)
 }
 
-// Critical logs a message at critical level.
+// Critical is specified on the Logger interface.
 func (sl *SysLogger) Critical(info, msg string) {
 	sl.writer.Crit(info + " " + msg)
+}
+
+// Fatal is specified on the Logger interface.
+func (sl *SysLogger) Fatal(info, msg string) {
+	sl.writer.Emerg(info + " " + msg)
 }
 
 // EOF

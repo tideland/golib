@@ -16,8 +16,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/logger"
+	"github.com/tideland/golib/audit"
 )
 
 //--------------------
@@ -25,44 +25,40 @@ import (
 //--------------------
 
 // Test log level.
-func TestLevel(t *testing.T) {
+func TestGetSetLevel(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	logger.SetLevel(logger.LevelDebug)
-	assert.Equal(logger.Level(), logger.LevelDebug, "Level debug.")
+	assert.Equal(logger.Level(), logger.LevelDebug)
 	logger.SetLevel(logger.LevelCritical)
-	assert.Equal(logger.Level(), logger.LevelCritical, "Level critical.")
+	assert.Equal(logger.Level(), logger.LevelCritical)
 	logger.SetLevel(logger.LevelDebug)
-	assert.Equal(logger.Level(), logger.LevelDebug, "Level debug.")
+	assert.Equal(logger.Level(), logger.LevelDebug)
 }
 
-// Test debugging.
-func TestDebug(t *testing.T) {
-	logger.Debugf("Hello, I'm debugging %v!", "here")
+// Test log level filtering.
+func TestLogLevelFiltering(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	ownLogger := &testLogger{}
+	logger.SetLogger(ownLogger)
+	logger.SetLevel(logger.LevelDebug)
+	logger.Debugf("Debug.")
+	logger.Infof("Info.")
+	logger.Warningf("Warning.")
+	logger.Errorf("Error.")
+	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 5)
+
+	ownLogger = &testLogger{}
+	logger.SetLogger(ownLogger)
 	logger.SetLevel(logger.LevelError)
-	logger.Debugf("Should not be shown!")
-}
-
-// Test log at all levels.
-func TestAllLevels(t *testing.T) {
-	logger.SetLevel(logger.LevelDebug)
-
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-}
-
-// Test logging from level warning and above.
-func TestWarningAndAbove(t *testing.T) {
-	logger.SetLevel(logger.LevelWarning)
-
-	logger.Debugf("Debug.")
-	logger.Infof("Info.")
-	logger.Warningf("Warning.")
-	logger.Errorf("Error.")
-	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 2)
 }
 
 // Test logging with the go logger.
@@ -99,7 +95,7 @@ func TestSysLogger(t *testing.T) {
 // Test logging with an own logger.
 func TestOwnLogger(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	ownLogger := &testLogger{[]string{}}
+	ownLogger := &testLogger{}
 
 	logger.SetLevel(logger.LevelDebug)
 	logger.SetLogger(ownLogger)
@@ -110,7 +106,25 @@ func TestOwnLogger(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(ownLogger.logs, 5, "Everything logged.")
+	assert.Length(ownLogger.logs, 5)
+}
+
+// TestFatalExit tests the call of the fatal exiter after a
+// fatal error log.
+func TestFatalExit(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	ownLogger := &testLogger{}
+	exited := false
+	fatalExiter := func() {
+		exited = true
+	}
+
+	logger.SetLogger(ownLogger)
+	logger.SetFatalExiter(fatalExiter)
+
+	logger.Fatalf("fatal")
+	assert.Length(ownLogger.logs, 1)
+	assert.True(exited)
 }
 
 //--------------------
@@ -122,20 +136,24 @@ type testLogger struct {
 }
 
 func (tl *testLogger) Debug(info, msg string) {
-	tl.logs = append(tl.logs, info+" "+msg)
+	tl.logs = append(tl.logs, "[DEBUG] "+info+" "+msg)
 }
 
 func (tl *testLogger) Info(info, msg string) {
-	tl.logs = append(tl.logs, info+" "+msg)
+	tl.logs = append(tl.logs, "[INFO] "+info+" "+msg)
 }
 func (tl *testLogger) Warning(info, msg string) {
-	tl.logs = append(tl.logs, info+" "+msg)
+	tl.logs = append(tl.logs, "[WARNING] "+info+" "+msg)
 }
 func (tl *testLogger) Error(info, msg string) {
-	tl.logs = append(tl.logs, info+" "+msg)
+	tl.logs = append(tl.logs, "[ERROR] "+info+" "+msg)
 }
 func (tl *testLogger) Critical(info, msg string) {
-	tl.logs = append(tl.logs, info+" "+msg)
+	tl.logs = append(tl.logs, "[CRITICAL] "+info+" "+msg)
+}
+
+func (tl *testLogger) Fatal(info, msg string) {
+	tl.logs = append(tl.logs, "[FATAL] "+info+" "+msg)
 }
 
 // EOF

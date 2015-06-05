@@ -24,7 +24,7 @@ import (
 )
 
 //--------------------
-// LOG LEVEL
+// TYPES AND TYPE FUNCTIONS
 //--------------------
 
 // LogLevel describes the chosen log level between
@@ -38,26 +38,67 @@ const (
 	LevelWarning
 	LevelError
 	LevelCritical
+	LevelFatal
 )
 
-// logLevel is the global log level.
-var logLevel LogLevel = LevelInfo
+// FatalExiterFunc defines a functions that will be called
+// in case of a Fatalf call.
+type FatalExiterFunc func()
+
+// OsFatalExiter exits the application with os.Exit and
+// the return code -1.
+func OsFatalExiter() {
+	os.Exit(-1)
+}
+
+// PanacFatalExiter exits the application with a panic.
+func PanicFatalExiter() {
+	panic("program aborted after fatal situation, see log")
+}
+
+//--------------------
+// LOG CONTROL
+//--------------------
+
+// Log control variables.
+var (
+	logMux         sync.Mutex
+	logLevel       LogLevel        = LevelInfo
+	logFatalExiter FatalExiterFunc = OsFatalExiter
+)
 
 // Level returns the current log level.
 func Level() LogLevel {
+	logMux.Lock()
+	defer logMux.Unlock()
 	return logLevel
 }
 
-// SetLevel switches to a new log level.
-func SetLevel(level LogLevel) {
+// SetLevel switches to a new log level and returns
+// the current one.
+func SetLevel(level LogLevel) LogLevel {
+	logMux.Lock()
+	defer logMux.Unlock()
+	current := logLevel
 	switch {
 	case level <= LevelDebug:
 		logLevel = LevelDebug
-	case level >= LevelCritical:
-		logLevel = LevelCritical
+	case level >= LevelFatal:
+		logLevel = LevelFatal
 	default:
 		logLevel = level
 	}
+	return current
+}
+
+// SetFatalExiter sets the fatal exiter function and
+// returns the current one.
+func SetFatalExiter(fef FatalExiterFunc) FatalExiterFunc {
+	logMux.Lock()
+	defer logMux.Unlock()
+	current := logFatalExiter
+	logFatalExiter = fef
+	return current
 }
 
 //--------------------
@@ -66,6 +107,8 @@ func SetLevel(level LogLevel) {
 
 // Debugf logs a message at debug level.
 func Debugf(format string, args ...interface{}) {
+	logMux.Lock()
+	defer logMux.Unlock()
 	if logLevel <= LevelDebug {
 		ci := retrieveCallInfo()
 		fi := fmt.Sprintf(format, args...)
@@ -76,6 +119,8 @@ func Debugf(format string, args ...interface{}) {
 
 // Infof logs a message at info level.
 func Infof(format string, args ...interface{}) {
+	logMux.Lock()
+	defer logMux.Unlock()
 	if logLevel <= LevelInfo {
 		ci := retrieveCallInfo()
 		fi := fmt.Sprintf(format, args...)
@@ -86,6 +131,8 @@ func Infof(format string, args ...interface{}) {
 
 // Warningf logs a message at warning level.
 func Warningf(format string, args ...interface{}) {
+	logMux.Lock()
+	defer logMux.Unlock()
 	if logLevel <= LevelWarning {
 		ci := retrieveCallInfo()
 		fi := fmt.Sprintf(format, args...)
@@ -96,6 +143,8 @@ func Warningf(format string, args ...interface{}) {
 
 // Errorf logs a message at error level.
 func Errorf(format string, args ...interface{}) {
+	logMux.Lock()
+	defer logMux.Unlock()
 	if logLevel <= LevelError {
 		ci := retrieveCallInfo()
 		fi := fmt.Sprintf(format, args...)
@@ -106,10 +155,28 @@ func Errorf(format string, args ...interface{}) {
 
 // Criticalf logs a message at critical level.
 func Criticalf(format string, args ...interface{}) {
+	logMux.Lock()
+	defer logMux.Unlock()
+	if logLevel <= LevelCritical {
+		ci := retrieveCallInfo()
+		fi := fmt.Sprintf(format, args...)
+
+		logBackend.Critical(ci.verboseFormat(), fi)
+	}
+}
+
+// Fatalf logs a message independant of any level. After
+// logging the message the functions calls the fatal exiter
+// function, which by default means exiting the application
+// with error code -1.
+func Fatalf(format string, args ...interface{}) {
+	logMux.Lock()
+	defer logMux.Unlock()
 	ci := retrieveCallInfo()
 	fi := fmt.Sprintf(format, args...)
 
-	logBackend.Critical(ci.verboseFormat(), fi)
+	logBackend.Fatal(ci.verboseFormat(), fi)
+	logFatalExiter()
 }
 
 //--------------------
@@ -118,16 +185,23 @@ func Criticalf(format string, args ...interface{}) {
 
 // Logger is the interface for different logger backends.
 type Logger interface {
-	// Debug logs a message at debug level.
+	// Debug logs a debugging message.
 	Debug(info, msg string)
-	// Info logs a message at info level.
+
+	// Info logs an informational message.
 	Info(info, msg string)
-	// Warning logs a message at warning level.
+
+	// Warning logs a warning message.
 	Warning(info, msg string)
-	// Error logs a message at error level.
+
+	// Error logs an error message.
 	Error(info, msg string)
-	// Critical logs a message at critical level.
+
+	// Critical logs a critical error message.
 	Critical(info, msg string)
+
+	// Fatal logs a fatal error message.
+	Fatal(info, msg string)
 }
 
 // logger references the used application logger.
@@ -141,8 +215,8 @@ func SetLogger(l Logger) {
 // timeFormat controls how the timestamp of the standard logger is printed.
 const timeFormat = "2006-01-02 15:04:05 Z07:00"
 
-// StandardLogger is a simple logger writing to the given writer. It
-// doesn't handle the levels differently.
+// StandardLogger is a simple logger writing to the given writer. Beside
+// the output it doesn't handle the levels differently.
 type StandardLogger struct {
 	mutex sync.Mutex
 	out   io.Writer
@@ -153,7 +227,7 @@ func NewStandardLogger(out io.Writer) Logger {
 	return &StandardLogger{out: out}
 }
 
-// Debug logs a message at debug level.
+// Debug is specified on the Logger interface.
 func (sl *StandardLogger) Debug(info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
@@ -166,7 +240,7 @@ func (sl *StandardLogger) Debug(info, msg string) {
 	io.WriteString(sl.out, "\n")
 }
 
-// Info logs a message at info level.
+// Info is specified on the Logger interface.
 func (sl *StandardLogger) Info(info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
@@ -179,7 +253,7 @@ func (sl *StandardLogger) Info(info, msg string) {
 	io.WriteString(sl.out, "\n")
 }
 
-// Warning logs a message at warning level.
+// Warning is specified on the Logger interface.
 func (sl *StandardLogger) Warning(info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
@@ -192,7 +266,7 @@ func (sl *StandardLogger) Warning(info, msg string) {
 	io.WriteString(sl.out, "\n")
 }
 
-// Error logs a message at error level.
+// Error is specified on the Logger interface.
 func (sl *StandardLogger) Error(info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
@@ -205,13 +279,26 @@ func (sl *StandardLogger) Error(info, msg string) {
 	io.WriteString(sl.out, "\n")
 }
 
-// Critical logs a message at critical level.
+// Critical is specified on the Logger interface.
 func (sl *StandardLogger) Critical(info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
 
 	io.WriteString(sl.out, time.Now().Format(timeFormat))
 	io.WriteString(sl.out, " [CRITICAL] ")
+	io.WriteString(sl.out, info)
+	io.WriteString(sl.out, " ")
+	io.WriteString(sl.out, msg)
+	io.WriteString(sl.out, "\n")
+}
+
+// Fatal is specified on the Logger interface.
+func (sl *StandardLogger) Fatal(info, msg string) {
+	sl.mutex.Lock()
+	defer sl.mutex.Unlock()
+
+	io.WriteString(sl.out, time.Now().Format(timeFormat))
+	io.WriteString(sl.out, " [FATAL] ")
 	io.WriteString(sl.out, info)
 	io.WriteString(sl.out, " ")
 	io.WriteString(sl.out, msg)
@@ -227,29 +314,34 @@ func NewGoLogger() Logger {
 	return &GoLogger{}
 }
 
-// Debug logs a message at debug level.
+// Debug is specified on the Logger interface.
 func (gl *GoLogger) Debug(info, msg string) {
 	log.Println("[DEBUG]", info, msg)
 }
 
-// Info logs a message at info level.
+// Info is specified on the Logger interface.
 func (gl *GoLogger) Info(info, msg string) {
 	log.Println("[INFO]", info, msg)
 }
 
-// Warning logs a message at warning level.
+// Warning is specified on the Logger interface.
 func (gl *GoLogger) Warning(info, msg string) {
 	log.Println("[WARNING]", info, msg)
 }
 
-// Error logs a message at error level.
+// Error is specified on the Logger interface.
 func (gl *GoLogger) Error(info, msg string) {
 	log.Println("[ERROR]", info, msg)
 }
 
-// Critical logs a message at critical level.
+// Critical is specified on the Logger interface.
 func (gl *GoLogger) Critical(info, msg string) {
 	log.Println("[CRITICAL]", info, msg)
+}
+
+// Fatal is specified on the Logger interface.
+func (gl *GoLogger) Fatal(info, msg string) {
+	log.Println("[FATAL]", info, msg)
 }
 
 //--------------------
