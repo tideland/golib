@@ -111,6 +111,17 @@ go get github.com/tideland/golib/version
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)
 
+### Web
+
+The Tideland Go Library web package provides a framework for a component based web
+development, especially following the principles of REST.
+
+```
+go get github.com/tideland/golib/web
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)
+
 ## Authors
 
 - Frank Mueller - <mue@tideland.biz>
