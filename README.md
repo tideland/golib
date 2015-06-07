@@ -89,6 +89,17 @@ go get github.com/tideland/golib/loop
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)
 
+### Map/Reduce
+
+The Tideland Go Library mapreduce package implements the Map/Reduce
+algorithm for the processing and aggregation mass data.
+
+```
+go get github.com/tideland/golib/mapreduce
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/mapreduce?status.svg)](https://godoc.org/github.com/tideland/golib/mapreduce)
+
 ### Monitoring
 
 The Tideland Go Library monitoring package supports three kinds of 
@@ -121,6 +132,17 @@ go get github.com/tideland/golib/scene
 ```
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)
+
+### SML
+
+The Tideland Go Library sml package provides a very simple markup language
+using a kind of LISP like notation with curly braces.
+
+```
+go get github.com/tideland/golib/sml
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)
 
 ### Timex
 
