@@ -31,6 +31,28 @@ go get github.com/tideland/golib/errors
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)
 
+### Feed
+
+#### Atom
+
+The Tideland Go Library atom package implements an atom feed client.
+
+```
+go get github.com/tideland/golib/feed/atom
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/feed/atom?status.svg)](https://godoc.org/github.com/tideland/golib/feed/atom)
+
+#### RSS
+
+The Tideland Go Library atom package implements a RSS feed client.
+
+```
+go get github.com/tideland/golib/feed/rss
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/feed/rss?status.svg)](https://godoc.org/github.com/tideland/golib/feed/rss)
+
 ### Identifier
 
 The Tideland Go Library identifier package provides different ways
