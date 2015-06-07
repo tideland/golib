@@ -100,6 +100,17 @@ go get github.com/tideland/golib/monitoring
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring)
 
+### Redis
+
+The Tideland Go Library redis package provides a very powerful as well as
+convenient client for the Redis database.
+
+```
+go get github.com/tideland/golib/redis
+```
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)
+
 ### Scene
 
 The Tideland Go Library scene package provides a shared access to common
