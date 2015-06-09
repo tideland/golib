@@ -21,6 +21,7 @@ I hope you like them. ;)
 | Loop         | Goroutine Control incl. Recovering | [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)             |
 | Map/Reduce   | Map/Reduce for Data Analysis       | [![GoDoc](https://godoc.org/github.com/tideland/golib/mapreduce?status.svg)](https://godoc.org/github.com/tideland/golib/mapreduce)   |
 | Monitoring   | Application Monitoring             | [![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring) |
+| Numerics     | Functions for Statistical Analysis | [![GoDoc](https://godoc.org/github.com/tideland/golib/numerics?status.svg)](https://godoc.org/github.com/tideland/golib/numerics) |
 | Redis Client | Client for Redis Database          | [![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)           |
 | Scene        | Context-based Shared Data Access   | [![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)           |
 | SML          | Simple Markup Language             | [![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)               |
