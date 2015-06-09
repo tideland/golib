@@ -1,4 +1,4 @@
-# Tideland Go Data Management
+# Tideland Go Library
 
 ## Description
 
@@ -9,177 +9,31 @@ I hope you like them. ;)
 
 ## Packages
 
-### Audit
+| Name         | Purpose                            | Documentation                                                                                                                         |
+|--------------|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| Audit        | Unit Testing Support               | [![GoDoc](https://godoc.org/github.com/tideland/golib/audit?status.svg)](https://godoc.org/github.com/tideland/golib/audit)           |
+| Cache        | Lazy Loading and Caching           | [![GoDoc](https://godoc.org/github.com/tideland/golib/cache?status.svg)](https://godoc.org/github.com/tideland/golib/cache)           |
+| Errors       | Detailed Error Values              | [![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)         |
+| Feed (Atom)  | Atom Feed Client                   | [![GoDoc](https://godoc.org/github.com/tideland/golib/feed/atom?status.svg)](https://godoc.org/github.com/tideland/golib/feed/atom)   |
+| Feed (RSS)   | RSS Feed Client                    | [![GoDoc](https://godoc.org/github.com/tideland/golib/feed/rss?status.svg)](https://godoc.org/github.com/tideland/golib/feed/rss)     |
+| Identifier   | ID/UUID Generation                 | [![GoDoc](https://godoc.org/github.com/tideland/golib/identifier?status.svg)](https://godoc.org/github.com/tideland/golib/identifier) |
+| Logger       | Flexible Logging                   | [![GoDoc](https://godoc.org/github.com/tideland/golib/logger?status.svg)](https://godoc.org/github.com/tideland/golib/logger)         |
+| Loop         | Goroutine Control incl. Recovering | [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)             |
+| Map/Reduce   | Map/Reduce for Data Analysis       | [![GoDoc](https://godoc.org/github.com/tideland/golib/mapreduce?status.svg)](https://godoc.org/github.com/tideland/golib/mapreduce)   |
+| Monitoring   | Application Monitoring             | [![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring) |
+| Redis Client | Client for Redis Database          | [![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)           |
+| Scene        | Context-based Shared Data Access   | [![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)           |
+| SML          | Simple Markup Language             | [![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)               |
+| Timex        | Extended Time/Date Handling        | [![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)           |
+| Version      | Semantic Versioning                | [![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)       |
+| Web          | RESTful Web Request Handling       | [![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)               |
 
-The Tideland Go Library audit package helps writing convenient and
-powerful unit tests.
+## Contributors
 
-```
-go get github.com/tideland/golib/audit
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/audit?status.svg)](https://godoc.org/github.com/tideland/golib/audit)
-
-### Errors
-
-The Tideland Go Library errors package allows to create more
-detailed errors than with errors.New() or fmt.Errorf().
-
-```
-go get github.com/tideland/golib/errors
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)
-
-### Feed
-
-#### Atom
-
-The Tideland Go Library atom package implements an atom feed client.
-
-```
-go get github.com/tideland/golib/feed/atom
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/feed/atom?status.svg)](https://godoc.org/github.com/tideland/golib/feed/atom)
-
-#### RSS
-
-The Tideland Go Library atom package implements a RSS feed client.
-
-```
-go get github.com/tideland/golib/feed/rss
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/feed/rss?status.svg)](https://godoc.org/github.com/tideland/golib/feed/rss)
-
-### Identifier
-
-The Tideland Go Library identifier package provides different ways
-to produce identifiers like e.g. UUIDs.
-
-```
-go get github.com/tideland/golib/identifier
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/identifier?status.svg)](https://godoc.org/github.com/tideland/golib/identifier)
-
-### Logger
-
-The Tideland Go Library logger package provides a flexible
-way to log information with different levels and on different
-backends.
-
-```
-go get github.com/tideland/golib/logger
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/logger?status.svg)](https://godoc.org/github.com/tideland/golib/logger)
-
-### Loop
-
-The Tideland Go Library loop package is intended to support
-the developer implementing the typical Go idiom for
-concurrent applications running in a loop in the background
-and doing a select on one or more channels.
-
-```
-go get github.com/tideland/golib/loop
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)
-
-### Map/Reduce
-
-The Tideland Go Library mapreduce package implements the Map/Reduce
-algorithm for the processing and aggregation mass data.
-
-```
-go get github.com/tideland/golib/mapreduce
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/mapreduce?status.svg)](https://godoc.org/github.com/tideland/golib/mapreduce)
-
-### Monitoring
-
-The Tideland Go Library monitoring package supports three kinds of 
-system monitoring.
-
-```
-go get github.com/tideland/golib/monitoring
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring)
-
-### Redis
-
-The Tideland Go Library redis package provides a very powerful as well as
-convenient client for the Redis database.
-
-```
-go get github.com/tideland/golib/redis
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)
-
-### Scene
-
-The Tideland Go Library scene package provides a shared access to common
-used data in a larger context.
-
-```
-go get github.com/tideland/golib/scene
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)
-
-### SML
-
-The Tideland Go Library sml package provides a very simple markup language
-using a kind of LISP like notation with curly braces.
-
-```
-go get github.com/tideland/golib/sml
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)
-
-### Timex
-
-The Tideland Go Library timex package helps when working with times and dates.
-
-```
-go get github.com/tideland/golib/timex
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)
-
-### Version
-
-The Tideland Go Library version package helps other packages to
-provide information about their current version and compare it
-to others.
-
-```
-go get github.com/tideland/golib/version
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)
-
-### Web
-
-The Tideland Go Library web package provides a framework for a component based web
-development, especially following the principles of REST.
-
-```
-go get github.com/tideland/golib/web
-```
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)
-
-## Authors
-
-- Frank Mueller - <mue@tideland.biz>
+- Frank Mueller (https://github.com/TheMue)
+- Alex Browne (https://github.com/albrow)
+- Benedikt Lang (https://github.com/blang)
+- Tim Heckman (https://github.com/theckman)
 
 ## License
 
