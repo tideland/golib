@@ -79,9 +79,9 @@ type Generator struct {
 	rand *rand.Rand
 }
 
-// New returns a new generator using the passed random number
+// NewGenerator returns a new generator using the passed random number
 // generator.
-func New(rand *rand.Rand) *Generator {
+func NewGenerator(rand *rand.Rand) *Generator {
 	return &Generator{rand}
 }
 

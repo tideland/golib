@@ -3,7 +3,7 @@
 // Copyright (C) 2013-2015 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
-// by the new BSD license.
+// by the NewGenerator BSD license.
 
 package audit_test
 
@@ -27,7 +27,7 @@ import (
 // TestInts tests the generation of ints.
 func TestInts(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	// Test individual ints.
 	for i := 0; i < 10000; i++ {
@@ -70,7 +70,7 @@ func TestInts(t *testing.T) {
 // TestOneOf tests the generation of selections.
 func TestOneOf(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	for i := 0; i < 10000; i++ {
 		b := gen.OneByteOf(1, 2, 3, 4, 5)
@@ -90,7 +90,7 @@ func TestOneOf(t *testing.T) {
 // TestWords tests the generation of words.
 func TestWords(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	// Test single words.
 	for i := 0; i < 10000; i++ {
@@ -116,7 +116,7 @@ func TestWords(t *testing.T) {
 // TestPattern tests the generation based on patterns.
 func TestPattern(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 	assertPattern := func(pattern, runes string) {
 		set := make(map[rune]bool)
 		for _, r := range runes {
@@ -150,7 +150,7 @@ func TestPattern(t *testing.T) {
 // TestText tests the generation of text.
 func TestText(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	for i := 0; i < 10000; i++ {
 		s := gen.Sentence()
@@ -177,7 +177,7 @@ func TestText(t *testing.T) {
 // TestName tests the generation of names.
 func TestName(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	assert.Equal(audit.ToUpperFirst("yadda"), "Yadda")
 
@@ -199,7 +199,7 @@ func TestName(t *testing.T) {
 // TestDomain tests the generation of domains.
 func TestDomain(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	for i := 0; i < 00100; i++ {
 		domain := gen.Domain()
@@ -211,7 +211,7 @@ func TestDomain(t *testing.T) {
 // TestURL tests the generation of URLs.
 func TestURL(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	for i := 0; i < 10000; i++ {
 		url := gen.URL()
@@ -223,7 +223,7 @@ func TestURL(t *testing.T) {
 // TestEMail tests the generation of e-mail addresses.
 func TestEMail(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	for i := 0; i < 10000; i++ {
 		addr := gen.EMail()
@@ -235,7 +235,7 @@ func TestEMail(t *testing.T) {
 // TestDimes tests the generation of durations and times.
 func TestTimes(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.New(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.SimpleRand())
 
 	for i := 0; i < 10000; i++ {
 		// Test durations.
