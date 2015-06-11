@@ -32,6 +32,29 @@ type KeyStringValue struct {
 }
 
 //--------------------
+// COLLECTIONS - RING BUFFER
+//--------------------
+
+// RingBuffer defines a buffer which is connected end-to-end. It
+// grows if needed.
+type RingBuffer interface {
+	fmt.Stringer
+
+	// Push adds values to the end of the buffer.
+	Push(values ...interface{})
+
+	// Pop removes and returns the first value of the buffer. If
+	// the buffer is empty the second return value is false.
+	Pop() (interface{}, bool)
+
+	// Len returns the number of values in the buffer.
+	Len() int
+
+	// Cap returns the capacity of the buffer.
+	Cap() int
+}
+
+//--------------------
 // COLLECTIONS - STACKS
 //--------------------
 
@@ -39,7 +62,7 @@ type KeyStringValue struct {
 type Stack interface {
 	fmt.Stringer
 
-	// Push adds a value to the top of the stack.
+	// Push adds values to the top of the stack.
 	Push(vs ...interface{})
 
 	// Pop removes and returns the top value of the stack.
