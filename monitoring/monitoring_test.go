@@ -40,7 +40,7 @@ func TestEtmMonitor(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	// Asserts.
 	mp, err := monitoring.ReadMeasuringPoint("foo")
-	assert.ErrorMatch(err, `\[MONITORING:.*\] measuring point "foo" does not exist`, "reading non-existent measuring point")
+	assert.ErrorMatch(err, `.* measuring point "foo" does not exist`)
 	mp, err = monitoring.ReadMeasuringPoint("mp:task:5")
 	assert.Nil(err, "No error expected.")
 	assert.Equal(mp.Id, "mp:task:5", "should get the right one")
@@ -66,12 +66,12 @@ func TestSsiMonitor(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	// Asserts.
 	ssv, err := monitoring.ReadVariable("foo")
-	assert.ErrorMatch(err, `\[MONITORING:.*\] stay-set variable "foo" does not exist`, "reading non-existent variable")
+	assert.ErrorMatch(err, `.* stay-set variable "foo" does not exist`)
 	ssv, err = monitoring.ReadVariable("ssv:value:5")
 	assert.Nil(err, "no error expected")
 	assert.Equal(ssv.Id, "ssv:value:5", "should get the right one")
 	assert.True(ssv.Count > 0, "should be set several times")
-	assert.Match(ssv.String(), `Stay-Set Variable "ssv:value:5" (.*)`, "string representation should look fine")
+	assert.Match(ssv.String(), `Stay-Set Variable "ssv:value:5" (.*)`)
 	monitoring.StaySetVariablesDo(func(ssv *monitoring.StaySetVariable) {
 		assert.Match(ssv.Id, "ssv:value:[0-9]", "id has to match the pattern")
 		assert.True(ssv.MinValue <= ssv.AvgValue && ssv.AvgValue <= ssv.MaxValue,
@@ -91,13 +91,13 @@ func TestDsrMonitor(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	// Asserts.
 	dsv, err := monitoring.ReadStatus("foo")
-	assert.ErrorMatch(err, `\[MONITORING:.*\] dynamic status "foo" does not exist`, "reading non-existent status")
+	assert.ErrorMatch(err, `.* dynamic status "foo" does not exist`)
 	dsv, err = monitoring.ReadStatus("dsr:b")
 	assert.Nil(err, "no error expected")
 	assert.Equal(dsv, "4711", "status value should be correct")
 	dsv, err = monitoring.ReadStatus("dsr:d")
 	assert.NotNil(err, "error should be returned")
-	assert.ErrorMatch(err, `\[MONITORING:.*\] monitor backend panicked`, "error inside retrieval has to be catched")
+	assert.ErrorMatch(err, `.* monitor backend panicked`)
 }
 
 // Test the behavior after an internal panic.
@@ -110,7 +110,7 @@ func TestInternalPanic(t *testing.T) {
 	// Asserts.
 	dsv, err := monitoring.ReadStatus("panic")
 	assert.Empty(dsv, "no dynamic status value")
-	assert.ErrorMatch(err, `\[MONITORING:.*\] monitor backend panicked`, "monitor restarted due to panic")
+	assert.ErrorMatch(err, `.* monitor backend panicked`)
 }
 
 //--------------------
