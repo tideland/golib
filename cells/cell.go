@@ -75,8 +75,8 @@ func (c *cell) ID() string {
 
 // Emit implements the Context interface.
 func (c *cell) Emit(event Event) error {
-	for _, ec := range c.subscribers {
-		if err := ec.processEvent(event); err != nil {
+	for _, sc := range c.subscribers {
+		if err := sc.Process(event); err != nil {
 			return err
 		}
 	}
@@ -92,14 +92,33 @@ func (c *cell) EmitNew(topic string, payload interface{}, scene scene.Scene) err
 	return c.Emit(event)
 }
 
+// Process implements the Subscriber interface.
+func (c *cell) Process(event Event) error {
+	return c.queue.Push(event)
+}
+
+// ProcessNew implements the Subscriber interface.
+func (c *cell) ProcessNew(topic string, payload interface{}, scene scene.Scene) error {
+	event, err := NewEvent(topic, payload, scene)
+	if err != nil {
+		return err
+	}
+	return c.Process(event)
+}
+
+// SubscribersDo implements the Subscriber interface.
+func (c *cell) SubscribersDo(f func(s Subscriber) error) error {
+	for _, sc := range c.subscribers {
+		if err := f(sc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // updateSubscribers sets the subscribers of the cell.
 func (c *cell) updateSubscribers(cells []*cell) {
 	c.subscriberc <- cells
-}
-
-// processEvent tells the cell to process an event.
-func (c *cell) processEvent(event Event) error {
-	return c.queue.Push(event)
 }
 
 // stop terminates the cell.

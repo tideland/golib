@@ -90,6 +90,22 @@ type Behavior interface {
 }
 
 //--------------------
+// SUBSCRIBER
+//--------------------
+
+// Subscriber describes a subscriber cell for an emitting cell.
+type Subscriber interface {
+	// ID returns the ID of the subscriber.
+	ID() string
+
+	// Process tells the subscriber to process an event.
+	Process(event Event) error
+
+	// ProcessNew creates an event and tells the subscriber to process it.
+	ProcessNew(topic string, payload interface{}, scene scene.Scene) error
+}
+
+//--------------------
 // CONTEXT
 //--------------------
 
@@ -107,6 +123,9 @@ type Context interface {
 
 	// EmitNew creates an event and emits it to all subscribers of a cell.
 	EmitNew(topic string, payload interface{}, scene scene.Scene) error
+
+	// SubscribersDo calls the passed function for each subscriber.
+	SubscribersDo(f func(s Subscriber) error) error
 }
 
 // EOF

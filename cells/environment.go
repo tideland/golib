@@ -96,7 +96,7 @@ func (env *environment) Emit(id string, event Event) error {
 	if err != nil {
 		return err
 	}
-	return cs[0].processEvent(event)
+	return cs[0].Process(event)
 }
 
 // EmitNew is specified on the Environment interface.
