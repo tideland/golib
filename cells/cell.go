@@ -32,7 +32,7 @@ type cell struct {
 	id          string
 	behavior    Behavior
 	subscribers []*cell
-	queue       EventQueue
+	eventc      chan Event
 	subscriberc chan []*cell
 	loop        loop.Loop
 	measuringID string
@@ -40,26 +40,22 @@ type cell struct {
 
 // newCell create a new cell around a behavior.
 func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
-	// Create queue.
-	queue, err := env.queueFactory(env)
-	if err != nil {
-		return nil, errors.Annotate(err, ErrCellInit, errorMessages, id)
-	}
+	logger.Infof("starting cell %q", id)
 	// Init cell runtime.
 	c := &cell{
 		env:         env,
 		id:          id,
 		behavior:    behavior,
-		queue:       queue,
+		eventc:      make(chan Event, env.bufferSize),
 		subscriberc: make(chan []*cell),
 		measuringID: identifier.Identifier("cells", env.id, "cell", identifier.TypeAsIdentifierPart(behavior)),
 	}
-	c.loop = loop.GoRecoverable(c.backendLoop, c.checkRecovering)
 	// Init behavior.
 	if err := behavior.Init(c); err != nil {
 		return nil, errors.Annotate(err, ErrCellInit, errorMessages, id)
 	}
-	logger.Infof("cell %q started", id)
+	// Start backend.
+	c.loop = loop.GoRecoverable(c.backendLoop, c.checkRecovering)
 	return c, nil
 }
 
@@ -76,7 +72,7 @@ func (c *cell) ID() string {
 // Emit implements the Context interface.
 func (c *cell) Emit(event Event) error {
 	for _, sc := range c.subscribers {
-		if err := sc.Process(event); err != nil {
+		if err := sc.ProcessEvent(event); err != nil {
 			return err
 		}
 	}
@@ -92,18 +88,23 @@ func (c *cell) EmitNew(topic string, payload interface{}, scene scene.Scene) err
 	return c.Emit(event)
 }
 
-// Process implements the Subscriber interface.
-func (c *cell) Process(event Event) error {
-	return c.queue.Push(event)
+// ProcessEvent implements the Subscriber interface.
+func (c *cell) ProcessEvent(event Event) error {
+	select {
+	case c.eventc <- event:
+	case <-c.loop.IsStopping():
+		return errors.New(ErrInactive, errorMessages, c.id)
+	}
+	return nil
 }
 
-// ProcessNew implements the Subscriber interface.
-func (c *cell) ProcessNew(topic string, payload interface{}, scene scene.Scene) error {
+// ProcessNewEvent implements the Subscriber interface.
+func (c *cell) ProcessNewEvent(topic string, payload interface{}, scene scene.Scene) error {
 	event, err := NewEvent(topic, payload, scene)
 	if err != nil {
 		return err
 	}
-	return c.Process(event)
+	return c.ProcessEvent(event)
 }
 
 // SubscribersDo implements the Subscriber interface.
@@ -117,12 +118,18 @@ func (c *cell) SubscribersDo(f func(s Subscriber) error) error {
 }
 
 // updateSubscribers sets the subscribers of the cell.
-func (c *cell) updateSubscribers(cells []*cell) {
-	c.subscriberc <- cells
+func (c *cell) updateSubscribers(cells []*cell) error{
+	select {
+	case c.subscriberc <- cells:
+	case <-c.loop.IsStopping():
+		return errors.New(ErrInactive, errorMessages, c.id)
+	}
+	return nil
 }
 
 // stop terminates the cell.
 func (c *cell) stop() error {
+	defer logger.Infof("cell %q terminated", c.id)
 	return c.loop.Stop()
 }
 
@@ -132,18 +139,17 @@ func (c *cell) backendLoop(l loop.Loop) error {
 	monitoring.IncrVariable(identifier.Identifier("cells", c.env.ID(), "total-cells"))
 	defer monitoring.DecrVariable(identifier.Identifier("cells", c.env.ID(), "total-cells"))
 	defer monitoring.DecrVariable(c.measuringID)
-	defer c.cleanup()
 
 	for {
 		select {
-		case <-c.loop.ShallStop():
+		case <-l.ShallStop():
 			return c.behavior.Terminate()
 		case subscribers := <-c.subscriberc:
 			c.subscribers = subscribers
-		case event := <-c.queue.Events():
-			// if event == nil {
-			//	panic("received illegal nil event!")
-			// }
+		case event := <-c.eventc:
+			if event == nil {
+				panic("received illegal nil event!")
+			}
 			measuring := monitoring.BeginMeasuring(c.measuringID)
 			err := c.behavior.ProcessEvent(event)
 			if err != nil {
@@ -170,17 +176,6 @@ func (c *cell) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
 		return nil, errors.Annotate(err, ErrEventRecovering, errorMessages, rs.Last().Reason)
 	}
 	return rs.Trim(12), nil
-}
-
-// cleanup ensures a proper end of a cell.
-func (c *cell) cleanup() {
-	// Unsubscribe from subscriptions.
-	// Notify subscribers.
-	// Terminate the queue.
-	if err := c.queue.Stop(); err != nil {
-		logger.Errorf("cannot stop queue of cell %q: %v", c.id, err)
-	}
-	logger.Infof("cell %q terminated", c.id)
 }
 
 // EOF

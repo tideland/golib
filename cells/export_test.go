@@ -7,8 +7,4 @@
 
 package cells
 
-var (
-	MakeLocalEventQueueFactory = makeLocalEventQueueFactory
-)
-
 // EOF

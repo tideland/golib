@@ -45,56 +45,6 @@ func TestEvent(t *testing.T) {
 	assert.Nil(err)
 }
 
-// TestLocalEventQueue tests the local event queue.
-func TestLocalEventQueue(t *testing.T) {
-	count := 10000
-	assert := audit.NewTestingAssertion(t, true)
-	factory := cells.MakeLocalEventQueueFactory(16)
-	queue, err := factory(nil)
-	assert.Nil(err)
-
-	for i := 0; i < count; i++ {
-		event, err := cells.NewEvent("queue-test", i, nil)
-		assert.Nil(err)
-
-		assert.Nil(queue.Push(event))
-	}
-
-	for i := 0; i < count; i++ {
-		_, ok := <-queue.Events()
-		assert.True(ok)
-	}
-
-	select {
-	case <-queue.Events():
-		assert.Fail("didn't expected any queued event")
-	case <-time.After(100 * time.Millisecond):
-		assert.True(true)
-	}
-
-	assert.Nil(queue.Stop())
-}
-
-// BenchmarkLocalEventQueue tests the performance of the local event queue.
-func BenchmarkLocalEventQueue(b *testing.B) {
-	factory := cells.MakeLocalEventQueueFactory(10)
-	queue, err := factory(nil)
-	if err != nil {
-		b.Fatalf("cannot create queue: %v", err)
-	}
-
-	for i := 0; i < b.N; i++ {
-		event, _ := cells.NewEvent("queue-test", i, nil)
-		queue.Push(event)
-	}
-
-	for i := 0; i < b.N; i++ {
-		<-queue.Events()
-	}
-
-	queue.Stop()
-}
-
 // TestEnvironmentAddRemove tests adding, checking and
 // removing of cells.
 func TestEnvironmentStartStop(t *testing.T) {
@@ -191,6 +141,38 @@ func TestEnvironmentStopUnsubscribe(t *testing.T) {
 	assert.Equal(response, []string{"baz"})
 }
 
+// TestEnvironmentSubscribersDo tests the iteration over
+// the subscribers.
+func TestEnvironmentSubscribersDo(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment()
+	defer env.Stop()
+
+	err := env.StartCell("foo", newTestBehavior())
+	assert.Nil(err)
+	err = env.StartCell("bar", newTestBehavior())
+	assert.Nil(err)
+	err = env.StartCell("baz", newTestBehavior())
+	assert.Nil(err)
+
+	err = env.Subscribe("foo", "bar", "baz")
+	assert.Nil(err)
+	err = env.EmitNew("foo", iterateTopic, nil, nil)
+	assert.Nil(err)
+
+	time.Sleep(200 * time.Millisecond)
+
+	collected, err := env.Request("bar", cells.ProcessedTopic, nil, nil, cells.DefaultTimeout)
+	assert.Nil(err)
+	assert.Length(collected, 1)
+	assert.Contents(`<event: "love" / payload: <"default": foo loves bar>>`, collected)
+	collected, err = env.Request("baz", cells.ProcessedTopic, nil, nil, cells.DefaultTimeout)
+	assert.Nil(err)
+	assert.Length(collected, 1)
+	assert.Contents(`<event: "love" / payload: <"default": foo loves baz>>`, collected)
+}
+
 // TestEnvironmentScenario tests creating and using the
 // environment in a simple way.
 func TestEnvironmentScenario(t *testing.T) {
@@ -218,7 +200,7 @@ func TestEnvironmentScenario(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(response, cells.PongResponse)
 
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	collected, err := env.Request("collector", cells.ProcessedTopic, nil, nil, cells.DefaultTimeout)
 	assert.Nil(err)
@@ -232,6 +214,9 @@ func TestEnvironmentScenario(t *testing.T) {
 //--------------------
 
 const (
+	// iterateTopic lets the test behavior iterate over its subscribers.
+	iterateTopic = "iterate!!"
+
 	// panicTopic lets the test behavior panic to check recovering.
 	panicTopic = "panic!"
 
@@ -275,6 +260,13 @@ func (t *testBehavior) ProcessEvent(event cells.Event) error {
 		t.processed = []string{}
 	case cells.PingTopic:
 		err := event.Respond(cells.PongResponse)
+		if err != nil {
+			return err
+		}
+	case iterateTopic:
+		err := t.ctx.SubscribersDo(func(s cells.Subscriber) error {
+			return s.ProcessNewEvent("love", t.ctx.ID() + " loves " + s.ID(), event.Scene())
+		})
 		if err != nil {
 			return err
 		}

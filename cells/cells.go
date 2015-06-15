@@ -98,11 +98,11 @@ type Subscriber interface {
 	// ID returns the ID of the subscriber.
 	ID() string
 
-	// Process tells the subscriber to process an event.
-	Process(event Event) error
+	// ProcessEvent tells the subscriber to process an event.
+	ProcessEvent(event Event) error
 
-	// ProcessNew creates an event and tells the subscriber to process it.
-	ProcessNew(topic string, payload interface{}, scene scene.Scene) error
+	// ProcessNewEvent creates an event and tells the subscriber to process it.
+	ProcessNewEvent(topic string, payload interface{}, scene scene.Scene) error
 }
 
 //--------------------

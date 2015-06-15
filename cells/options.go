@@ -16,6 +16,13 @@ import (
 )
 
 //--------------------
+// CONST
+//--------------------
+
+// defaultBufferSize is the minimum size of the event buffer per cell.
+const defaultBufferSize = 256
+
+//--------------------
 // OPTIONS
 //--------------------
 
@@ -37,26 +44,14 @@ func ID(id string) Option {
 	}
 }
 
-// QueueFactory is the option to set the queue factory
-// of the environment.
-func QueueFactory(queueFactory EventQueueFactory) Option {
+// BufferSize is the option to set the event buffer size for each cell.
+func BufferSize(size int) Option {
 	return func(env Environment) {
 		e := env.(*environment)
-		if queueFactory == nil {
-			queueFactory = makeLocalEventQueueFactory(8)
+		if size < defaultBufferSize {
+			size = defaultBufferSize
 		}
-		e.queueFactory = queueFactory
-	}
-}
-
-// LocalQueueFactory is the option to set the queue factory of
-// the environment to create local event queues.
-func LocalQueueFactory(size int) Option {
-	return func(env Environment) {
-		if size < 8 {
-			size = 8
-		}
-		QueueFactory(makeLocalEventQueueFactory(size))
+		e.bufferSize = size
 	}
 }
 

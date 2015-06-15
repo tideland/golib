@@ -34,17 +34,17 @@ const DefaultTimeout = 5 * time.Second
 
 // Environment implements the Environment interface.
 type environment struct {
-	id           string
-	queueFactory EventQueueFactory
-	cells        *registry
+	id         string
+	bufferSize int
+	cells      *registry
 }
 
 // NewEnvironment creates a new environment.
 func NewEnvironment(options ...Option) Environment {
 	env := &environment{
-		id:           identifier.NewUUID().String(),
-		queueFactory: makeLocalEventQueueFactory(10),
-		cells:        newRegistry(),
+		id:         identifier.NewUUID().String(),
+		bufferSize: defaultBufferSize,
+		cells:      newRegistry(),
 	}
 	for _, option := range options {
 		option(env)
@@ -96,7 +96,7 @@ func (env *environment) Emit(id string, event Event) error {
 	if err != nil {
 		return err
 	}
-	return cs[0].Process(event)
+	return cs[0].ProcessEvent(event)
 }
 
 // EmitNew is specified on the Environment interface.

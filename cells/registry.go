@@ -35,21 +35,23 @@ func (cr *celler) stop() error {
 	for id := range cr.subscriptions {
 		ucr := cr.registry.cellers[id]
 		delete(ucr.subscribers, subscriberID)
-		ucr.updateSubscribers()
+		if err := ucr.updateSubscribers(); err != nil {
+			return err
+		}
 	}
 	return cr.cell.stop()
 }
 
 // updateSubscribers notifies the cell about the
 // current subscribers.
-func (cr *celler) updateSubscribers() {
+func (cr *celler) updateSubscribers() error {
 	var cells []*cell
 	for id := range cr.subscribers {
 		if scr, ok := cr.registry.cellers[id]; ok {
 			cells = append(cells, scr.cell)
 		}
 	}
-	cr.cell.updateSubscribers(cells)
+	return cr.cell.updateSubscribers(cells)
 }
 
 //--------------------
