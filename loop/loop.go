@@ -119,8 +119,9 @@ type loop struct {
 	recoverFunc RecoverFunc
 	err         error
 	status      int
-	stopChan    chan struct{}
-	doneChan    chan struct{}
+	startedc    chan struct{}
+	stopc       chan struct{}
+	donec       chan struct{}
 }
 
 // Go starts the loop function in the background. The loop can be
@@ -132,10 +133,13 @@ func Go(lf LoopFunc) Loop {
 	l := &loop{
 		loopFunc: lf,
 		status:   Running,
-		stopChan: make(chan struct{}),
-		doneChan: make(chan struct{}),
+		startedc: make(chan struct{}),
+		stopc:    make(chan struct{}),
+		donec:    make(chan struct{}),
 	}
+	// Start and wait until it's running.
 	go l.singleLoop()
+	<-l.startedc
 	return l
 }
 
@@ -154,22 +158,27 @@ func GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop {
 		loopFunc:    lf,
 		recoverFunc: rf,
 		status:      Running,
-		stopChan:    make(chan struct{}),
-		doneChan:    make(chan struct{}),
+		startedc:    make(chan struct{}),
+		stopc:       make(chan struct{}),
+		donec:       make(chan struct{}),
 	}
+	// Start and wait until it's running.
 	go l.recoverableLoop()
+	<-l.startedc
 	return l
 }
 
 // singleLoop is the goroutine for a loop which is not recoverable.
 func (l *loop) singleLoop() {
 	defer l.done()
+	l.startedc <- struct{}{}
 	l.Kill(l.loopFunc(l))
 }
 
 // recoverableLoop is the goroutine for loops which
 func (l *loop) recoverableLoop() {
 	defer l.done()
+	l.startedc <- struct{}{}
 	run := true
 	rs := Recoverings{}
 	loop := func() {
@@ -205,7 +214,7 @@ func (l *loop) done() {
 	defer l.mux.Unlock()
 	if l.status == Stopping {
 		l.status = Stopped
-		close(l.doneChan)
+		close(l.donec)
 	}
 }
 
@@ -229,15 +238,15 @@ func (l *loop) Kill(err error) {
 	}
 	l.status = Stopping
 	select {
-	case <-l.stopChan:
+	case <-l.stopc:
 	default:
-		close(l.stopChan)
+		close(l.stopc)
 	}
 }
 
 // Wait blocks the caller until the loop ended and returns the error.
 func (l *loop) Wait() (err error) {
-	<-l.doneChan
+	<-l.donec
 	l.mux.Lock()
 	defer l.mux.Unlock()
 	err = l.err
@@ -256,14 +265,14 @@ func (l *loop) Error() (status int, err error) {
 // ShallStop returns a channel signalling the loop to
 // stop working.
 func (l *loop) ShallStop() <-chan struct{} {
-	return l.stopChan
+	return l.stopc
 }
 
 // IsStopping returns a channel that can be used to wait until
 // the loop is stopping or to avoid deadlocks when communicating
 // with the loop.
 func (l *loop) IsStopping() <-chan struct{} {
-	return l.stopChan
+	return l.stopc
 }
 
 // EOF
