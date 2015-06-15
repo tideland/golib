@@ -109,13 +109,15 @@ func TestEnvironmentStartStop(t *testing.T) {
 	hasFoo := env.HasCell("foo")
 	assert.True(hasFoo)
 
-	env.StopCell("foo")
+	err = env.StopCell("foo")
+	assert.Nil(err)
 	hasFoo = env.HasCell("foo")
 	assert.False(hasFoo)
 
 	hasBar := env.HasCell("bar")
 	assert.False(hasBar)
-	env.StopCell("bar")
+	err = env.StopCell("bar")
+	assert.True(errors.IsError(err, cells.ErrInvalidID))
 	hasBar = env.HasCell("bar")
 	assert.False(hasBar)
 }
@@ -162,6 +164,33 @@ func TestEnvironmentSubscribeUnsubscribe(t *testing.T) {
 	assert.Empty(subs)
 }
 
+// TestEnvironmentStopUnsubscribe tests the unsubscribe of a cell when
+// it is stopped.
+func TestEnvironmentStopUnsubscribe(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment()
+	defer env.Stop()
+
+	err := env.StartCell("foo", newTestBehavior())
+	assert.Nil(err)
+	err = env.StartCell("bar", newTestBehavior())
+	assert.Nil(err)
+	err = env.StartCell("baz", newTestBehavior())
+	assert.Nil(err)
+
+	err = env.Subscribe("foo", "bar", "baz")
+	assert.Nil(err)
+
+	err = env.StopCell("bar")
+	assert.Nil(err)
+
+	// Expect only baz because bar is stopped.
+	response, err := env.Request("foo", subscribersTopic, nil, nil, cells.DefaultTimeout)
+	assert.Nil(err)
+	assert.Equal(response, []string{"baz"})
+}
+
 // TestEnvironmentScenario tests creating and using the
 // environment in a simple way.
 func TestEnvironmentScenario(t *testing.T) {
@@ -202,8 +231,13 @@ func TestEnvironmentScenario(t *testing.T) {
 // HELPERS
 //--------------------
 
-// panicTopic lets the test behavior panic to check recovering.
-const panicTopic = "panic!"
+const (
+	// panicTopic lets the test behavior panic to check recovering.
+	panicTopic = "panic!"
+
+	// subscribersTopic returns the current subscribers.
+	subscribersTopic = "subscribers?"
+)
 
 // testBehavior implements a simple behavior used in the tests.
 type testBehavior struct {
@@ -246,6 +280,16 @@ func (t *testBehavior) ProcessEvent(event cells.Event) error {
 		}
 	case panicTopic:
 		panic("Ouch!")
+	case subscribersTopic:
+		var ids []string
+		t.ctx.SubscribersDo(func(s cells.Subscriber) error {
+			ids = append(ids, s.ID())
+			return nil
+		})
+		err := event.Respond(ids)
+		if err != nil {
+			return err
+		}
 	default:
 		t.processed = append(t.processed, fmt.Sprintf("%v", event))
 		t.ctx.Emit(event)

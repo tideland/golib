@@ -29,11 +29,12 @@ type celler struct {
 	subscribers   map[string]struct{}
 }
 
-// stop stops the celler.
+// stop unsubscribes from the subscriptions and stops the cell.
 func (cr *celler) stop() error {
+	subscriberID := cr.cell.ID()
 	for id := range cr.subscriptions {
 		ucr := cr.registry.cellers[id]
-		delete(ucr.subscribers, id)
+		delete(ucr.subscribers, subscriberID)
 		ucr.updateSubscribers()
 	}
 	return cr.cell.stop()
@@ -112,7 +113,8 @@ func (r *registry) stopCell(id string) error {
 	if !ok {
 		return errors.New(ErrInvalidID, errorMessages, id)
 	}
-	// Unsubscribe from subscriptions.
+	// Stopping the celler will stop the cell and unsubscribe
+	// from its subscriptions.
 	if err := cr.stop(); err != nil {
 		return err
 	}
