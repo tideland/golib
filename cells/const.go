@@ -8,6 +8,14 @@
 package cells
 
 //--------------------
+// IMPORTS
+//--------------------
+
+import (
+	"time"
+)
+
+//--------------------
 // CONSTANTS
 //--------------------
 
@@ -29,6 +37,18 @@ const (
 
 	// Special responses.
 	PongResponse = "pong!"
+
+	// Default timeout for requests to cells.
+	DefaultTimeout = 5 * time.Second
+
+	// defaultEventBufferSize is the minimum size of the
+	// event buffer per cell.
+	defaultEventBufferSize = 64
+
+	// defaultRecoveringNumber and defaultRecoveringDuration
+	// control the default recovering frequency.
+	defaultRecoveringNumber   = 1
+	defaultRecoveringDuration = time.Second
 )
 
 // EOF

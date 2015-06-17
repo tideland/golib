@@ -23,31 +23,23 @@ import (
 )
 
 //--------------------
-// CONST
-//--------------------
-
-const DefaultTimeout = 5 * time.Second
-
-//--------------------
 // ENVIRONMENT
 //--------------------
 
 // Environment implements the Environment interface.
 type environment struct {
 	id         string
-	bufferSize int
 	cells      *registry
 }
 
 // NewEnvironment creates a new environment.
-func NewEnvironment(options ...Option) Environment {
-	env := &environment{
-		id:         identifier.NewUUID().String(),
-		bufferSize: defaultBufferSize,
-		cells:      newRegistry(),
+func NewEnvironment(id string) Environment {
+	if id == "" {
+		id = identifier.NewUUID().String()
 	}
-	for _, option := range options {
-		option(env)
+	env := &environment{
+		id:         id,
+		cells:      newRegistry(),
 	}
 	runtime.SetFinalizer(env, (*environment).Stop)
 	logger.Infof("cells environment %q started", env.ID())
@@ -60,8 +52,8 @@ func (env *environment) ID() string {
 }
 
 // StartCell is specified on the Environment interface.
-func (env *environment) StartCell(id string, behavior Behavior) error {
-	return env.cells.startCell(env, id, behavior)
+func (env *environment) StartCell(id string, behavior Behavior, options ...Option) error {
+	return env.cells.startCell(env, id, behavior, options...)
 }
 
 // StopCell is specified on the Environment interface.

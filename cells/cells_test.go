@@ -50,7 +50,7 @@ func TestEvent(t *testing.T) {
 func TestEnvironmentStartStop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
-	env := cells.NewEnvironment()
+	env := cells.NewEnvironment("start-stop")
 	defer env.Stop()
 
 	err := env.StartCell("foo", newTestBehavior())
@@ -77,7 +77,7 @@ func TestEnvironmentStartStop(t *testing.T) {
 func TestEnvironmentSubscribeUnsubscribe(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
-	env := cells.NewEnvironment()
+	env := cells.NewEnvironment("subscribe-unsubscribe")
 	defer env.Stop()
 
 	err := env.StartCell("foo", newTestBehavior())
@@ -119,7 +119,7 @@ func TestEnvironmentSubscribeUnsubscribe(t *testing.T) {
 func TestEnvironmentStopUnsubscribe(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
-	env := cells.NewEnvironment()
+	env := cells.NewEnvironment("stop-unsubscribe")
 	defer env.Stop()
 
 	err := env.StartCell("foo", newTestBehavior())
@@ -146,7 +146,7 @@ func TestEnvironmentStopUnsubscribe(t *testing.T) {
 func TestEnvironmentSubscribersDo(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
-	env := cells.NewEnvironment()
+	env := cells.NewEnvironment("subscribers-do")
 	defer env.Stop()
 
 	err := env.StartCell("foo", newTestBehavior())
@@ -177,7 +177,7 @@ func TestEnvironmentSubscribersDo(t *testing.T) {
 // environment in a simple way.
 func TestEnvironmentScenario(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("scenario"))
+	env := cells.NewEnvironment("scenario")
 	defer env.Stop()
 
 	err := env.StartCell("foo", newTestBehavior())

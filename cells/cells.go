@@ -28,7 +28,7 @@ type Environment interface {
 	ID() string
 
 	// StartCell starts a new cell with a given ID and its behavior.
-	StartCell(id string, behavior Behavior) error
+	StartCell(id string, behavior Behavior, options ...Option) error
 
 	// StopCell stops and removes the cell with the given ID.
 	StopCell(id string) error

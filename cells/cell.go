@@ -28,27 +28,44 @@ import (
 
 // cell for event processing.
 type cell struct {
-	env         *environment
-	id          string
-	behavior    Behavior
-	subscribers []*cell
-	eventc      chan Event
-	subscriberc chan []*cell
-	loop        loop.Loop
-	measuringID string
+	env                *environment
+	id                 string
+	behavior           Behavior
+	subscribers        []*cell
+	eventc             chan Event
+	subscriberc        chan []*cell
+	loop               loop.Loop
+	recoveringNumber   int
+	recoveringDuration time.Duration
+	measuringID        string
 }
 
 // newCell create a new cell around a behavior.
-func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
+func newCell(env *environment, id string, behavior Behavior, options ...Option) (*cell, error) {
 	logger.Infof("starting cell %q", id)
 	// Init cell runtime.
 	c := &cell{
 		env:         env,
 		id:          id,
 		behavior:    behavior,
-		eventc:      make(chan Event, env.bufferSize),
 		subscriberc: make(chan []*cell),
-		measuringID: identifier.Identifier("cells", env.id, "cell", identifier.TypeAsIdentifierPart(behavior)),
+		measuringID: identifier.Identifier("cells", env.id, "cell", id),
+	}
+	// Set options.
+	for _, option := range options {
+		if err := option(c); err != nil {
+			return nil, err
+		}
+	}
+	// Validate settings.
+	if c.eventc == nil {
+		c.eventc = make(chan Event, defaultEventBufferSize)
+	}
+	if c.recoveringNumber < defaultRecoveringNumber {
+		c.recoveringNumber = defaultRecoveringNumber
+	}
+	if c.recoveringDuration < defaultRecoveringDuration {
+		c.recoveringDuration = defaultRecoveringDuration
 	}
 	// Init behavior.
 	if err := behavior.Init(c); err != nil {
@@ -118,7 +135,7 @@ func (c *cell) SubscribersDo(f func(s Subscriber) error) error {
 }
 
 // updateSubscribers sets the subscribers of the cell.
-func (c *cell) updateSubscribers(cells []*cell) error{
+func (c *cell) updateSubscribers(cells []*cell) error {
 	select {
 	case c.subscriberc <- cells:
 	case <-c.loop.IsStopping():
@@ -135,10 +152,8 @@ func (c *cell) stop() error {
 
 // backendLoop is the backend for the processing of messages.
 func (c *cell) backendLoop(l loop.Loop) error {
-	monitoring.IncrVariable(c.measuringID)
 	monitoring.IncrVariable(identifier.Identifier("cells", c.env.ID(), "total-cells"))
 	defer monitoring.DecrVariable(identifier.Identifier("cells", c.env.ID(), "total-cells"))
-	defer monitoring.DecrVariable(c.measuringID)
 
 	for {
 		select {
@@ -168,14 +183,14 @@ func (c *cell) backendLoop(l loop.Loop) error {
 func (c *cell) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
 	logger.Errorf("recovering cell %q after error: %v", c.id, rs.Last().Reason)
 	// Check frequency.
-	if rs.Frequency(12, time.Minute) {
+	if rs.Frequency(c.recoveringNumber, c.recoveringDuration) {
 		return nil, errors.New(ErrRecoveredTooOften, errorMessages, rs.Last().Reason)
 	}
 	// Try to recover.
 	if err := c.behavior.Recover(rs.Last().Reason); err != nil {
 		return nil, errors.Annotate(err, ErrEventRecovering, errorMessages, rs.Last().Reason)
 	}
-	return rs.Trim(12), nil
+	return rs.Trim(c.recoveringNumber), nil
 }
 
 // EOF

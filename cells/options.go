@@ -12,46 +12,42 @@ package cells
 //--------------------
 
 import (
-	"github.com/tideland/golib/identifier"
+	"time"
 )
 
 //--------------------
-// CONST
+// CELL OPTIONS
 //--------------------
 
-// defaultBufferSize is the minimum size of the event buffer per cell.
-const defaultBufferSize = 256
+// Option allows to set an option of a cell.
+type Option func(c *cell) error
 
-//--------------------
-// OPTIONS
-//--------------------
-
-// Option allows to set an option of the environment.
-type Option func(env Environment)
-
-// Options is a set of options.
-type Options []Option
-
-// ID is the option to set the ID of the environment.
-func ID(id string) Option {
-	return func(env Environment) {
-		e := env.(*environment)
-		if id == "" {
-			e.id = identifier.NewUUID().String()
-		} else {
-			e.id = id
+// EventBufferSize is the option to set the event buffer size
+// for each cell.
+func EventBufferSize(size int) Option {
+	return func(c *cell) error {
+		if size < defaultEventBufferSize {
+			size = defaultEventBufferSize
 		}
+		c.eventc = make(chan Event, size)
+		return nil
 	}
 }
 
-// BufferSize is the option to set the event buffer size for each cell.
-func BufferSize(size int) Option {
-	return func(env Environment) {
-		e := env.(*environment)
-		if size < defaultBufferSize {
-			size = defaultBufferSize
+// CellRecoveryFrequency is the option to control number of
+// accepted cell recoverings in a given time frame before
+// a cell is terminated after an error.
+func CellRecoveryFrequency(number int, duration time.Duration) Option {
+	return func(c *cell) error {
+		if number < defaultRecoveringNumber {
+			number = defaultRecoveringNumber
 		}
-		e.bufferSize = size
+		if duration < defaultRecoveringDuration {
+			duration = defaultRecoveringDuration
+		}
+		c.recoveringNumber = number
+		c.recoveringDuration = duration
+		return nil
 	}
 }
 
