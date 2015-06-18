@@ -28,7 +28,7 @@ import (
 // TestFSMBehavior tests the finite state machine behavior.
 func TestFSMBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("fsm-behavior"))
+	env := cells.NewEnvironment("fsm-behavior")
 	defer env.Stop()
 
 	checkCents := func(id string) int {

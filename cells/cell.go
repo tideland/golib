@@ -12,6 +12,7 @@ package cells
 //--------------------
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -30,14 +31,15 @@ import (
 type cell struct {
 	env                *environment
 	id                 string
+	measuringID        string
 	behavior           Behavior
 	subscribers        []*cell
 	eventc             chan Event
 	subscriberc        chan []*cell
-	loop               loop.Loop
 	recoveringNumber   int
 	recoveringDuration time.Duration
-	measuringID        string
+	emitTimeout        time.Duration
+	loop               loop.Loop
 }
 
 // newCell create a new cell around a behavior.
@@ -47,9 +49,9 @@ func newCell(env *environment, id string, behavior Behavior, options ...Option) 
 	c := &cell{
 		env:         env,
 		id:          id,
+		measuringID: identifier.Identifier("cells", env.id, "cell", id),
 		behavior:    behavior,
 		subscriberc: make(chan []*cell),
-		measuringID: identifier.Identifier("cells", env.id, "cell", id),
 	}
 	// Set options.
 	for _, option := range options {
@@ -66,6 +68,9 @@ func newCell(env *environment, id string, behavior Behavior, options ...Option) 
 	}
 	if c.recoveringDuration < defaultRecoveringDuration {
 		c.recoveringDuration = defaultRecoveringDuration
+	}
+	if c.emitTimeout < defaultEmitTimeout {
+		c.emitTimeout = defaultEmitTimeout
 	}
 	// Init behavior.
 	if err := behavior.Init(c); err != nil {
@@ -107,12 +112,22 @@ func (c *cell) EmitNew(topic string, payload interface{}, scene scene.Scene) err
 
 // ProcessEvent implements the Subscriber interface.
 func (c *cell) ProcessEvent(event Event) error {
-	select {
-	case c.eventc <- event:
-	case <-c.loop.IsStopping():
-		return errors.New(ErrInactive, errorMessages, c.id)
+	start := time.Now()
+	for {
+		select {
+		case c.eventc <- event:
+			return nil
+		case <-c.loop.IsStopping():
+			return errors.New(ErrInactive, errorMessages, c.id)
+		default:
+			time.Sleep(time.Second)
+			now := time.Now()
+			if now.Sub(start) > c.emitTimeout {
+				op := fmt.Sprintf("emitting %q to %q", event.Topic(), c.id)
+				return errors.New(ErrTimeout, errorMessages, op)
+			}
+		}
 	}
-	return nil
 }
 
 // ProcessNewEvent implements the Subscriber interface.

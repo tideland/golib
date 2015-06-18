@@ -45,9 +45,26 @@ func TestEvent(t *testing.T) {
 	assert.Nil(err)
 }
 
-// TestEnvironmentAddRemove tests adding, checking and
-// removing of cells.
-func TestEnvironmentStartStop(t *testing.T) {
+// TestEnvironment tests general environment methods.
+func TestEnvironment(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	envOne := cells.NewEnvironment("part", 1, "of", "env", "ONE")
+	defer envOne.Stop()
+
+	id := envOne.ID()
+	assert.Equal(id, "part:1:of:env:one")
+
+	envTwo := cells.NewEnvironment("environment TWO")
+	defer envTwo.Stop()
+
+	id = envTwo.ID()
+	assert.Equal(id, "environment-two")
+}
+
+// TestEnvironmentStartStopCell tests starting, checking and
+// stopping of cells.
+func TestEnvironmentStartStopCell(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	env := cells.NewEnvironment("start-stop")
@@ -265,7 +282,7 @@ func (t *testBehavior) ProcessEvent(event cells.Event) error {
 		}
 	case iterateTopic:
 		err := t.ctx.SubscribersDo(func(s cells.Subscriber) error {
-			return s.ProcessNewEvent("love", t.ctx.ID() + " loves " + s.ID(), event.Scene())
+			return s.ProcessNewEvent("love", t.ctx.ID()+" loves "+s.ID(), event.Scene())
 		})
 		if err != nil {
 			return err

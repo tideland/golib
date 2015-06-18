@@ -28,7 +28,7 @@ import (
 // TestRouterBehavior tests the router behavior.
 func TestRouterBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("router-behavior"))
+	env := cells.NewEnvironment("router-behavior")
 	defer env.Stop()
 
 	rf := func(emitterID, subscriberID string, event cells.Event) (bool, error) {

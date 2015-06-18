@@ -27,7 +27,7 @@ import (
 // TestFilterBehavior tests the filter behavior.
 func TestFilterBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("filter-behavior"))
+	env := cells.NewEnvironment("filter-behavior")
 	defer env.Stop()
 
 	ff := func(id string, event cells.Event) bool {

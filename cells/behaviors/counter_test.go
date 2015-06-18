@@ -27,7 +27,7 @@ import (
 // TestCounterBehavior tests the counting of events.
 func TestCounterBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("counter-behavior"))
+	env := cells.NewEnvironment("counter-behavior")
 	defer env.Stop()
 
 	cf := func(id string, event cells.Event) []string {

@@ -37,7 +37,7 @@ func TestMapperBehavior(t *testing.T) {
 		assert.True(ok)
 		assert.Equal(upperText, value)
 	}
-	env := cells.NewEnvironment(cells.ID("mapper-behavior"))
+	env := cells.NewEnvironment("mapper-behavior")
 	defer env.Stop()
 
 	mf := func(id string, event cells.Event) (cells.Event, error) {

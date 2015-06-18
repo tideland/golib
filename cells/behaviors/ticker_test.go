@@ -27,7 +27,7 @@ import (
 // TestTickerBehavior tests the ticker behavior.
 func TestTickerBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("ticker-behavior"))
+	env := cells.NewEnvironment("ticker-behavior")
 	defer env.Stop()
 
 	env.StartCell("ticker", behaviors.NewTickerBehavior(50*time.Millisecond))

@@ -27,7 +27,7 @@ import (
 // TestRoundRobinBehavior tests the round robin behavior.
 func TestRoundRobinBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("round-robin-behavior"))
+	env := cells.NewEnvironment("round-robin-behavior")
 	defer env.Stop()
 
 	env.StartCell("round-robin", behaviors.NewRoundRobinBehavior())

@@ -27,7 +27,7 @@ import (
 // TestCollectorBehavior tests the collector behavior.
 func TestCollectorBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("collector-behavior"))
+	env := cells.NewEnvironment("collector-behavior")
 	defer env.Stop()
 
 	env.StartCell("collector", behaviors.NewCollectorBehavior(10))

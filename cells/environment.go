@@ -28,18 +28,21 @@ import (
 
 // Environment implements the Environment interface.
 type environment struct {
-	id         string
-	cells      *registry
+	id    string
+	cells *registry
 }
 
 // NewEnvironment creates a new environment.
-func NewEnvironment(id string) Environment {
-	if id == "" {
+func NewEnvironment(idParts ...interface{}) Environment {
+	var id string
+	if len(idParts) == 0 {
 		id = identifier.NewUUID().String()
+	} else {
+		id = identifier.Identifier(idParts...)
 	}
 	env := &environment{
-		id:         id,
-		cells:      newRegistry(),
+		id:    id,
+		cells: newRegistry(),
 	}
 	runtime.SetFinalizer(env, (*environment).Stop)
 	logger.Infof("cells environment %q started", env.ID())
@@ -120,7 +123,7 @@ func (env *environment) Request(
 		}
 		return response, nil
 	case <-time.After(timeout):
-		op := fmt.Sprintf("request %q to %q", topic, id)
+		op := fmt.Sprintf("requesting %q from %q", topic, id)
 		return nil, errors.New(ErrTimeout, errorMessages, op)
 	}
 }

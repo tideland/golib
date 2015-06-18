@@ -27,7 +27,7 @@ import (
 // TestBroadcasterBehavior tests the broadcast behavior.
 func TestBroadcasterBehavior(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment(cells.ID("broadcast-behavior"))
+	env := cells.NewEnvironment("broadcast-behavior")
 	defer env.Stop()
 
 	env.StartCell("broadcast", behaviors.NewBroadcasterBehavior())

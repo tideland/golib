@@ -49,7 +49,7 @@ var errorMessages = map[int]string{
 	ErrNoRequest:            "cannot respond, event is no request",
 	ErrInactive:             "cell %q is inactive",
 	ErrStopping:             "%s is stopping",
-	ErrTimeout:              "operation needed too long with %v",
+	ErrTimeout:              "needed too long for %v",
 	ErrMissingScene:         "missing scene for request",
 	ErrInvalidResponseEvent: "event not valid for a response: %v",
 	ErrInvalidResponse:      "request returned invalid response: %v",

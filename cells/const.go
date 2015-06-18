@@ -1,4 +1,4 @@
-// Tideland Go Library- Cells - Constants
+// Tideland Go Library - Cells - Constants
 //
 // Copyright (C) 2010-2015 Frank Mueller / Oldenburg / Germany
 //
@@ -49,6 +49,11 @@ const (
 	// control the default recovering frequency.
 	defaultRecoveringNumber   = 1
 	defaultRecoveringDuration = time.Second
+
+	// defaultEmitTimeout is the maximum time to emit an
+	// event into a cells event buffer before a timeout
+	// error is returned to the emitter.
+	defaultEmitTimeout = 5 * time.Second
 )
 
 // EOF

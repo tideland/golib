@@ -15,11 +15,16 @@
 //
 // New environments are created with
 //
-//     env := cells.NewEnvironment()
+//     env := cells.NewEnvironment(identifier)
 //
 // and cells are added with
 //
 //    env.StartCell("foo", NewFooBehavior())
+//
+// or options like
+//
+//    env.StartCell("foo", NewFooBehavior(),
+//        cells.EventBufferSize(1024), cells.EmitTimeout(time.Minute))
 //
 // Cells then can be subscribed with
 //

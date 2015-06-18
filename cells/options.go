@@ -51,4 +51,17 @@ func CellRecoveryFrequency(number int, duration time.Duration) Option {
 	}
 }
 
+// EmitTimeout is the maximum time to emit an event into
+// a cells event buffer before a timeout error is returned
+// to the emitter.
+func EmitTimeout(timeout time.Duration) Option {
+	return func(c *cell) error {
+		if timeout < defaultEmitTimeout {
+			timeout = defaultEmitTimeout
+		}
+		c.emitTimeout = timeout
+		return nil
+	}
+}
+
 // EOF
