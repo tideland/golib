@@ -85,7 +85,7 @@ func (r *registry) stop() error {
 
 // startCell starts and adds a new cell to the registry if the
 // ID does not already exist.
-func (r *registry) startCell(env *environment, id string, behavior Behavior, options ...Option) error {
+func (r *registry) startCell(env *environment, id string, behavior Behavior) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	// Check if the ID already exists.
@@ -93,7 +93,7 @@ func (r *registry) startCell(env *environment, id string, behavior Behavior, opt
 		return errors.New(ErrDuplicateID, errorMessages, id)
 	}
 	// Create and add celler.
-	c, err := newCell(env, id, behavior, options...)
+	c, err := newCell(env, id, behavior)
 	if err != nil {
 		return err
 	}

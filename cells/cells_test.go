@@ -89,6 +89,81 @@ func TestEnvironmentStartStopCell(t *testing.T) {
 	assert.False(hasBar)
 }
 
+// TestBehaviorEventBufferSize tests the setting of
+// the event buffer size.
+func TestBehaviorEventBufferSize(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment("event-buffer")
+	defer env.Stop()
+
+	err := env.StartCell("negative", newTestEventBufferBehavior(-8))
+	assert.Nil(err)
+	ci := cells.InspectCell(env, "negative")
+	assert.Equal(ci.EventBufferSize(), cells.MinEventBufferSize)
+
+	err = env.StartCell("low", newTestEventBufferBehavior(1))
+	assert.Nil(err)
+	ci = cells.InspectCell(env, "low")
+	assert.Equal(ci.EventBufferSize(), cells.MinEventBufferSize)
+
+	err = env.StartCell("high", newTestEventBufferBehavior(2*cells.MinEventBufferSize))
+	assert.Nil(err)
+	ci = cells.InspectCell(env, "high")
+	assert.Equal(ci.EventBufferSize(), 2*cells.MinEventBufferSize)
+}
+
+// TestBehaviorRecoveringFrequency tests the setting of
+// the recovering frequency.
+func TestBehaviorRecoveringFrequency(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment("recovering-frequency")
+	defer env.Stop()
+
+	err := env.StartCell("negative", newTestRecoveringFrequencyBehavior(-1, time.Second))
+	assert.Nil(err)
+	ci := cells.InspectCell(env, "negative")
+	assert.Equal(ci.RecoveringNumber(), cells.MinRecoveringNumber)
+	assert.Equal(ci.RecoveringDuration(), cells.MinRecoveringDuration)
+
+	err = env.StartCell("low", newTestRecoveringFrequencyBehavior(10, time.Millisecond))
+	assert.Nil(err)
+	ci = cells.InspectCell(env, "low")
+	assert.Equal(ci.RecoveringNumber(), cells.MinRecoveringNumber)
+	assert.Equal(ci.RecoveringDuration(), cells.MinRecoveringDuration)
+
+	err = env.StartCell("high", newTestRecoveringFrequencyBehavior(12, time.Minute))
+	assert.Nil(err)
+	ci = cells.InspectCell(env, "high")
+	assert.Equal(ci.RecoveringNumber(), 12)
+	assert.Equal(ci.RecoveringDuration(), time.Minute)
+}
+
+// TestBehaviorEmitTimeout tests the setting of
+// the emit timeout.
+func TestBehaviorEmitTimeout(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment("emit-timeout")
+	defer env.Stop()
+
+	err := env.StartCell("low", newTestEmitTimeoutBehavior(time.Millisecond))
+	assert.Nil(err)
+	ci := cells.InspectCell(env, "low")
+	assert.Equal(ci.EmitTimeout(), cells.MinEmitTimeout)
+
+	err = env.StartCell("correct", newTestEmitTimeoutBehavior(10*time.Second))
+	assert.Nil(err)
+	ci = cells.InspectCell(env, "correct")
+	assert.Equal(ci.EmitTimeout(), 10*time.Second)
+
+	err = env.StartCell("high", newTestEmitTimeoutBehavior(2*cells.MaxEmitTimeout))
+	assert.Nil(err)
+	ci = cells.InspectCell(env, "high")
+	assert.Equal(ci.EmitTimeout(), cells.MaxEmitTimeout)
+}
+
 // TestEnvironmentSubscribeUnsubscribe tests subscribing,
 // checking and unsubscribing of cells.
 func TestEnvironmentSubscribeUnsubscribe(t *testing.T) {
@@ -242,47 +317,49 @@ const (
 )
 
 // testBehavior implements a simple behavior used in the tests.
+// It collects and re-emits all events, returns them with the
+// topic "processed" and delets all collected with the
+// topic "reset".
 type testBehavior struct {
 	ctx         cells.Context
 	processed   []string
 	recoverings int
 }
 
-// newTestBehavior creates a behavior for testing. It collects and
-// re-emits all events, returns them with the topic "processed" and
-// delets all collected with the topic "reset".
-func newTestBehavior() cells.Behavior {
+var _ cells.Behavior = &testBehavior{}
+
+func newTestBehavior() *testBehavior {
 	return &testBehavior{nil, []string{}, 0}
 }
 
-func (t *testBehavior) Init(ctx cells.Context) error {
-	t.ctx = ctx
+func (b *testBehavior) Init(ctx cells.Context) error {
+	b.ctx = ctx
 	return nil
 }
 
-func (t *testBehavior) Terminate() error {
+func (b *testBehavior) Terminate() error {
 	return nil
 }
 
-func (t *testBehavior) ProcessEvent(event cells.Event) error {
+func (b *testBehavior) ProcessEvent(event cells.Event) error {
 	switch event.Topic() {
 	case cells.ProcessedTopic:
-		processed := make([]string, len(t.processed))
-		copy(processed, t.processed)
+		processed := make([]string, len(b.processed))
+		copy(processed, b.processed)
 		err := event.Respond(processed)
 		if err != nil {
 			return err
 		}
 	case cells.ResetTopic:
-		t.processed = []string{}
+		b.processed = []string{}
 	case cells.PingTopic:
 		err := event.Respond(cells.PongResponse)
 		if err != nil {
 			return err
 		}
 	case iterateTopic:
-		err := t.ctx.SubscribersDo(func(s cells.Subscriber) error {
-			return s.ProcessNewEvent("love", t.ctx.ID()+" loves "+s.ID(), event.Scene())
+		err := b.ctx.SubscribersDo(func(s cells.Subscriber) error {
+			return s.ProcessNewEvent("love", b.ctx.ID()+" loves "+s.ID(), event.Scene())
 		})
 		if err != nil {
 			return err
@@ -291,7 +368,7 @@ func (t *testBehavior) ProcessEvent(event cells.Event) error {
 		panic("Ouch!")
 	case subscribersTopic:
 		var ids []string
-		t.ctx.SubscribersDo(func(s cells.Subscriber) error {
+		b.ctx.SubscribersDo(func(s cells.Subscriber) error {
 			ids = append(ids, s.ID())
 			return nil
 		})
@@ -300,18 +377,83 @@ func (t *testBehavior) ProcessEvent(event cells.Event) error {
 			return err
 		}
 	default:
-		t.processed = append(t.processed, fmt.Sprintf("%v", event))
-		t.ctx.Emit(event)
+		b.processed = append(b.processed, fmt.Sprintf("%v", event))
+		b.ctx.Emit(event)
 	}
 	return nil
 }
 
-func (t *testBehavior) Recover(r interface{}) error {
-	t.recoverings++
-	if t.recoverings > 5 {
-		return cells.NewCannotRecoverError(t.ctx.ID(), r)
+func (b *testBehavior) Recover(r interface{}) error {
+	b.recoverings++
+	if b.recoverings > 5 {
+		return cells.NewCannotRecoverError(b.ctx.ID(), r)
 	}
 	return nil
+}
+
+// testEventBufferBehavior allows testing the setting
+// of the event buffer size.
+type testEventBufferBehavior struct {
+	*testBehavior
+
+	size int
+}
+
+var _ cells.BehaviorEventBufferSize = &testEventBufferBehavior{}
+
+func newTestEventBufferBehavior(size int) cells.Behavior {
+	return &testEventBufferBehavior{
+		testBehavior: newTestBehavior(),
+		size:         size,
+	}
+}
+
+func (b *testEventBufferBehavior) EventBufferSize() int {
+	return b.size
+}
+
+// testRecoveringFrequencyBehavior allows testing the setting
+// of the recovering frequency.
+type testRecoveringFrequencyBehavior struct {
+	*testBehavior
+
+	number   int
+	duration time.Duration
+}
+
+var _ cells.BehaviorRecoveringFrequency = &testRecoveringFrequencyBehavior{}
+
+func newTestRecoveringFrequencyBehavior(number int, duration time.Duration) cells.Behavior {
+	return &testRecoveringFrequencyBehavior{
+		testBehavior: newTestBehavior(),
+		number:       number,
+		duration:     duration,
+	}
+}
+
+func (b *testRecoveringFrequencyBehavior) RecoveringFrequency() (int, time.Duration) {
+	return b.number, b.duration
+}
+
+// testEmitTimeoutBehavior allows testing the setting
+// of the event buffer size.
+type testEmitTimeoutBehavior struct {
+	*testBehavior
+
+	timeout time.Duration
+}
+
+var _ cells.BehaviorEmitTimeout = &testEmitTimeoutBehavior{}
+
+func newTestEmitTimeoutBehavior(timeout time.Duration) cells.Behavior {
+	return &testEmitTimeoutBehavior{
+		testBehavior: newTestBehavior(),
+		timeout:      timeout,
+	}
+}
+
+func (b *testEmitTimeoutBehavior) EmitTimeout() time.Duration {
+	return b.timeout
 }
 
 // EOF

@@ -41,19 +41,23 @@ const (
 	// Default timeout for requests to cells.
 	DefaultTimeout = 5 * time.Second
 
-	// defaultEventBufferSize is the minimum size of the
+	// minEventBufferSize is the minimum size of the
 	// event buffer per cell.
-	defaultEventBufferSize = 64
+	minEventBufferSize = 16
 
-	// defaultRecoveringNumber and defaultRecoveringDuration
+	// minRecoveringNumber and minRecoveringDuration
 	// control the default recovering frequency.
-	defaultRecoveringNumber   = 1
-	defaultRecoveringDuration = time.Second
+	minRecoveringNumber   = 1
+	minRecoveringDuration = time.Second
 
-	// defaultEmitTimeout is the maximum time to emit an
+	// minEmitTimeout is the minimum allowed timeout
+	// for event emitting (see below).
+	minEmitTimeout = time.Second
+
+	// maxEmitTimeout is the maximum time to emit an
 	// event into a cells event buffer before a timeout
 	// error is returned to the emitter.
-	defaultEmitTimeout = 5 * time.Second
+	maxEmitTimeout = 30 * time.Second
 )
 
 // EOF

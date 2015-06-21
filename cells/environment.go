@@ -55,8 +55,8 @@ func (env *environment) ID() string {
 }
 
 // StartCell is specified on the Environment interface.
-func (env *environment) StartCell(id string, behavior Behavior, options ...Option) error {
-	return env.cells.startCell(env, id, behavior, options...)
+func (env *environment) StartCell(id string, behavior Behavior) error {
+	return env.cells.startCell(env, id, behavior)
 }
 
 // StopCell is specified on the Environment interface.

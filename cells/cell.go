@@ -43,7 +43,7 @@ type cell struct {
 }
 
 // newCell create a new cell around a behavior.
-func newCell(env *environment, id string, behavior Behavior, options ...Option) (*cell, error) {
+func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 	logger.Infof("starting cell %q", id)
 	// Init cell runtime.
 	c := &cell{
@@ -53,24 +53,39 @@ func newCell(env *environment, id string, behavior Behavior, options ...Option) 
 		behavior:    behavior,
 		subscriberc: make(chan []*cell),
 	}
-	// Set options.
-	for _, option := range options {
-		if err := option(c); err != nil {
-			return nil, err
+	// Set configuration.
+	if bebs, ok := behavior.(BehaviorEventBufferSize); ok {
+		size := bebs.EventBufferSize()
+		if size < minEventBufferSize {
+			size = minEventBufferSize
 		}
+		c.eventc = make(chan Event, size)
+	} else {
+		c.eventc = make(chan Event, minEventBufferSize)
 	}
-	// Validate settings.
-	if c.eventc == nil {
-		c.eventc = make(chan Event, defaultEventBufferSize)
+	if brf, ok := behavior.(BehaviorRecoveringFrequency); ok {
+		number, duration := brf.RecoveringFrequency()
+		if duration.Seconds() / float64(number) < 1.0 {
+			number = minRecoveringNumber
+			duration = minRecoveringDuration
+		}
+		c.recoveringNumber = number
+		c.recoveringDuration = duration
+	} else {
+		c.recoveringNumber = minRecoveringNumber
+		c.recoveringDuration = minRecoveringDuration
 	}
-	if c.recoveringNumber < defaultRecoveringNumber {
-		c.recoveringNumber = defaultRecoveringNumber
-	}
-	if c.recoveringDuration < defaultRecoveringDuration {
-		c.recoveringDuration = defaultRecoveringDuration
-	}
-	if c.emitTimeout < defaultEmitTimeout {
-		c.emitTimeout = defaultEmitTimeout
+	if bet, ok := behavior.(BehaviorEmitTimeout); ok {
+		timeout := bet.EmitTimeout()
+		switch {
+		case timeout < minEmitTimeout:
+			timeout = minEmitTimeout
+		case timeout > maxEmitTimeout:
+			timeout = maxEmitTimeout
+		}
+		c.emitTimeout = timeout
+	} else {
+		c.emitTimeout = maxEmitTimeout
 	}
 	// Init behavior.
 	if err := behavior.Init(c); err != nil {

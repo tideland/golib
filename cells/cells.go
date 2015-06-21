@@ -28,7 +28,7 @@ type Environment interface {
 	ID() string
 
 	// StartCell starts a new cell with a given ID and its behavior.
-	StartCell(id string, behavior Behavior, options ...Option) error
+	StartCell(id string, behavior Behavior) error
 
 	// StopCell stops and removes the cell with the given ID.
 	StopCell(id string) error
@@ -87,6 +87,26 @@ type Behavior interface {
 	// a valid state. If it's not possible the implementation has to return
 	// an error documenting the reason.
 	Recover(r interface{}) error
+}
+
+// BehaviorEventBufferSize is an additional optional interface for a behavior to
+// set the size of the event buffer (will never be below 16).
+type BehaviorEventBufferSize interface {
+	EventBufferSize() int
+}
+
+// BehaviorRecoveringFrequency is an additional optional interface for a behavior to
+// set the allowed frequency for recoverings by returning the according number and
+// duration (will never below once per second).
+type BehaviorRecoveringFrequency interface {
+	RecoveringFrequency() (int, time.Duration)
+}
+
+// BehaviorEmitTimeout is an additional optional interface for a behavior to
+// set the maximum time an emitter is waiting for a receiving cell to accept the
+// emitted event (will never been higher than seconds).
+type BehaviorEmitTimeout interface {
+	EmitTimeout() time.Duration
 }
 
 //--------------------
