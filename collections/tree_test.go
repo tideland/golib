@@ -1,4 +1,4 @@
-// Tideland Go Library - Collections - Node - Unit Tests
+// Tideland Go Library - Collections - Tree - Unit Tests
 //
 // Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
 //
