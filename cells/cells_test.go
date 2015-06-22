@@ -399,7 +399,7 @@ type testEventBufferBehavior struct {
 	size int
 }
 
-var _ cells.BehaviorEventBufferSize = &testEventBufferBehavior{}
+var _ cells.BehaviorEventBufferSize = (*testEventBufferBehavior)(nil)
 
 func newTestEventBufferBehavior(size int) cells.Behavior {
 	return &testEventBufferBehavior{
@@ -421,7 +421,7 @@ type testRecoveringFrequencyBehavior struct {
 	duration time.Duration
 }
 
-var _ cells.BehaviorRecoveringFrequency = &testRecoveringFrequencyBehavior{}
+var _ cells.BehaviorRecoveringFrequency = (*testRecoveringFrequencyBehavior)(nil)
 
 func newTestRecoveringFrequencyBehavior(number int, duration time.Duration) cells.Behavior {
 	return &testRecoveringFrequencyBehavior{
@@ -443,7 +443,7 @@ type testEmitTimeoutBehavior struct {
 	timeout time.Duration
 }
 
-var _ cells.BehaviorEmitTimeout = &testEmitTimeoutBehavior{}
+var _ cells.BehaviorEmitTimeout = (*testEmitTimeoutBehavior)(nil)
 
 func newTestEmitTimeoutBehavior(timeout time.Duration) cells.Behavior {
 	return &testEmitTimeoutBehavior{
