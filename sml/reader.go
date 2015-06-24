@@ -117,7 +117,7 @@ func (mr *mlReader) readTag() (string, int, error) {
 		case rc == rcSpace || rc == rcClose:
 			return buf.String(), rc, nil
 		default:
-			msg := fmt.Sprintf("invalid tag run at position %d", mr.index)
+			msg := fmt.Sprintf("invalid tag character at position %d", mr.index)
 			return "", 0, errors.New(ErrReader, errorMessages, msg)
 		}
 	}
@@ -166,7 +166,7 @@ func (mr *mlReader) readBracedContent() error {
 	case rc == rcHash:
 		return mr.readCommentNode()
 	}
-	msg := fmt.Sprintf("invalid rune after opening at index %d", mr.index)
+	msg := fmt.Sprintf("invalid character after opening at index %d", mr.index)
 	return errors.New(ErrReader, errorMessages, msg)
 }
 
@@ -250,7 +250,7 @@ func (mr *mlReader) readTextNode() error {
 			case rc == rcOpen || rc == rcClose || rc == rcEscape:
 				buf.WriteRune(r)
 			default:
-				msg := fmt.Sprintf("invalid rune after escaping at index %d", mr.index)
+				msg := fmt.Sprintf("invalid character after escaping at index %d", mr.index)
 				return errors.New(ErrReader, errorMessages, msg)
 			}
 		default:

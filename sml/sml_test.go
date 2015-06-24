@@ -119,7 +119,7 @@ func TestNegativeReading(t *testing.T) {
 	text := "{Foo {bar:1 Yadda {test} {} 1} {bar:2 Yadda 2}}"
 	builder := sml.NewNodeBuilder()
 	err := sml.ReadSML(strings.NewReader(text), builder)
-	assert.ErrorMatch(err, `\[SML:.*\] cannot read SML document: invalid rune after opening at index .*`)
+	assert.ErrorMatch(err, `.* cannot read SML document: invalid character after opening at index .*`)
 }
 
 // Test reading a SML document and write it as XML.
