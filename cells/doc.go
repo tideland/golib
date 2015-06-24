@@ -21,11 +21,6 @@
 //
 //    env.StartCell("foo", NewFooBehavior())
 //
-// or options like
-//
-//    env.StartCell("foo", NewFooBehavior(),
-//        cells.EventBufferSize(1024), cells.EmitTimeout(time.Minute))
-//
 // Cells then can be subscribed with
 //
 //    env.Subscribe("foo", "bar")
@@ -82,7 +77,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(4, 1, 0)
+	return version.New(4, 1, 1)
 }
 
 // EOF
