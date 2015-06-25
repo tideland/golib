@@ -22,15 +22,30 @@ import (
 const (
 	ErrIllegalSourceFormat = iota + 1
 	ErrIllegalConfigSource
-	ErrInvalidConfigurationPath
+	ErrInvalidPath
 	ErrInvalidFormat
 )
 
 var errorMessages = errors.Messages{
-	ErrIllegalSourceFormat:      "illegal source format",
-	ErrIllegalConfigSource:      "illegal source for configuration: %v",
-	ErrInvalidConfigurationPath: "invalid configuration path %q",
-	ErrInvalidFormat:            "invalid value format of %q",
+	ErrIllegalSourceFormat: "illegal source format",
+	ErrIllegalConfigSource: "illegal source for configuration: %v",
+	ErrInvalidPath:         "invalid configuration path %q",
+	ErrInvalidFormat:       "invalid value format of %q",
+}
+
+//--------------------
+// ERROR CHECKING
+//--------------------
+
+// IsInvalidPathError checks if a path cannot be found.
+func IsInvalidPathError(err error) bool {
+	return errors.IsError(err, ErrInvalidPath)
+}
+
+// IsInvalidFormatError checks if a value hasn't the
+// expected format.
+func IsInvalidFormatError(err error) bool {
+	return errors.IsError(err, ErrInvalidFormat)
 }
 
 // EOF

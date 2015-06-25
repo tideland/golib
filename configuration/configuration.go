@@ -15,6 +15,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tideland/golib/collections"
 	"github.com/tideland/golib/errors"
@@ -43,6 +44,13 @@ type Configuration interface {
 
 	// GetFloat64 returns the float value at the given path.
 	GetFloat64(path ...string) (float64, error)
+
+	// GetTime returns the time value at the given path. It has
+	// to be written in RfC 3339 format.
+	GetTime(path ...string) (time.Time, error)
+
+	// GetDuration returns the duration value at the given path.
+	GetDuration(path ...string) (time.Duration, error)
 }
 
 // Read reads the SML source of the configuration from a
@@ -75,7 +83,7 @@ func (c *configuration) List(path ...string) ([]string, error) {
 	path = fullPath(path)
 	kvs, err := c.values.At(path...).List()
 	if err != nil {
-		return nil, errors.New(ErrInvalidConfigurationPath, errorMessages, pathToString(path))
+		return nil, errors.New(ErrInvalidPath, errorMessages, pathToString(path))
 	}
 	var ks []string
 	for _, kv := range kvs {
@@ -89,7 +97,7 @@ func (c *configuration) Get(path ...string) (string, error) {
 	path = fullPath(path)
 	value, err := c.values.At(path...).Value()
 	if err != nil {
-		return "", errors.New(ErrInvalidConfigurationPath, errorMessages, pathToString(path))
+		return "", errors.New(ErrInvalidPath, errorMessages, pathToString(path))
 	}
 	return value, nil
 }
@@ -129,6 +137,32 @@ func (c *configuration) GetFloat64(path ...string) (float64, error) {
 	value, err := strconv.ParseFloat(raw, 64)
 	if err != nil {
 		return 0.0, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
+	}
+	return value, nil
+}
+
+// GetTime implements the Configuration interface.
+func (c *configuration) GetTime(path ...string) (time.Time, error) {
+	raw, err := c.Get(path...)
+	if err != nil {
+		return time.Time{}, err
+	}
+	value, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return value, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
+	}
+	return value, nil
+}
+
+// GetDuration implements the Configuration interface.
+func (c *configuration) GetDuration(path ...string) (time.Duration, error) {
+	raw, err := c.Get(path...)
+	if err != nil {
+		return time.Duration(0), err
+	}
+	value, err := time.ParseDuration(raw)
+	if err != nil {
+		return value, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
 	}
 	return value, nil
 }

@@ -14,6 +14,7 @@ package configuration_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/configuration"
@@ -83,10 +84,12 @@ func TestGetSuccess(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	source := `{config
-	{a Hello}
+	{a  Hello}
 	{b true}
 	{c -1}
 	{d     47.11     }
+	{e 2015-06-25T23:45:00+02:00}
+	{f 2h15m30s}
 	{sub
 		{a
 			World}
@@ -107,6 +110,14 @@ func TestGetSuccess(t *testing.T) {
 	vd, err := config.GetFloat64("d")
 	assert.Nil(err)
 	assert.Equal(vd, 47.11)
+	vtim, err := config.GetTime("e")
+	assert.Nil(err)
+	loc, err := time.LoadLocation("CET")
+	assert.Nil(err)
+	assert.Equal(vtim.String(), time.Date(2015, time.June, 25, 23, 45, 00, 0, loc).String())
+	vdur, err := config.GetDuration("f")
+	assert.Nil(err)
+	assert.Equal(vdur, 8130 * time.Second)
 
 	vs, err = config.Get("sub", "a")
 	assert.Nil(err)
