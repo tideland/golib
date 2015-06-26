@@ -2,6 +2,10 @@
 
 ## 2015-06-25
 
+- Added new scene behavior to cells
+
+## 2015-06-25
+
 - Done migration into new library
 - Added new configuration package
 

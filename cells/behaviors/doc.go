@@ -30,6 +30,8 @@
 // each event and returning a new mapped one;
 // - the round robin behavior distributes each received event round robin
 // to its subscribers;
+// - the scene behavior stores a received payload at the event topic as
+// key in the event scene, useful in testing scenarios;
 // - the ticker behavior emits a tick event in a defined interval to its
 // subscribers.
 package behaviors
@@ -48,7 +50,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(4, 0, 0)
+	return version.New(4, 1, 0)
 }
 
 // EOF
