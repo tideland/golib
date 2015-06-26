@@ -45,6 +45,56 @@ func TestEvent(t *testing.T) {
 	assert.Nil(err)
 }
 
+// TestPayload tests the payload creation and access.
+func TestPayload(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	now := time.Now()
+	dur := 30 * time.Second
+	pvs := cells.PayloadValues{
+		"bool":     true,
+		"int":      42,
+		"float64":  47.11,
+		"string":   "hello, world",
+		"time":     now,
+		"duration": dur,
+	}
+	pl := cells.NewPayload(pvs)
+
+	b, ok := pl.GetBool("bool")
+	assert.True(ok)
+	assert.True(b)
+	i, ok := pl.GetInt("int")
+	assert.True(ok)
+	assert.Equal(i, 42)
+	f, ok := pl.GetFloat64("float64")
+	assert.True(ok)
+	assert.Equal(f, 47.11)
+	s, ok := pl.GetString("string")
+	assert.True(ok)
+	assert.Equal(s, "hello, world")
+	tt, ok := pl.GetTime("time")
+	assert.True(ok)
+	assert.Equal(tt, now)
+	td, ok := pl.GetDuration("duration")
+	assert.True(ok)
+	assert.Equal(td, dur)
+
+	pln := pl.Apply("foo")
+	s, ok = pln.GetString(cells.DefaultPayload)
+	assert.True(ok)
+	assert.Equal(s, "foo")
+	assert.Length(pln, 7)
+
+	keys := pln.Keys()
+	assert.Contents("string", keys)
+	assert.Contents("int", keys)
+
+	plab := cells.NewPayload(map[string]interface{}{"a": 1, "b": 2})
+	plnab := pln.Apply(plab)
+	assert.Length(plnab, 9)
+}
+
 // TestEnvironment tests general environment methods.
 func TestEnvironment(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
