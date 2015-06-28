@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tideland/golib/sort"
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/sort"
 )
 
 //--------------------

@@ -51,9 +51,9 @@ func TestRingBufferPop(t *testing.T) {
 	assert.Length(rb, 4)
 	assert.Equal(rb.String(), "[1]->[alpha]->[<nil>]->[true]")
 
-	tests := []struct{
-		value interface{}
-		ok bool
+	tests := []struct {
+		value  interface{}
+		ok     bool
 		length int
 	}{
 		{1, true, 3},

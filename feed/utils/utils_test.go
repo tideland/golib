@@ -14,8 +14,8 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/tideland/golib/feed/utils"
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/feed/utils"
 )
 
 //--------------------

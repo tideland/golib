@@ -30,6 +30,9 @@ type nodeContent interface {
 
 	// value returns the value itself.
 	value() interface{}
+
+	// deepCopy creates a copy of the node content.
+	deepCopy() nodeContent
 }
 
 // justValue has same key and value.
@@ -45,6 +48,11 @@ func (v justValue) key() interface{} {
 // value implements the nodeContent interface.
 func (v justValue) value() interface{} {
 	return v.v
+}
+
+// deepCopy implements the nodeContent interface.
+func (v justValue) deepCopy() nodeContent {
+	return justValue{v.v}
 }
 
 // String implements the Stringer interface.
@@ -66,6 +74,11 @@ func (v keyValue) key() interface{} {
 // value implements the nodeContent interface.
 func (v keyValue) value() interface{} {
 	return v.v
+}
+
+// deepCopy implements the nodeContent interface.
+func (v keyValue) deepCopy() nodeContent {
+	return keyValue{v.k, v.v}
 }
 
 // String implements the Stringer interface.
@@ -94,6 +107,15 @@ func newNodeContainer(c nodeContent, duplicates bool) *nodeContainer {
 	}
 	nc.root.container = nc
 	return nc
+}
+
+// deepCopy creates a copy of the container.
+func (nc *nodeContainer) deepCopy() *nodeContainer {
+	cnc := &nodeContainer{
+		duplicates: nc.duplicates,
+	}
+	cnc.root = nc.root.deepCopy(cnc, nil)
+	return cnc
 }
 
 //--------------------
@@ -279,6 +301,20 @@ func (n *node) size() int {
 	return l
 }
 
+// deepCopy creates a copy of the node.
+func (n *node) deepCopy(c *nodeContainer, p *node) *node {
+	cn := &node{
+		container: c,
+		parent:    p,
+		content:   n.content.deepCopy(),
+		children:  make([]*node, len(n.children)),
+	}
+	for i, child := range n.children {
+		cn.children[i] = child.deepCopy(c, cn)
+	}
+	return cn
+}
+
 // String implements the Stringer interface.
 func (n *node) String() string {
 	out := fmt.Sprintf("[%v", n.content)
@@ -362,6 +398,13 @@ func (t *tree) DoAll(f func(v interface{}) error) error {
 // Len implements then Tree interface.
 func (t *tree) Len() int {
 	return t.container.root.size()
+}
+
+// Copy implements then Tree interface.
+func (t *tree) Copy() Tree {
+	return &tree{
+		container: t.container.deepCopy(),
+	}
 }
 
 // Deflate implements then Tree interface.
@@ -448,6 +491,13 @@ func (t *stringTree) Len() int {
 	return t.container.root.size()
 }
 
+// Copy implements then StringTree interface.
+func (t *stringTree) Copy() StringTree {
+	return &stringTree{
+		container: t.container.deepCopy(),
+	}
+}
+
 // Deflate implements then StringTree interface.
 func (t *stringTree) Deflate(v string) {
 	t.container.root = &node{
@@ -532,6 +582,13 @@ func (t *keyValueTree) Len() int {
 	return t.container.root.size()
 }
 
+// Copy implements then KeyValueTree interface.
+func (t *keyValueTree) Copy() KeyValueTree {
+	return &keyValueTree{
+		container: t.container.deepCopy(),
+	}
+}
+
 // Deflate implements then KeyValueTree interface.
 func (t *keyValueTree) Deflate(k string, v interface{}) {
 	t.container.root = &node{
@@ -553,15 +610,15 @@ type keyStringValueTree struct {
 	container *nodeContainer
 }
 
-// NewKeyValueTree creates a new key/value tree with or without
-// duplicate values for children.
+// NewKeyStringValueTree creates a new key/value tree with or without
+// duplicate values for children and strings as values.
 func NewKeyStringValueTree(k, v string, duplicates bool) KeyStringValueTree {
 	return &keyStringValueTree{
 		container: newNodeContainer(keyValue{k, v}, duplicates),
 	}
 }
 
-// At implements then KeyValueTree interface.
+// At implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) At(keys ...string) KeyStringValueChanger {
 	var path []nodeContent
 	for _, key := range keys {
@@ -571,7 +628,7 @@ func (t *keyStringValueTree) At(keys ...string) KeyStringValueChanger {
 	return &keyStringValueChanger{n, err}
 }
 
-// Create implements then KeyValueTree interface.
+// Create implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) Create(keys ...string) KeyStringValueChanger {
 	var path []nodeContent
 	for _, key := range keys {
@@ -581,7 +638,7 @@ func (t *keyStringValueTree) Create(keys ...string) KeyStringValueChanger {
 	return &keyStringValueChanger{n, err}
 }
 
-// FindFirst implements then KeyValueTree interface.
+// FindFirst implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) FindFirst(f func(k, v string) (bool, error)) KeyStringValueChanger {
 	n, err := t.container.root.findFirst(func(fn *node) (bool, error) {
 		return f(fn.content.key().(string), fn.content.value().(string))
@@ -589,7 +646,7 @@ func (t *keyStringValueTree) FindFirst(f func(k, v string) (bool, error)) KeyStr
 	return &keyStringValueChanger{n, err}
 }
 
-// FindFirst implements then KeyValueTree interface.
+// FindFirst implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) FindAll(f func(k, v string) (bool, error)) []KeyStringValueChanger {
 	ns, err := t.container.root.findAll(func(fn *node) (bool, error) {
 		return f(fn.content.key().(string), fn.content.value().(string))
@@ -604,19 +661,26 @@ func (t *keyStringValueTree) FindAll(f func(k, v string) (bool, error)) []KeyStr
 	return cs
 }
 
-// DoAll implements then KeyValueTree interface.
+// DoAll implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) DoAll(f func(k, v string) error) error {
 	return t.container.root.doAll(func(dn *node) error {
 		return f(dn.content.key().(string), dn.content.value().(string))
 	})
 }
 
-// Len implements then KeyValueTree interface.
+// Len implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) Len() int {
 	return t.container.root.size()
 }
 
-// Deflate implements then KeyValueTree interface.
+// Copy implements then KeyStringValueTree interface.
+func (t *keyStringValueTree) Copy() KeyStringValueTree {
+	return &keyStringValueTree{
+		container: t.container.deepCopy(),
+	}
+}
+
+// Deflate implements then KeyStringValueTree interface.
 func (t *keyStringValueTree) Deflate(k, v string) {
 	t.container.root = &node{
 		content: keyValue{k, v},

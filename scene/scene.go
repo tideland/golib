@@ -14,9 +14,9 @@ package scene
 import (
 	"time"
 
+	"github.com/tideland/golib/errors"
 	"github.com/tideland/golib/identifier"
 	"github.com/tideland/golib/loop"
-	"github.com/tideland/golib/errors"
 )
 
 //--------------------

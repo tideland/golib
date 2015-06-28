@@ -24,6 +24,7 @@ const (
 	ErrIllegalConfigSource
 	ErrInvalidPath
 	ErrInvalidFormat
+	ErrCannotApply
 )
 
 var errorMessages = errors.Messages{
@@ -31,6 +32,7 @@ var errorMessages = errors.Messages{
 	ErrIllegalConfigSource: "illegal source for configuration: %v",
 	ErrInvalidPath:         "invalid configuration path %q",
 	ErrInvalidFormat:       "invalid value format of %q",
+	ErrCannotApply:         "cannot apply values to configuration",
 }
 
 //--------------------

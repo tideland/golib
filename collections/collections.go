@@ -248,6 +248,9 @@ type Tree interface {
 	// Len returns the number of nodes of the tree.
 	Len() int
 
+	// Copy creates a copy of the tree.
+	Copy() Tree
+
 	// Deflate cleans the tree with a new root value.
 	Deflate(value interface{})
 }
@@ -281,6 +284,9 @@ type StringTree interface {
 
 	// Len returns the number of nodes of the tree.
 	Len() int
+
+	// Copy creates a copy of the tree.
+	Copy() StringTree
 
 	// Deflate cleans the tree with a new root value.
 	Deflate(value string)
@@ -316,6 +322,9 @@ type KeyValueTree interface {
 	// Len returns the number of nodes of the tree.
 	Len() int
 
+	// Copy creates a copy of the tree.
+	Copy() KeyValueTree
+
 	// Deflate cleans the tree with a new root value.
 	Deflate(key string, value interface{})
 }
@@ -350,6 +359,9 @@ type KeyStringValueTree interface {
 
 	// Len returns the number of nodes of the tree.
 	Len() int
+
+	// Copy creates a copy of the tree.
+	Copy() KeyStringValueTree
 
 	// Deflate cleans the tree with a new root value.
 	Deflate(key, value string)

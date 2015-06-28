@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2015-06-28
+
+- Changed configuration API to be more powerful
+  and convenient
+
 ## 2015-06-25
 
 - Added new scene behavior to cells

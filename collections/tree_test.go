@@ -187,6 +187,30 @@ func TestTreeDo(t *testing.T) {
 	assert.ErrorMatch(err, ".* cannot perform function on all nodes: ouch")
 }
 
+// TestTreeCopy tests the copy of a tree.
+func TestTreeCopy(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	tree := collections.NewTree("root", true)
+	err := tree.Create("root", "alpha").Add("a")
+	assert.Nil(err)
+	err = tree.Create("root", "beta").Add("b")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "one").Add("1")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "two").Add("2")
+	assert.Nil(err)
+
+	ctree := tree.Copy()
+	assert.Length(ctree, 10)
+	value, err := ctree.At("root", "alpha", "a").Value()
+	assert.Nil(err)
+	assert.Equal(value, "a")
+	value, err = ctree.At("root", "gamma", "two", "2").Value()
+	assert.Nil(err)
+	assert.Equal(value, "2")
+}
+
 //--------------------
 // TEST STRING TREE
 //--------------------
@@ -328,6 +352,30 @@ func TestStringTreeDo(t *testing.T) {
 	assert.ErrorMatch(err, ".* cannot perform function on all nodes: ouch")
 }
 
+// TestStringTreeCopy tests the copy of a string tree.
+func TestStringTreeCopy(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	tree := collections.NewStringTree("root", true)
+	err := tree.Create("root", "alpha").Add("a")
+	assert.Nil(err)
+	err = tree.Create("root", "beta").Add("b")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "one").Add("1")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "two").Add("2")
+	assert.Nil(err)
+
+	ctree := tree.Copy()
+	assert.Length(ctree, 10)
+	value, err := ctree.At("root", "alpha", "a").Value()
+	assert.Nil(err)
+	assert.Equal(value, "a")
+	value, err = ctree.At("root", "gamma", "two", "2").Value()
+	assert.Nil(err)
+	assert.Equal(value, "2")
+}
+
 //--------------------
 // TEST KEY/VALUE TREE
 //--------------------
@@ -467,6 +515,30 @@ func TestKeyValueTreeDo(t *testing.T) {
 		return errors.New("ouch")
 	})
 	assert.ErrorMatch(err, ".* cannot perform function on all nodes: ouch")
+}
+
+// TestKeyValueTreeCopy tests the copy of a key/value tree.
+func TestKeyValueTreeCopy(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	tree := collections.NewKeyValueTree("root", "0", true)
+	err := tree.Create("root", "alpha").Add("a", "1")
+	assert.Nil(err)
+	err = tree.Create("root", "beta").Add("b", "2")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "one").Add("1", "3.1")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "two").Add("2", "3.2")
+	assert.Nil(err)
+
+	ctree := tree.Copy()
+	assert.Length(ctree, 10)
+	value, err := ctree.At("root", "alpha", "a").Value()
+	assert.Nil(err)
+	assert.Equal(value, "1")
+	value, err = ctree.At("root", "gamma", "two", "2").Value()
+	assert.Nil(err)
+	assert.Equal(value, "3.2")
 }
 
 //--------------------
@@ -613,6 +685,30 @@ func TestKeyStringValueTreeDo(t *testing.T) {
 		return errors.New("ouch")
 	})
 	assert.ErrorMatch(err, ".* cannot perform function on all nodes: ouch")
+}
+
+// TestKeyStringValueTreeCopy tests the copy of a key/string value tree.
+func TestKeyStringValueTreeCopy(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	tree := collections.NewKeyStringValueTree("root", "0", true)
+	err := tree.Create("root", "alpha").Add("a", "1")
+	assert.Nil(err)
+	err = tree.Create("root", "beta").Add("b", "2")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "one").Add("1", "3.1")
+	assert.Nil(err)
+	err = tree.Create("root", "gamma", "two").Add("2", "3.2")
+	assert.Nil(err)
+
+	ctree := tree.Copy()
+	assert.Length(ctree, 10)
+	value, err := ctree.At("root", "alpha", "a").Value()
+	assert.Nil(err)
+	assert.Equal(value, "1")
+	value, err = ctree.At("root", "gamma", "two", "2").Value()
+	assert.Nil(err)
+	assert.Equal(value, "3.2")
 }
 
 //--------------------

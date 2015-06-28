@@ -14,8 +14,8 @@ package identifier_test
 import (
 	"testing"
 
-	"github.com/tideland/golib/identifier"
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/identifier"
 )
 
 //--------------------

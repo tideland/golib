@@ -23,7 +23,7 @@ import (
 // valueLink is one ring buffer element containing one
 // value and linking to the next element.
 type valueLink struct {
-	used bool
+	used  bool
 	value interface{}
 	next  *valueLink
 }
@@ -62,7 +62,7 @@ func (rb *ringBuffer) Push(values ...interface{}) {
 			continue
 		}
 		link := &valueLink{
-			used: true,
+			used:  true,
 			value: value,
 			next:  rb.start,
 		}
@@ -121,6 +121,5 @@ func (rb *ringBuffer) String() string {
 	}
 	return strings.Join(vs, "->")
 }
-
 
 // EOF

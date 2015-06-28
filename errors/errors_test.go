@@ -14,8 +14,8 @@ package errors_test
 import (
 	"testing"
 
-	"github.com/tideland/golib/errors"
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/errors"
 )
 
 //--------------------

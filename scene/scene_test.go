@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tideland/golib/scene"
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/scene"
 )
 
 //--------------------

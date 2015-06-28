@@ -65,7 +65,7 @@ func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 	}
 	if brf, ok := behavior.(BehaviorRecoveringFrequency); ok {
 		number, duration := brf.RecoveringFrequency()
-		if duration.Seconds() / float64(number) < 1.0 {
+		if duration.Seconds()/float64(number) < 1.0 {
 			number = minRecoveringNumber
 			duration = minRecoveringDuration
 		}

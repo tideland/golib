@@ -16,8 +16,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/logger"
 )
 
 //--------------------

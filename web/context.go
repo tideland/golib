@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tideland/golib/scene"
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/scene"
 )
 
 //--------------------
