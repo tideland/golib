@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-07-05
+
+- Made standard logger backend time format changeable
+
 ## 2015-06-28
 
 - Changed configuration API to be more powerful

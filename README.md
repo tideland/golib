@@ -41,6 +41,7 @@ I hope you like them. ;)
 - Alex Browne (https://github.com/albrow)
 - Benedikt Lang (https://github.com/blang)
 - Tim Heckman (https://github.com/theckman)
+- Pellaeon Lin (https://github.com/pellaeon)
 
 ## License
 

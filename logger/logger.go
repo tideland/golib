@@ -212,93 +212,72 @@ func SetLogger(l Logger) {
 	logBackend = l
 }
 
-// timeFormat controls how the timestamp of the standard logger is printed.
-const timeFormat = "2006-01-02 15:04:05 Z07:00"
+// defaultTimeFormat controls how the timestamp of the standard
+// logger is printed by default.
+const defaultTimeFormat = "2006-01-02 15:04:05 Z07:00"
 
 // StandardLogger is a simple logger writing to the given writer. Beside
 // the output it doesn't handle the levels differently.
 type StandardLogger struct {
-	mutex sync.Mutex
-	out   io.Writer
+	mutex      sync.Mutex
+	out        io.Writer
+	timeFormat string
 }
 
-// NewStandardLogger creates the standard logger.
+// NewTimeformatLogger creates a logger writing to the passed
+// output and with the time formatted with the passed time format.
+func NewTimeformatLogger(out io.Writer, timeFormat string) Logger {
+	return &StandardLogger{
+		out:        out,
+		timeFormat: timeFormat,
+	}
+}
+
+// NewStandardLogger creates the standard logger writing
+// to the passed output.
 func NewStandardLogger(out io.Writer) Logger {
-	return &StandardLogger{out: out}
+	return NewTimeformatLogger(out, defaultTimeFormat)
 }
 
 // Debug is specified on the Logger interface.
 func (sl *StandardLogger) Debug(info, msg string) {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-
-	io.WriteString(sl.out, time.Now().Format(timeFormat))
-	io.WriteString(sl.out, " [DEBUG] ")
-	io.WriteString(sl.out, info)
-	io.WriteString(sl.out, " ")
-	io.WriteString(sl.out, msg)
-	io.WriteString(sl.out, "\n")
+	sl.writeLog("DEBUG", info, msg)
 }
 
 // Info is specified on the Logger interface.
 func (sl *StandardLogger) Info(info, msg string) {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-
-	io.WriteString(sl.out, time.Now().Format(timeFormat))
-	io.WriteString(sl.out, " [INFO] ")
-	io.WriteString(sl.out, info)
-	io.WriteString(sl.out, " ")
-	io.WriteString(sl.out, msg)
-	io.WriteString(sl.out, "\n")
+	sl.writeLog("INFO", info, msg)
 }
 
 // Warning is specified on the Logger interface.
 func (sl *StandardLogger) Warning(info, msg string) {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-
-	io.WriteString(sl.out, time.Now().Format(timeFormat))
-	io.WriteString(sl.out, " [WARNING] ")
-	io.WriteString(sl.out, info)
-	io.WriteString(sl.out, " ")
-	io.WriteString(sl.out, msg)
-	io.WriteString(sl.out, "\n")
+	sl.writeLog("WARNING", info, msg)
 }
 
 // Error is specified on the Logger interface.
 func (sl *StandardLogger) Error(info, msg string) {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-
-	io.WriteString(sl.out, time.Now().Format(timeFormat))
-	io.WriteString(sl.out, " [ERROR] ")
-	io.WriteString(sl.out, info)
-	io.WriteString(sl.out, " ")
-	io.WriteString(sl.out, msg)
-	io.WriteString(sl.out, "\n")
+	sl.writeLog("ERROR", info, msg)
 }
 
 // Critical is specified on the Logger interface.
 func (sl *StandardLogger) Critical(info, msg string) {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-
-	io.WriteString(sl.out, time.Now().Format(timeFormat))
-	io.WriteString(sl.out, " [CRITICAL] ")
-	io.WriteString(sl.out, info)
-	io.WriteString(sl.out, " ")
-	io.WriteString(sl.out, msg)
-	io.WriteString(sl.out, "\n")
+	sl.writeLog("CRITICAL", info, msg)
 }
 
 // Fatal is specified on the Logger interface.
 func (sl *StandardLogger) Fatal(info, msg string) {
+	sl.writeLog("FATAL", info, msg)
+}
+
+// writeLog writes the concrete log output.
+func (sl *StandardLogger) writeLog(level, info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
 
-	io.WriteString(sl.out, time.Now().Format(timeFormat))
-	io.WriteString(sl.out, " [FATAL] ")
+	io.WriteString(sl.out, time.Now().Format(sl.timeFormat))
+	io.WriteString(sl.out, " [")
+	io.WriteString(sl.out, level)
+	io.WriteString(sl.out, "] ")
 	io.WriteString(sl.out, info)
 	io.WriteString(sl.out, " ")
 	io.WriteString(sl.out, msg)
