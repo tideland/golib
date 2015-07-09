@@ -12,7 +12,7 @@
 //
 // In the beginning of a test function a new assertion instance is created with:
 //
-// assert := testing.NewTestingAssertion(t, shallFail)
+// assert := audit.NewTestingAssertion(t, shallFail)
 //
 // Inside the test an assert looks like:
 //
@@ -22,6 +22,10 @@
 // Otherwise the failing is printed but the tests continue. Other functions
 // help with temporary directories, environment variables, and the generating
 // of test data.
+//
+// Additional helpers support in generating test data or work with the
+// environment, like temporary directories or environment variables, in
+// a safe and convenient way.
 package audit
 
 //--------------------
@@ -38,7 +42,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(4, 0, 0)
+	return version.New(4, 0, 1)
 }
 
 // EOF
