@@ -35,17 +35,17 @@ func TestRead(t *testing.T) {
 	source = "{something {gnagnagna}}"
 	config, err = configuration.Read(strings.NewReader(source))
 	assert.Nil(config)
-	assert.ErrorMatch(err, `*. illegal source for configuration: does not start with "config" node`)
+	assert.ErrorMatch(err, `*. illegal source format: .* node not found`)
 
 	source = "{config {gna 1}{gna 2}}"
 	config, err = configuration.Read(strings.NewReader(source))
 	assert.Nil(config)
-	assert.ErrorMatch(err, `*. illegal source for configuration: node has multiple values`)
+	assert.ErrorMatch(err, `*. illegal source format: .* cannot build node structure: node has multiple values`)
 
 	source = "{config {gna 1 {foo x} 2}}"
 	config, err = configuration.Read(strings.NewReader(source))
 	assert.Nil(config)
-	assert.ErrorMatch(err, `*. illegal source for configuration: node has multiple values`)
+	assert.ErrorMatch(err, `*. illegal source format: .* cannot build node structure: node has multiple values`)
 
 	source = "{config {foo/bar 1}{bar/foo 2}}"
 	config, err = configuration.Read(strings.NewReader(source))

@@ -83,7 +83,7 @@ func (v keyValue) deepCopy() nodeContent {
 
 // String implements the Stringer interface.
 func (v keyValue) String() string {
-	return fmt.Sprintf("%v = %v", v.k, v.v)
+	return fmt.Sprintf("%v = '%v'", v.k, v.v)
 }
 
 //--------------------

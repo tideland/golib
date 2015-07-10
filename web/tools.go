@@ -107,7 +107,7 @@ func (m *cookieSceneManager) backendLoop(l loop.Loop) error {
 	ticker := time.Tick(5 * time.Minute)
 	for {
 		select {
-		case <-m.loop.ShallStop():
+		case <-l.ShallStop():
 			return nil
 		case request := <-m.requestChan:
 			m.requestScene(request)

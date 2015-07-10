@@ -245,15 +245,19 @@ type Configuration interface {
 // Read reads the SML source of the configuration from a
 // reader, parses it, and returns the configuration instance.
 func Read(source io.Reader) (Configuration, error) {
-	builder := &configBuilder{}
+	builder := sml.NewKeyStringValueTreeBuilder()
 	err := sml.ReadSML(source, builder)
 	if err != nil {
-		if errors.IsError(err, ErrIllegalConfigSource) {
-			return nil, err
-		}
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	return &configuration{builder.values}, nil
+	tree, err := builder.Tree()
+	if err != nil {
+		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
+	}
+	if err := tree.At("config").Error(); err != nil {
+		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
+	}
+	return &configuration{tree}, nil
 }
 
 // ReadString reads the SML source of the configuration from a

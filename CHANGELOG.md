@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2015-07-10
+
+- Added `KeyStringValueTreeBuilder` to SML
+- Several minor fixes
+
 ## 2015-07-05
 
 - Made standard logger backend time format changeable

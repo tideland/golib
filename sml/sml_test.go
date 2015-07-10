@@ -25,6 +25,7 @@ import (
 // TESTS
 //--------------------
 
+// TestTagValidation checks if only correct tags are accepted.
 func TestTagValidation(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	tests := []struct {
@@ -62,7 +63,7 @@ func TestTagValidation(t *testing.T) {
 	}
 }
 
-// Test creating.
+// TestCreating checks the manual tree creation.
 func TestCreating(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	root := createNodeStructure(assert)
@@ -70,7 +71,7 @@ func TestCreating(t *testing.T) {
 	assert.NotEmpty(root, "Root tag is not empty.")
 }
 
-// Test SML writer processing.
+// TestWriterProcessing checks the writing of SML.
 func TestWriterProcessing(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	root := createNodeStructure(assert)
@@ -82,18 +83,18 @@ func TestWriterProcessing(t *testing.T) {
 	sml.WriteSML(root, ctxA)
 	sml.WriteSML(root, ctxB)
 
-	println("===== WITH INDENT =====")
-	println(bufA.String())
-	println("===== WITHOUT INDENT =====")
-	println(bufB.String())
-	println("===== DONE =====")
+	assert.Logf("===== WITH INDENT =====")
+	assert.Logf(bufA.String())
+	assert.Logf("===== WITHOUT INDENT =====")
+	assert.Logf(bufB.String())
+	assert.Logf("===== DONE =====")
 
 	assert.NotEmpty(bufA, "Buffer A must not be empty.")
 	assert.NotEmpty(bufB, "Buffer B must not be empty.")
 }
 
-// Test positive reading.
-func TestPositiveReading(t *testing.T) {
+// TestPositiveNodeReading checks the successful reading of nodes.
+func TestPositiveNodeReading(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	text := "Before!   {foo:main {bar:1:first Yadda ^{Test^} 1} {! Raw: }} { ! ^^^ !}  {inbetween}  {bar:2:last Yadda {Test ^^} 2}}   After!"
 	builder := sml.NewNodeBuilder()
@@ -108,13 +109,13 @@ func TestPositiveReading(t *testing.T) {
 	ctx := sml.NewWriterContext(sml.NewStandardSMLWriter(), buf, true, "    ")
 	sml.WriteSML(root, ctx)
 
-	println("===== PARSED SML =====")
-	println(buf.String())
-	println("===== DONE =====")
+	assert.Logf("===== PARSED SML =====")
+	assert.Logf(buf.String())
+	assert.Logf("===== DONE =====")
 }
 
-// Test negative reading.
-func TestNegativeReading(t *testing.T) {
+// TestNegativeNodeReading checks the failing reading of nodes.
+func TestNegativeNodeReading(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	text := "{Foo {bar:1 Yadda {test} {} 1} {bar:2 Yadda 2}}"
 	builder := sml.NewNodeBuilder()
@@ -122,7 +123,28 @@ func TestNegativeReading(t *testing.T) {
 	assert.ErrorMatch(err, `.* cannot read SML document: invalid character after opening at index .*`)
 }
 
-// Test reading a SML document and write it as XML.
+// TestPositiveTreeReading checks the successful reading of trees.
+func TestPositiveTreeReading(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	text := "{config {foo 1}{bar 2}{yadda {up down}{down up}}}"
+	builder := sml.NewKeyStringValueTreeBuilder()
+	err := sml.ReadSML(strings.NewReader(text), builder)
+	assert.Nil(err)
+	tree, err := builder.Tree()
+	assert.Nil(err)
+	assert.Logf("%v", tree)
+}
+
+// TestNegativeTreeReading checks the failing reading of trees.
+func TestNegativeTreeReading(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	text := "{foo {bar 1}{bar 2}}"
+	builder := sml.NewKeyStringValueTreeBuilder()
+	err := sml.ReadSML(strings.NewReader(text), builder)
+	assert.ErrorMatch(err, `.* node has multiple values`)
+}
+
+// TestSML2XML checks the conversion from SML to XML.
 func TestSML2XML(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	in := `{html
@@ -153,9 +175,9 @@ for foo := 0; foo < 42; foo++ {
 	ctx.Register("li", newLIWriter())
 	sml.WriteSML(root, ctx)
 
-	println("===== XML =====")
-	println(buf.String())
-	println("===== DONE =====")
+	assert.Logf("===== XML =====")
+	assert.Logf(buf.String())
+	assert.Logf("===== DONE =====")
 }
 
 //--------------------
