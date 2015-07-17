@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-07-17
+
+- Added `stringex` package
+
 ## 2015-07-10
 
 - Added `KeyStringValueTreeBuilder` to SML
