@@ -31,8 +31,8 @@ I hope you like them. ;)
 | Scroller       | Continuous Filtered Reading/Writing                | [![GoDoc](https://godoc.org/github.com/tideland/golib/scroller?status.svg)](https://godoc.org/github.com/tideland/golib/scroller)               |
 | SML            | Simple Markup Language                             | [![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)                         |
 | Sort           | Parallel Quicksort                                 | [![GoDoc](https://godoc.org/github.com/tideland/golib/sort?status.svg)](https://godoc.org/github.com/tideland/golib/sort)                       |
-| Stringex       | String Extension                                   | [![GoDoc](https://godoc.org/github.com/tideland/golib/stringex?status.svg)](https://godoc.org/github.com/tideland/golib/stringex)               |
-| Timex          | Time Extension                                     | [![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)                     |
+| Stringex       | String Extensions                                  | [![GoDoc](https://godoc.org/github.com/tideland/golib/stringex?status.svg)](https://godoc.org/github.com/tideland/golib/stringex)               |
+| Timex          | Time Extensions                                    | [![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)                     |
 | Version        | Semantic Versioning                                | [![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)                 |
 | Web            | RESTful Web Request Handling                       | [![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)                         |
 
