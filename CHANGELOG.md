@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-07-20
+
+- Simplified `configuration` package for usage with `stringex.Defaulter`
+
 ## 2015-07-17
 
 - Added `stringex` package

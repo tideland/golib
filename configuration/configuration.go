@@ -13,9 +13,7 @@ package configuration
 
 import (
 	"io"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/tideland/golib/collections"
 	"github.com/tideland/golib/errors"
@@ -26,48 +24,20 @@ import (
 // VALUE
 //--------------------
 
-// Value contains the found value at a given path of
-// an error if the path is invalid.
+// Value contains the found string value at a given path
+// or an error if the path is invalid. A convenient converting
+// can be done using the stringex.Defaulter. So e.g. accessing
+// a configuration and interpret it as int woud be
+//
+//   myInt := myDefaulter.AsInt(myConfig.At("path", "to", "value"), 42)
+//
+// An error check can also be done by myValue.Error().
 type Value interface {
 	// List returns the configuration keys below the value.
 	List() ([]string, error)
 
-	// Get returns the value as string.
-	Get() (string, error)
-
-	// GetDefault returns the value as string or the default.
-	GetDefault(d string) string
-
-	// GetBool returns the value as bool.
-	GetBool() (bool, error)
-
-	// GetBoolDefault returns the value as bool or the default.
-	GetBoolDefault(d bool) bool
-
-	// GetInt returns the value as int.
-	GetInt() (int, error)
-
-	// GetIntDefault returns the value as int or the default.
-	GetIntDefault(d int) int
-
-	// GetFloat64 returns the value as float64.
-	GetFloat64() (float64, error)
-
-	// GetFloat64Default returns the value as float64 or the default.
-	GetFloat64Default(d float64) float64
-
-	// GetTime returns the value as time. It has
-	// to be written in RfC 3339 format.
-	GetTime() (time.Time, error)
-
-	// GetTimeDefault returns the value as time or the default.
-	GetTimeDefault(d time.Time) time.Time
-
-	// GetDuration returns the value as duration.
-	GetDuration() (time.Duration, error)
-
-	// GetDurationDefault returns the value as duration or the default.
-	GetDurationDefault(d time.Duration) time.Duration
+	// Value returns the value as string.
+	Value() (string, error)
 
 	// Error returns the error if the value retrieval fails.
 	Error() error
@@ -92,132 +62,13 @@ func (v *value) List() ([]string, error) {
 	return ks, nil
 }
 
-// Get implements the Value interface.
-func (v *value) Get() (string, error) {
+// Value implements the Value interface.
+func (v *value) Value() (string, error) {
 	sv, err := v.changer.Value()
 	if err != nil {
 		return "", errors.New(ErrInvalidPath, errorMessages, pathToString(v.path))
 	}
 	return sv, nil
-}
-
-// GetDefault implements the Value interface.
-func (v *value) GetDefault(d string) string {
-	sv, err := v.Get()
-	if err != nil {
-		return d
-	}
-	return sv
-}
-
-// GetBool implements the Value interface.
-func (v *value) GetBool() (bool, error) {
-	raw, err := v.Get()
-	if err != nil {
-		return false, err
-	}
-	bv, err := strconv.ParseBool(raw)
-	if err != nil {
-		return false, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
-	}
-	return bv, nil
-}
-
-// GetBoolDefault implements the Value interface.
-func (v *value) GetBoolDefault(d bool) bool {
-	bv, err := v.GetBool()
-	if err != nil {
-		return d
-	}
-	return bv
-}
-
-// GetInt implements the Value interface.
-func (v *value) GetInt() (int, error) {
-	raw, err := v.Get()
-	if err != nil {
-		return 0, err
-	}
-	iv, err := strconv.ParseInt(raw, 10, 0)
-	if err != nil {
-		return 0, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
-	}
-	return int(iv), nil
-}
-
-// GetIntDefault implements the Value interface.
-func (v *value) GetIntDefault(d int) int {
-	iv, err := v.GetInt()
-	if err != nil {
-		return d
-	}
-	return iv
-}
-
-// GetFloat64 implements the Value interface.
-func (v *value) GetFloat64() (float64, error) {
-	raw, err := v.Get()
-	if err != nil {
-		return 0.0, err
-	}
-	fv, err := strconv.ParseFloat(raw, 64)
-	if err != nil {
-		return 0.0, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
-	}
-	return fv, nil
-}
-
-// GetFloat64Default implements the Value interface.
-func (v *value) GetFloat64Default(d float64) float64 {
-	fv, err := v.GetFloat64()
-	if err != nil {
-		return d
-	}
-	return fv
-}
-
-// GetTime implements the Value interface.
-func (v *value) GetTime() (time.Time, error) {
-	raw, err := v.Get()
-	if err != nil {
-		return time.Time{}, err
-	}
-	tv, err := time.Parse(time.RFC3339, raw)
-	if err != nil {
-		return tv, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
-	}
-	return tv, nil
-}
-
-// GetTimeDefault implements the Value interface.
-func (v *value) GetTimeDefault(d time.Time) time.Time {
-	tv, err := v.GetTime()
-	if err != nil {
-		return d
-	}
-	return tv
-}
-
-// GetDuration implements the Value interface.
-func (v *value) GetDuration() (time.Duration, error) {
-	raw, err := v.Get()
-	if err != nil {
-		return time.Duration(0), err
-	}
-	dv, err := time.ParseDuration(raw)
-	if err != nil {
-		return dv, errors.Annotate(err, ErrInvalidFormat, errorMessages, raw)
-	}
-	return dv, nil
-}
-
-// GetDurationDefault implements the Value interface.
-func (v *value) GetDurationDefault(d time.Duration) time.Duration {
-	dv, err := v.GetDuration()
-	if err != nil {
-		return d
-	}
-	return dv
 }
 
 // Error implements the Value interface.

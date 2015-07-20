@@ -7,9 +7,9 @@
 
 // The Tideland Go Library configuration package provides the reading,
 // parsing, and accessing of configuration data. Different readers
-// can be passed as sources for the SML formatted input. The data
-// then can be accessed as sting, int, float64, time.Time, and
-// time.Duration.
+// can be passed as sources for the SML formatted input. The retrieved
+// value at a given path can be checked for an error or directly used
+// as input for stringex.Defaulter.
 package configuration
 
 //--------------------
@@ -26,7 +26,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(2, 0, 0)
+	return version.New(3, 0, 0)
 }
 
 // EOF
