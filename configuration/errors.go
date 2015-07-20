@@ -23,7 +23,6 @@ const (
 	ErrIllegalSourceFormat = iota + 1
 	ErrIllegalConfigSource
 	ErrInvalidPath
-	ErrInvalidFormat
 	ErrCannotApply
 )
 
