@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-07-23
+
+- Added ReadFile() to configuration
+
 ## 2015-07-20
 
 - Simplified `configuration` package for usage with `stringex.Defaulter`

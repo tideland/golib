@@ -12,6 +12,7 @@ package configuration_test
 //--------------------
 
 import (
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -51,6 +52,31 @@ func TestRead(t *testing.T) {
 	config, err = configuration.Read(strings.NewReader(source))
 	assert.Nil(config)
 	assert.ErrorMatch(err, `*. illegal source format: .*`)
+}
+
+// TestReadFile tests reading a configuration out of a file.
+func TestReadFile(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tempDir := audit.NewTempDir(assert)
+	defer tempDir.Restore()
+	configFile, err := ioutil.TempFile(tempDir.String(), "configuration")
+	assert.Nil(err)
+	configFileName := configFile.Name()
+	_, err = configFile.WriteString("{config {foo 42}{bar 24}}")
+	assert.Nil(err)
+	configFile.Close()
+
+	config, err := configuration.ReadFile(configFileName)
+	assert.Nil(err)
+	v, err := config.At("foo").Value()
+	assert.Nil(err)
+	assert.Equal(v, "42")
+	v, err = config.At("bar").Value()
+	assert.Nil(err)
+	assert.Equal(v, "24")
+
+	_, err = configuration.ReadFile("some-not-existing-configuration-file-due-to-wierd-name")
+	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
 }
 
 // TestList tests the listing of configuration keys.
