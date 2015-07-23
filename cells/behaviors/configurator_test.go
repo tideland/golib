@@ -13,8 +13,8 @@ package behaviors_test
 
 import (
 	"io/ioutil"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cells"
@@ -34,7 +34,7 @@ func TestConfigurationLoad(t *testing.T) {
 	tempDir, filename := createConfigurationFile(assert, "{config {foo 42}}")
 	defer tempDir.Restore()
 
-	var wg sync.WaitGroup
+	sigc := make(chan bool, 1)
 	spf := func(ctx cells.Context, event cells.Event) error {
 		if event.Topic() == behaviors.ConfigurationTopic {
 			value, ok := event.Payload().Get(behaviors.ConfigurationPayload)
@@ -45,7 +45,7 @@ func TestConfigurationLoad(t *testing.T) {
 			assert.Nil(err)
 			assert.Equal(v, "42")
 
-			wg.Done()
+			sigc <- true
 		}
 		return nil
 	}
@@ -54,12 +54,11 @@ func TestConfigurationLoad(t *testing.T) {
 	env.StartCell("simple", behaviors.NewSimpleProcessorBehavior(spf))
 	env.Subscribe("configurator", "simple")
 
-	wg.Add(1)
 	pvs := cells.PayloadValues{
 		behaviors.ConfigurationFilenamePayload: filename,
 	}
 	env.EmitNew("configurator", behaviors.ReadConfigurationTopic, pvs, nil)
-	wg.Wait()
+	assert.Wait(sigc, 100*time.Millisecond)
 }
 
 //--------------------

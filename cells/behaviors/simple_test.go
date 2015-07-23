@@ -12,8 +12,8 @@ package behaviors_test
 //--------------------
 
 import (
-	"testing"
 	"sync"
+	"testing"
 
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cells"

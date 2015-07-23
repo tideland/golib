@@ -5,6 +5,7 @@
 - Added ReadFile() to configuration
 - Added SimpleProcessorBehavior to cells 
 - Added ConfiguratorBehavior to cells
+- Added assertion Wait() to audit
 
 ## 2015-07-20
 
