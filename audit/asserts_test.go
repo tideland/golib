@@ -16,6 +16,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tideland/golib/audit"
 )
@@ -213,6 +214,32 @@ func TestAssertPanics(t *testing.T) {
 
 	successfulAssert.Panics(func() { panic("ouch") }, "should panic")
 	failingAssert.Panics(func() { _ = 1 + 1 }, "should not panic")
+}
+
+// TestAssertWait tests the wait testing.
+func TestAssertWait(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	sigc := make(chan bool, 1)
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		sigc <- true
+	}()
+	successfulAssert.Wait(sigc, 100 * time.Millisecond, "should be true")
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		sigc <- false
+	}()
+	failingAssert.Wait(sigc, 100 * time.Millisecond, "should be false")
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		sigc <- true
+	}()
+	failingAssert.Wait(sigc, 100 * time.Millisecond, "should timeout")
+
 }
 
 // TestAssertFail tests the fail testing.

@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 //--------------------
@@ -30,7 +31,7 @@ import (
 type Test uint
 
 const (
-	Invalid Test = iota
+	Invalid Test = iota + 1
 	True
 	False
 	Nil
@@ -49,6 +50,7 @@ const (
 	NotEmpty
 	Length
 	Panics
+	Wait
 	Fail
 )
 
@@ -72,6 +74,7 @@ var testNames = []string{
 	NotEmpty:     "not empty",
 	Length:       "length",
 	Panics:       "panics",
+	Wait:         "wait",
 	Fail:         "fail",
 }
 
@@ -266,6 +269,10 @@ type Assertion interface {
 
 	// Panics checks if the passed function panics.
 	Panics(pf func(), msgs ...string) bool
+
+	// Wait until a received signal or a timeout. The signal has
+	// to be true for the test to success.
+	Wait(sigc <-chan bool, timeout time.Duration, msgs ...string) bool
 
 	// Fail always fails.
 	Fail(msgs ...string) bool
@@ -480,6 +487,19 @@ func (a *assertion) Panics(pf func(), msgs ...string) bool {
 		return a.failer.Fail(Panics, ValueDescription(pf), nil, msgs...)
 	}
 	return true
+}
+
+// Wait is specified on the Assertion interface.
+func (a *assertion) Wait(sigc <-chan bool, timeout time.Duration, msgs ...string) bool {
+	select {
+	case sig := <-sigc:
+		if !sig {
+			return a.failer.Fail(Wait, "signal false", "signal true", msgs...)
+		}
+		return true
+	case <-time.After(timeout):
+		return a.failer.Fail(Wait, "timeout " + timeout.String(), "signal true", msgs...)
+	}
 }
 
 // Fail is specified on the Assertion interface.
