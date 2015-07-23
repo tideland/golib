@@ -13,6 +13,7 @@ package behaviors
 
 import (
 	"github.com/tideland/golib/cells"
+	"github.com/tideland/golib/logger"
 )
 
 //--------------------
@@ -32,6 +33,12 @@ type filterBehavior struct {
 // NewFilterBehavior creates a filter behavior based on the passed function.
 // It emits every received event for which the filter function returns true.
 func NewFilterBehavior(ff FilterFunc) cells.Behavior {
+	if ff == nil {
+		ff = func(id string, event cells.Event) bool {
+			logger.Errorf("filter processor %q used without function to handle event %v", id, event)
+			return true
+		}
+	}
 	return &filterBehavior{nil, ff}
 }
 
