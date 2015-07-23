@@ -3,6 +3,8 @@
 ## 2015-07-23
 
 - Added ReadFile() to configuration
+- Added SimpleProcessorBehavior to cells 
+- Added ConfiguratorBehavior to cells
 
 ## 2015-07-20
 

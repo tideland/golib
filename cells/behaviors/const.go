@@ -13,11 +13,15 @@ package behaviors
 
 const (
 	// Topics.
-	TickerTopic = "tick!"
+	ReadConfigurationTopic = "read-configuration!"
+	ConfigurationTopic     = "configuration"
+	TickerTopic            = "tick!"
 
 	// Payload keys.
-	TickerIDPayload   = "ticker:id"
-	TickerTimePayload = "ticker:time"
+	ConfigurationFilenamePayload = "configuration:filename"
+	ConfigurationPayload         = "configuration"
+	TickerIDPayload              = "ticker:id"
+	TickerTimePayload            = "ticker:time"
 )
 
 // EOF

@@ -13,6 +13,7 @@ package behaviors_test
 
 import (
 	"testing"
+	"sync"
 
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cells"
@@ -30,22 +31,21 @@ func TestSimpleBehavior(t *testing.T) {
 	defer env.Stop()
 
 	topics := []string{}
-	done := make(chan bool, 1)
+	var wg sync.WaitGroup
 	spf := func(ctx cells.Context, event cells.Event) error {
 		topics = append(topics, event.Topic())
-		if len(topics) == 3 {
-			done <- true
-		}
+		wg.Done()
 		return nil
 	}
 	env.StartCell("simple", behaviors.NewSimpleProcessorBehavior(spf))
 
+	wg.Add(3)
 	env.EmitNew("simple", "foo", "", nil)
 	env.EmitNew("simple", "bar", "", nil)
 	env.EmitNew("simple", "baz", "", nil)
 
-	ok := <-done
-	assert.True(ok)
+	wg.Wait()
+	assert.Length(topics, 3)
 }
 
 // EOF
