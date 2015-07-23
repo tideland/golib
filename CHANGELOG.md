@@ -1,5 +1,12 @@
 # Tideland Go Library
 
+## 2015-07-23
+
+- Added ReadFile() to configuration
+- Added SimpleProcessorBehavior to cells 
+- Added ConfiguratorBehavior to cells
+- Added assertion Wait() to audit
+
 ## 2015-07-20
 
 - Simplified `configuration` package for usage with `stringex.Defaulter`

@@ -13,6 +13,7 @@ package configuration
 
 import (
 	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/tideland/golib/collections"
@@ -115,6 +116,16 @@ func Read(source io.Reader) (Configuration, error) {
 // string, parses it, and returns the configuration instance.
 func ReadString(source string) (Configuration, error) {
 	return Read(strings.NewReader(source))
+}
+
+// ReadFile reads the SML source of a configuration file,
+// parses it, and returns the configuration instance.
+func ReadFile(filename string) (Configuration, error) {
+	source, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, errors.Annotate(err, ErrCannotReadFile, errorMessages, filename)
+	}
+	return ReadString(string(source))
 }
 
 // configuration implements the Configuration interface.

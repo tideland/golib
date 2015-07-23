@@ -20,6 +20,10 @@
 // - the collector behavior collects all received events and also emits
 // them, they can be retrieved and resetted;
 //
+// - the configurator behavior reads a configuration out of a file
+// named in the payload and can optionally also validate it with a
+// defined function;
+//
 // - the counter behavior increments and emits counters identified by
 // the return value of a configurable function and the individual events,
 // the counters can be retrieved and resetted;
@@ -41,6 +45,9 @@
 // - the scene behavior stores a received payload at the event topic as
 // key in the event scene, useful in testing scenarios;
 //
+// - the simple behavior allows to define the event processing in one
+// simple function;
+//
 // - the ticker behavior emits a tick event in a defined interval to its
 // subscribers.
 package behaviors
@@ -59,7 +66,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(4, 1, 0)
+	return version.New(4, 2, 0)
 }
 
 // EOF

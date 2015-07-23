@@ -22,6 +22,7 @@ import (
 const (
 	ErrIllegalSourceFormat = iota + 1
 	ErrIllegalConfigSource
+	ErrCannotReadFile
 	ErrInvalidPath
 	ErrCannotApply
 )
@@ -29,6 +30,7 @@ const (
 var errorMessages = errors.Messages{
 	ErrIllegalSourceFormat: "illegal source format",
 	ErrIllegalConfigSource: "illegal source for configuration: %v",
+	ErrCannotReadFile:      "cannot read configuration file %q",
 	ErrInvalidPath:         "invalid configuration path %q",
 	ErrCannotApply:         "cannot apply values to configuration",
 }
