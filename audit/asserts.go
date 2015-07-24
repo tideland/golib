@@ -271,8 +271,8 @@ type Assertion interface {
 	Panics(pf func(), msgs ...string) bool
 
 	// Wait until a received signal or a timeout. The signal has
-	// to be true for the test to success.
-	Wait(sigc <-chan bool, timeout time.Duration, msgs ...string) bool
+	// to be the expected value.
+	Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool
 
 	// Fail always fails.
 	Fail(msgs ...string) bool
@@ -490,11 +490,11 @@ func (a *assertion) Panics(pf func(), msgs ...string) bool {
 }
 
 // Wait is specified on the Assertion interface.
-func (a *assertion) Wait(sigc <-chan bool, timeout time.Duration, msgs ...string) bool {
+func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool {
 	select {
-	case sig := <-sigc:
-		if !sig {
-			return a.failer.Fail(Wait, "signal false", "signal true", msgs...)
+	case obtained := <-sigc:
+		if !a.IsEqual(obtained, expected) {
+			return a.failer.Fail(Wait, obtained, expected, msgs...)
 		}
 		return true
 	case <-time.After(timeout):
@@ -655,6 +655,12 @@ func ValueDescription(value interface{}) string {
 	}
 	// Default.
 	return kind.String()
+}
+
+// MakeSigChan is a simple one-liner to create the buffered signal channel
+// for the wait assertion.
+func MakeSigChan() chan interface{} {
+	return make(chan interface{}, 1)
 }
 
 // lenable is an interface for the Len() mehod.

@@ -221,24 +221,24 @@ func TestAssertWait(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
 	failingAssert := failingAssertion(t)
 
-	sigc := make(chan bool, 1)
+	sigc := audit.MakeSigChan()
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		sigc <- true
 	}()
-	successfulAssert.Wait(sigc, 100 * time.Millisecond, "should be true")
+	successfulAssert.Wait(sigc, true, 100 * time.Millisecond, "should be true")
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		sigc <- false
 	}()
-	failingAssert.Wait(sigc, 100 * time.Millisecond, "should be false")
+	failingAssert.Wait(sigc, true, 100 * time.Millisecond, "should be false")
 
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		sigc <- true
 	}()
-	failingAssert.Wait(sigc, 100 * time.Millisecond, "should timeout")
+	failingAssert.Wait(sigc, true, 100 * time.Millisecond, "should timeout")
 
 }
 

@@ -26,21 +26,18 @@ import (
 // TESTS
 //--------------------
 
-// TestConfigurationLoad tests the successful loading of a configuration.
-func TestConfigurationLoad(t *testing.T) {
+// TestConfigurationRead tests the successful reading of a configuration.
+func TestConfigurationRead(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	env := cells.NewEnvironment("configuration-load")
+	env := cells.NewEnvironment("configuration-read")
 	defer env.Stop()
 	tempDir, filename := createConfigurationFile(assert, "{config {foo 42}}")
 	defer tempDir.Restore()
 
-	sigc := make(chan bool, 1)
+	sigc := audit.MakeSigChan()
 	spf := func(ctx cells.Context, event cells.Event) error {
 		if event.Topic() == behaviors.ConfigurationTopic {
-			value, ok := event.Payload().Get(behaviors.ConfigurationPayload)
-			assert.True(ok)
-			config, ok := value.(configuration.Configuration)
-			assert.True(ok)
+			config := behaviors.Configuration(event)
 			v, err := config.At("foo").Value()
 			assert.Nil(err)
 			assert.Equal(v, "42")
@@ -58,7 +55,49 @@ func TestConfigurationLoad(t *testing.T) {
 		behaviors.ConfigurationFilenamePayload: filename,
 	}
 	env.EmitNew("configurator", behaviors.ReadConfigurationTopic, pvs, nil)
-	assert.Wait(sigc, 100*time.Millisecond)
+	assert.Wait(sigc, true, 100*time.Millisecond)
+}
+
+// TestConfigurationValidation tests the validation of a configuration.
+func TestConfigurationValidation(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	env := cells.NewEnvironment("configuration-validation")
+	defer env.Stop()
+	tempDir, filename := createConfigurationFile(assert, "{config {foo 42}}")
+	defer tempDir.Restore()
+
+	sigc := audit.MakeSigChan()
+	spf := func(ctx cells.Context, event cells.Event) error {
+		sigc <- true
+		return nil
+	}
+	var key string
+	cv := func(config configuration.Configuration) error {
+		_, err := config.At(key).Value()
+		if err != nil {
+			sigc <- false
+		}
+		return err
+	}
+
+	env.StartCell("configurator", behaviors.NewConfiguratorBehavior(cv))
+	env.StartCell("simple", behaviors.NewSimpleProcessorBehavior(spf))
+	env.Subscribe("configurator", "simple")
+
+	// First run with success as key has the valid value "foo"
+	pvs := cells.PayloadValues{
+		behaviors.ConfigurationFilenamePayload: filename,
+	}
+	key = "foo"
+	env.EmitNew("configurator", behaviors.ReadConfigurationTopic, pvs, nil)
+	assert.Wait(sigc, true, 100*time.Millisecond)
+
+	// Second run also will succeed, even with "bar" as invalid value.
+	// See definition of validator cv above. But validationError is not
+	// nil.
+	key = "bar"
+	env.EmitNew("configurator", behaviors.ReadConfigurationTopic, pvs, nil)
+	assert.Wait(sigc, false, 100*time.Millisecond)
 }
 
 //--------------------
