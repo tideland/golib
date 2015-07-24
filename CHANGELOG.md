@@ -1,5 +1,13 @@
 # Tideland Go Library
 
+## 2015-07-24
+
+- Fixed cells unsubscribing failure when stopping cell with 
+  bi-directional subscriptions; thanks to Jonathan Camp for
+  his fix
+- Added expected value to compare with signal in Wait() assertion
+- Added test for configuration validation in configurator behavior
+
 ## 2015-07-23
 
 - Added ReadFile() to configuration

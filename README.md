@@ -40,9 +40,10 @@ I hope you like them. ;)
 
 - Frank Mueller (https://github.com/TheMue / https://github.com/tideland)
 - Alex Browne (https://github.com/albrow)
+- Jonathan Camp (https://github.com/kung-foo)
 - Benedikt Lang (https://github.com/blang)
-- Tim Heckman (https://github.com/theckman)
 - Pellaeon Lin (https://github.com/pellaeon)
+- Tim Heckman (https://github.com/theckman)
 
 ## License
 

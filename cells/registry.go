@@ -32,8 +32,18 @@ type celler struct {
 // stop unsubscribes from the subscriptions and stops the cell.
 func (cr *celler) stop() error {
 	subscriberID := cr.cell.ID()
-	for id := range cr.subscriptions {
+	for id := range cr.subscribers {
 		ucr := cr.registry.cellers[id]
+		delete(ucr.subscriptions, subscriberID)
+		if err := ucr.updateSubscribers(); err != nil {
+			return err
+		}
+	}
+	for id := range cr.subscriptions {
+		ucr, ok := cr.registry.cellers[id]
+		if !ok {
+			panic("subscriptions out of sync with cellers")
+		}
 		delete(ucr.subscribers, subscriberID)
 		if err := ucr.updateSubscribers(); err != nil {
 			return err

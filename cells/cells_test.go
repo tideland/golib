@@ -214,6 +214,25 @@ func TestBehaviorEmitTimeout(t *testing.T) {
 	assert.Equal(ci.EmitTimeout(), cells.MaxEmitTimeout)
 }
 
+// TestEnvironmentSubscribeStop subscribing and stopping
+func TestEnvironmentSubscribeStop(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment("subscribe-unsubscribe-stop")
+	defer env.Stop()
+
+	assert.Nil(env.StartCell("foo", newTestBehavior()))
+	assert.Nil(env.StartCell("bar", newTestBehavior()))
+	assert.Nil(env.StartCell("baz", newTestBehavior()))
+
+	assert.Nil(env.Subscribe("foo", "bar", "baz"))
+	assert.Nil(env.Subscribe("bar", "foo", "baz"))
+
+	assert.Nil(env.StopCell("bar"))
+	assert.Nil(env.StopCell("foo"))
+	assert.Nil(env.StopCell("baz"))
+}
+
 // TestEnvironmentSubscribeUnsubscribe tests subscribing,
 // checking and unsubscribing of cells.
 func TestEnvironmentSubscribeUnsubscribe(t *testing.T) {
