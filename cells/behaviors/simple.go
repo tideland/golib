@@ -17,7 +17,7 @@ import (
 )
 
 //--------------------
-// FILTER BEHAVIOR
+// SIMPLE BEHAVIOR
 //--------------------
 
 // SimpleProcessorFunc is a function type doing the event processing.
@@ -54,7 +54,7 @@ func (b *simpleBehavior) Terminate() error {
 	return nil
 }
 
-// ProcessEvent emits the event when the filter func returns true.
+// ProcessEvent calls the simple processor function.
 func (b *simpleBehavior) ProcessEvent(event cells.Event) error {
 	return b.processorFunc(b.ctx, event)
 }

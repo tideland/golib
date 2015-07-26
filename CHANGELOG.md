@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-07-26
+
+- Added CallbackBehavior to cells
+
 ## 2015-07-24
 
 - Fixed cells unsubscribing failure when stopping cell with 

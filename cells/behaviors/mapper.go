@@ -45,7 +45,7 @@ func (b *mapperBehavior) Terminate() error {
 	return nil
 }
 
-// ProcessEvent executes the simple action func.
+// ProcessEvent maps the received event to a new one and emits it.
 func (b *mapperBehavior) ProcessEvent(event cells.Event) error {
 	mappedEvent, err := b.mapFunc(b.ctx.ID(), event)
 	if err != nil {

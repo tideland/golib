@@ -44,7 +44,7 @@ func (b *loggerBehavior) Terminate() error {
 
 // ProcessEvent logs the event at info level.
 func (b *loggerBehavior) ProcessEvent(event cells.Event) error {
-	logger.Infof("(%s) processing: %q", b.ctx.ID(), event)
+	logger.Infof("(%s) processing event %v", b.ctx.ID(), event)
 	return nil
 }
 

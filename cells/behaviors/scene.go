@@ -44,7 +44,8 @@ func (b *sceneBehavior) Terminate() error {
 	return nil
 }
 
-// ProcessEvent implements the Behavior interface.
+// ProcessEvent stores and flags the event in the event scene.
+// So other code parts using the same scene can wait for the signal.
 func (b *sceneBehavior) ProcessEvent(event cells.Event) error {
 	scn := event.Scene()
 	if scn != nil {

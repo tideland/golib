@@ -17,6 +17,9 @@
 // - the broadcaster behavior simply emits all received events to all
 // subscribers;
 //
+// - the callback behavior allows to pass a number of function which
+// will be called in order when an event is received;
+//
 // - the collector behavior collects all received events and also emits
 // them, they can be retrieved and resetted;
 //
@@ -66,7 +69,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(4, 2, 0)
+	return version.New(4, 3, 0)
 }
 
 // EOF

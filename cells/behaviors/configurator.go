@@ -41,7 +41,7 @@ func Configuration(event cells.Event) configuration.Configuration {
 }
 
 //--------------------
-// CONFIGURATOR
+// CONFIGURATOR BEHAVIOR
 //--------------------
 
 // ConfigurationValidator defines a function for the validation of
@@ -75,7 +75,7 @@ func (b *configuratorBehavior) Terminate() error {
 	return nil
 }
 
-// ProcessEvent implements the cells.Behavior interface.
+// ProcessEvent reads, validates and emits a configuration.
 func (b *configuratorBehavior) ProcessEvent(event cells.Event) error {
 	switch event.Topic() {
 	case ReadConfigurationTopic:

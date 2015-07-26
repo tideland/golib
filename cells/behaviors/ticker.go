@@ -48,7 +48,8 @@ func (b *tickerBehavior) Terminate() error {
 	return b.loop.Stop()
 }
 
-// PrecessEvent does nothing here.
+// PrecessEvent emits a ticker event each time the
+// defined duration elapsed.
 func (b *tickerBehavior) ProcessEvent(event cells.Event) error {
 	if event.Topic() == TickerTopic {
 		pvs := cells.PayloadValues{
