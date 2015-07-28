@@ -51,6 +51,7 @@ const (
 	Length
 	Panics
 	Wait
+	Retry
 	Fail
 )
 
@@ -75,6 +76,7 @@ var testNames = []string{
 	Length:       "length",
 	Panics:       "panics",
 	Wait:         "wait",
+	Retry:        "retry",
 	Fail:         "fail",
 }
 
@@ -273,6 +275,10 @@ type Assertion interface {
 	// Wait until a received signal or a timeout. The signal has
 	// to be the expected value.
 	Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool
+
+	// Retry calls the passed function and expects it to return true. Otherwise
+	// it pauses for the given duration and retries the call the defined number.
+	Retry(rf func() bool, retries int, pause time.Duration, msgs ...string) bool
 
 	// Fail always fails.
 	Fail(msgs ...string) bool
@@ -498,8 +504,21 @@ func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout 
 		}
 		return true
 	case <-time.After(timeout):
-		return a.failer.Fail(Wait, "timeout " + timeout.String(), "signal true", msgs...)
+		return a.failer.Fail(Wait, "timeout "+timeout.String(), "signal true", msgs...)
 	}
+}
+
+// Retry is specified on the Assertion interface.
+func (a *assertion) Retry(rf func() bool, retries int, pause time.Duration, msgs ...string) bool {
+	start := time.Now()
+	for r := 0; r < retries; r++ {
+		if rf() {
+			return true
+		}
+	}
+	needed := time.Now().Sub(start)
+	info := fmt.Sprintf("timeout after %v and %d retries", needed, retries)
+	return a.failer.Fail(Retry, info, "successful call", msgs...)
 }
 
 // Fail is specified on the Assertion interface.

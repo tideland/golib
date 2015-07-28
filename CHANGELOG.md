@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-07-28
+
+- Added assertion Retry() to audit
+
 ## 2015-07-26
 
 - Added CallbackBehavior to cells

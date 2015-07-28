@@ -226,20 +226,33 @@ func TestAssertWait(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		sigc <- true
 	}()
-	successfulAssert.Wait(sigc, true, 100 * time.Millisecond, "should be true")
+	successfulAssert.Wait(sigc, true, 100*time.Millisecond, "should be true")
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		sigc <- false
 	}()
-	failingAssert.Wait(sigc, true, 100 * time.Millisecond, "should be false")
+	failingAssert.Wait(sigc, true, 100*time.Millisecond, "should be false")
 
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		sigc <- true
 	}()
-	failingAssert.Wait(sigc, true, 100 * time.Millisecond, "should timeout")
+	failingAssert.Wait(sigc, true, 100*time.Millisecond, "should timeout")
+}
 
+// TestAssertRetry tests the retry testing.
+func TestAssertRetry(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	i := 0
+	successfulAssert.Retry(func() bool {
+		i++
+		return i == 5
+	}, 10, 10*time.Millisecond, "should succeed")
+
+	failingAssert.Retry(func() bool { return false }, 10, 10*time.Millisecond, "should fail")
 }
 
 // TestAssertFail tests the fail testing.
