@@ -515,6 +515,7 @@ func (a *assertion) Retry(rf func() bool, retries int, pause time.Duration, msgs
 		if rf() {
 			return true
 		}
+		time.Sleep(pause)
 	}
 	needed := time.Now().Sub(start)
 	info := fmt.Sprintf("timeout after %v and %d retries", needed, retries)
