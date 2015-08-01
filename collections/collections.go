@@ -111,6 +111,72 @@ type StringStack interface {
 }
 
 //--------------------
+// COLLECTIONS - SETS
+//--------------------
+
+// Set defines a set containing any kind of values.
+type Set interface {
+	fmt.Stringer
+
+	// Add adds values to the set.
+	Add(vs ...interface{})
+
+	// Remove removes a value out if the set. It doesn't
+	// matter if the set does not contain the value.
+	Remove(vs ...interface{})
+
+	// Contains checks if the set contains a given value.
+	Contains(v interface{}) bool
+
+	// All returns all values.
+	All() []interface{}
+
+	// FindAll returns all values found by the
+	// passed function.
+	FindAll(f func(v interface{}) (bool, error)) ([]interface{}, error)
+
+	// DoAll executes the passed function on all values.
+	DoAll(f func(v interface{}) error) error
+
+	// Len returns the number of entries in the set.
+	Len() int
+
+	// Deflate cleans the stack.
+	Deflate()
+}
+
+// StringSet defines a set containing string values.
+type StringSet interface {
+	fmt.Stringer
+
+	// Add adds values to the set.
+	Add(vs ...string)
+
+	// Remove removes a value out if the set. It doesn't
+	// matter if the set does not contain the value.
+	Remove(vs ...string)
+
+	// Contains checks if a value is
+	Contains(v string) bool
+
+	// All returns all values.
+	All() []string
+
+	// FindAll returns all values found by the
+	// passed function.
+	FindAll(f func(v string) (bool, error)) ([]string, error)
+
+	// DoAll executes the passed function on all values.
+	DoAll(f func(v string) error) error
+
+	// Len returns the number of entries in the set.
+	Len() int
+
+	// Deflate cleans the stack.
+	Deflate()
+}
+
+//--------------------
 // COLLECTIONS - TREE CHANGERS
 //--------------------
 

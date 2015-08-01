@@ -148,7 +148,7 @@ func TestTreeFind(t *testing.T) {
 		return false, errors.New("ouch")
 	})
 	assert.Length(changers, 1)
-	assert.ErrorMatch(changers[0].Error(), ".* cannot find all nodes: ouch")
+	assert.ErrorMatch(changers[0].Error(), ".* cannot find all matching nodes: ouch")
 }
 
 // TestTreeDo tests the iteration over the tree nodes.
@@ -330,7 +330,7 @@ func TestStringTreeFind(t *testing.T) {
 		return false, errors.New("ouch")
 	})
 	assert.Length(changers, 1)
-	assert.ErrorMatch(changers[0].Error(), ".* cannot find all nodes: ouch")
+	assert.ErrorMatch(changers[0].Error(), ".* cannot find all matching nodes: ouch")
 }
 
 // TestStringTreeDo tests the iteration over the string tree nodes.
@@ -495,7 +495,7 @@ func TestKeyValueTreeFind(t *testing.T) {
 		return false, errors.New("ouch")
 	})
 	assert.Length(changers, 1)
-	assert.ErrorMatch(changers[0].Error(), ".* cannot find all nodes: ouch")
+	assert.ErrorMatch(changers[0].Error(), ".* cannot find all matching nodes: ouch")
 }
 
 // TestKeyValueTreeDo tests the iteration over the key/value tree nodes.
@@ -664,7 +664,7 @@ func TestKeyStringValueTreeFind(t *testing.T) {
 		return false, errors.New("ouch")
 	})
 	assert.Length(changers, 1)
-	assert.ErrorMatch(changers[0].Error(), ".* cannot find all nodes: ouch")
+	assert.ErrorMatch(changers[0].Error(), ".* cannot find all matching nodes: ouch")
 }
 
 // TestKeyStringValueTreeDo tests the iteration over the

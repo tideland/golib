@@ -478,7 +478,7 @@ func (a *assertion) NotEmpty(obtained interface{}, msgs ...string) bool {
 func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
-		return a.failer.Fail(NotEmpty, ValueDescription(obtained), expected, err.Error())
+		return a.failer.Fail(Length, ValueDescription(obtained), expected, err.Error())
 	}
 	if length != expected {
 		return a.failer.Fail(Length, length, expected, msgs...)

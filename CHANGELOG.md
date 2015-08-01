@@ -1,27 +1,31 @@
 # Tideland Go Library
 
+## 2015-08-01
+
+- Added `Set` and `StringSet` to collections
+
 ## 2015-07-28
 
-- Added assertion Retry() to audit
+- Added assertion `Retry()` to audit
 
 ## 2015-07-26
 
-- Added CallbackBehavior to cells
+- Added `CallbackBehavior` to cells
 
 ## 2015-07-24
 
 - Fixed cells unsubscribing failure when stopping cell with 
   bi-directional subscriptions; thanks to Jonathan Camp for
   his fix
-- Added expected value to compare with signal in Wait() assertion
+- Added expected value to compare with signal in `Wait()` assertion
 - Added test for configuration validation in configurator behavior
 
 ## 2015-07-23
 
-- Added ReadFile() to configuration
-- Added SimpleProcessorBehavior to cells 
-- Added ConfiguratorBehavior to cells
-- Added assertion Wait() to audit
+- Added `ReadFile()` to configuration
+- Added `SimpleProcessorBehavior` to cells 
+- Added `ConfiguratorBehavior` to cells
+- Added assertion `Wait()` to audit
 
 ## 2015-07-20
 
@@ -47,7 +51,7 @@
 
 ## 2015-06-25
 
-- Added new scene behavior to cells
+- Added new `SceneBehavior` to cells
 
 ## 2015-06-25
 

@@ -31,6 +31,8 @@ const (
 	ErrNodeFindAll
 	ErrNodeDoAll
 	ErrNodeDoChildren
+	ErrFindAll
+	ErrDoAll
 )
 
 var errorMessages = errors.Messages{
@@ -42,9 +44,11 @@ var errorMessages = errors.Messages{
 	ErrCannotRemoveRoot: "cannot remove root",
 	ErrNodeNotFound:     "node not found",
 	ErrNodeFindFirst:    "cannot find first node",
-	ErrNodeFindAll:      "cannot find all nodes",
+	ErrNodeFindAll:      "cannot find all matching nodes",
 	ErrNodeDoAll:        "cannot perform function on all nodes",
 	ErrNodeDoChildren:   "cannot perform function on child nodes",
+	ErrFindAll:          "cannot find all matching values",
+	ErrDoAll:            "cannot perform function on all values",
 }
 
 //--------------------

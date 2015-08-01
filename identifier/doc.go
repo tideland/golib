@@ -6,7 +6,7 @@
 // by the new BSD license.
 
 // The Tideland Go Library identifier package provides different ways
-// to produce identifiers like e.g. UUIDs.
+// to produce identifiers out of diffent input data as well as UUIDs.
 //
 // The UUID generation can be done according the versions 1, 3, 4, and 5.
 // Other identifier types are based on passed data or types. Here
