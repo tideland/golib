@@ -6,6 +6,9 @@
 // by the new BSD license.
 
 // The Tideland Go Library timex package helps when working with times and dates.
+// Beside tests it contains a crontab for chronological jobs and a retry function
+// to let code blocks be retried under well defined conditions regarding time and
+// count.
 package timex
 
 //--------------------
@@ -22,7 +25,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(3, 0, 0)
+	return version.New(3, 1, 0)
 }
 
 // EOF

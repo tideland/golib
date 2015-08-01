@@ -15,21 +15,7 @@ import (
 	"time"
 
 	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/logger"
-	"github.com/tideland/golib/loop"
 )
-
-//--------------------
-// CONSTANTS
-//--------------------
-
-const (
-	ErrCrontabCannotBeRecovered = iota + 1
-)
-
-var errorMessages = errors.Messages{
-	ErrCrontabCannotBeRecovered: "crontab cannot be recovered: %v",
-}
 
 //--------------------
 // RANGES
@@ -142,106 +128,69 @@ func WeekdayInRange(time time.Time, minWeekday, maxWeekday time.Weekday) bool {
 }
 
 //--------------------
-// CRONTAB
+// RETRY
 //--------------------
 
-// Job is executed by the crontab.
-type Job interface {
-	// ShallExecute decides when called if the job
-	// shal be executed.
-	ShallExecute(t time.Time) bool
-
-	// Execute executes the job. If the method returns
-	// false or an error it will be removed.
-	Execute() (bool, error)
+// RetryStrategy describes how often the function in Retry is executed, the
+// initial break between those retries, how much this time is incremented
+// for each retry, and the maximum timeout.
+type RetryStrategy struct {
+	Count          int
+	Break          time.Duration
+	BreakIncrement time.Duration
+	Timeout        time.Duration
 }
 
-// cronCommand operates on a crontab.
-type command struct {
-	add bool
-	id  string
-	job Job
-}
-
-// Crontab is one cron server. A system can run multiple in
-// parallel.
-type Crontab struct {
-	jobs        map[string]Job
-	commandChan chan *command
-	ticker      *time.Ticker
-	loop        loop.Loop
-}
-
-// NewCrontab creates a cron server.
-func NewCrontab(freq time.Duration) *Crontab {
-	c := &Crontab{
-		jobs:        make(map[string]Job),
-		commandChan: make(chan *command),
-		ticker:      time.NewTicker(freq),
+// ShortAttempt returns a predefined short retry strategy.
+func ShortAttempt() RetryStrategy {
+	return RetryStrategy{
+		Count:          10,
+		Break:          50 * time.Millisecond,
+		BreakIncrement: 0,
+		Timeout:        5 * time.Second,
 	}
-	c.loop = loop.GoRecoverable(c.backendLoop, c.checkRecovering)
-	return c
 }
 
-// Stop terminates the cron server.
-func (c *Crontab) Stop() error {
-	return c.loop.Stop()
+// MediumAttempt returns a predefined medium retry strategy.
+func MediumAttempt() RetryStrategy {
+	return RetryStrategy{
+		Count:          50,
+		Break:          10 * time.Millisecond,
+		BreakIncrement: 10 * time.Millisecond,
+		Timeout:        30 * time.Second,
+	}
 }
 
-// Add adds a new job to the server.
-func (c *Crontab) Add(id string, job Job) {
-	c.commandChan <- &command{true, id, job}
+// LongAttempt returns a predefined long retry strategy.
+func LongAttempt() RetryStrategy {
+	return RetryStrategy{
+		Count:          100,
+		Break:          10 * time.Millisecond,
+		BreakIncrement: 25 * time.Millisecond,
+		Timeout:        5 * time.Minute,
+	}
 }
 
-// Remove removes a job from the server.
-func (c *Crontab) Remove(id string) {
-	c.commandChan <- &command{false, id, nil}
-}
-
-// backendLoop runs the server backend.
-func (c *Crontab) backendLoop(l loop.Loop) error {
-	for {
-		select {
-		case <-l.ShallStop():
-			return nil
-		case cmd := <-c.commandChan:
-			if cmd.add {
-				c.jobs[cmd.id] = cmd.job
-			} else {
-				delete(c.jobs, cmd.id)
-			}
-		case now := <-c.ticker.C:
-			for id, job := range c.jobs {
-				c.do(id, job, now)
-			}
+// Retry executes the passed function until it returns true or an error.
+// These retries are restricted by the retry strategy.
+func Retry(f func() (bool, error), rs RetryStrategy) error {
+	timeout := time.Now().Add(rs.Timeout)
+	sleep := rs.Break
+	for i := 0; i < rs.Count; i++ {
+		done, err := f()
+		if err != nil {
+			return err
 		}
+		if done {
+			return nil
+		}
+		if time.Now().After(timeout) {
+			return errors.New(ErrRetriedTooLong, errorMessages, rs.Timeout)
+		}
+		time.Sleep(sleep)
+		sleep += rs.BreakIncrement
 	}
-}
-
-// checkRecovering checks if the backend can be recovered.
-func (c *Crontab) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
-	if rs.Frequency(12, time.Minute) {
-		logger.Errorf("crontab cannot be recovered: %v", rs.Last().Reason)
-		return nil, errors.New(ErrCrontabCannotBeRecovered, errorMessages, rs.Last().Reason)
-	}
-	logger.Warningf("crontab recovered: %v", rs.Last().Reason)
-	return rs.Trim(12), nil
-}
-
-// do checks and performs a job.
-func (c *Crontab) do(id string, job Job, now time.Time) {
-	if job.ShallExecute(now) {
-		go func() {
-			cont, err := job.Execute()
-			if err != nil {
-				logger.Errorf("job %q removed after error: %v", id, err)
-				cont = false
-			}
-			if !cont {
-				c.Remove(id)
-			}
-		}()
-	}
+	return errors.New(ErrRetriedTooOften, errorMessages, rs.Count)
 }
 
 // EOF

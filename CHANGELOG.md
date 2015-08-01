@@ -3,6 +3,7 @@
 ## 2015-08-01
 
 - Added `Set` and `StringSet` to collections
+- Added `Retry()` to timex
 
 ## 2015-07-28
 

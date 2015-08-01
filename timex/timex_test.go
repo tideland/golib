@@ -27,6 +27,7 @@ import (
 // Test time containments.
 func TestTimeContainments(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+
 	// Create some test data.
 	ts := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 	years := []int{2008, 2009, 2010}
@@ -56,6 +57,7 @@ func TestTimeContainments(t *testing.T) {
 // Test crontab keeping the job.
 func TestCrontabKeep(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+
 	// Create test crontab with job.
 	c := timex.NewCrontab(10 * time.Millisecond)
 	j := &cronjob{0, false, false}
@@ -71,6 +73,7 @@ func TestCrontabKeep(t *testing.T) {
 // Test crontab removing the job.
 func TestCrontabRemove(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+
 	// Create test crontab with job.
 	c := timex.NewCrontab(10 * time.Millisecond)
 	j := &cronjob{0, false, false}
@@ -86,6 +89,7 @@ func TestCrontabRemove(t *testing.T) {
 // Test crontab removing the job after an error.
 func TestCrontabError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+
 	// Create test crontab with job.
 	c := timex.NewCrontab(10 * time.Millisecond)
 	j := &cronjob{0, false, true}
@@ -96,6 +100,61 @@ func TestCrontabError(t *testing.T) {
 	c.Stop()
 
 	assert.Equal(j.counter, 5, "job counter increased max five times")
+}
+
+// TestRetrySuccess tests a successful retry.
+func TestRetrySuccess(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	count := 0
+	err := timex.Retry(func() (bool, error) {
+		count++
+		return count == 5, nil
+	}, timex.ShortAttempt())
+	assert.Nil(err)
+	assert.Equal(count, 5)
+}
+
+// TestRetryFuncError tests an error inside the retried func.
+func TestRetryFuncError(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	err := timex.Retry(func() (bool, error) {
+		return false, errors.New("ouch")
+	}, timex.ShortAttempt())
+	assert.ErrorMatch(err, "ouch")
+}
+
+// TestRetryTooLong tests a retry timout.
+func TestRetryTooLong(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	rs := timex.RetryStrategy{
+		Count:          10,
+		Break:          5 * time.Millisecond,
+		BreakIncrement: 5 * time.Millisecond,
+		Timeout:        50 * time.Millisecond,
+	}
+	err := timex.Retry(func() (bool, error) {
+		return false, nil
+	}, rs)
+	assert.ErrorMatch(err, ".* retried longer than .*")
+}
+
+// TestRetryTooOften tests a retry count error.
+func TestRetryTooOften(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	rs := timex.RetryStrategy{
+		Count:          5,
+		Break:          5 * time.Millisecond,
+		BreakIncrement: 5 * time.Millisecond,
+		Timeout:        time.Second,
+	}
+	err := timex.Retry(func() (bool, error) {
+		return false, nil
+	}, rs)
+	assert.ErrorMatch(err, ".* retried more than .* times")
 }
 
 //--------------------
