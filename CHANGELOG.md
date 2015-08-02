@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-08-02
+
+- Added `BeginOf()` and `EndOf()` to timex
+
 ## 2015-08-01
 
 - Added `Set` and `StringSet` to collections

@@ -54,6 +54,34 @@ func TestTimeContainments(t *testing.T) {
 	assert.True(timex.WeekdayInRange(ts, time.Monday, time.Friday), "Go time in weekday range .")
 }
 
+// TestBeginOf tests the calculation of a beginning of a unit of time.
+func TestBeginOf(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	ts := time.Date(2015, time.August, 2, 15, 10, 45, 12345, time.UTC)
+
+	assert.Equal(timex.BeginOf(ts, timex.Second), time.Date(2015, time.August, 2, 15, 10, 45, 0, time.UTC))
+	assert.Equal(timex.BeginOf(ts, timex.Minute), time.Date(2015, time.August, 2, 15, 10, 0, 0, time.UTC))
+	assert.Equal(timex.BeginOf(ts, timex.Hour), time.Date(2015, time.August, 2, 15, 0, 0, 0, time.UTC))
+	assert.Equal(timex.BeginOf(ts, timex.Day), time.Date(2015, time.August, 2, 0, 0, 0, 0, time.UTC))
+	assert.Equal(timex.BeginOf(ts, timex.Month), time.Date(2015, time.August, 1, 0, 0, 0, 0, time.UTC))
+	assert.Equal(timex.BeginOf(ts, timex.Year), time.Date(2015, time.January, 1, 0, 0, 0, 0, time.UTC))
+}
+
+// TestEndOf tests the calculation of a ending of a unit of time.
+func TestEndOf(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	ts := time.Date(2012, time.February, 2, 15, 10, 45, 12345, time.UTC)
+
+	assert.Equal(timex.EndOf(ts, timex.Second), time.Date(2012, time.February, 2, 15, 10, 45, 999999999, time.UTC))
+	assert.Equal(timex.EndOf(ts, timex.Minute), time.Date(2012, time.February, 2, 15, 10, 59, 999999999, time.UTC))
+	assert.Equal(timex.EndOf(ts, timex.Hour), time.Date(2012, time.February, 2, 15, 59, 59, 999999999, time.UTC))
+	assert.Equal(timex.EndOf(ts, timex.Day), time.Date(2012, time.February, 2, 23, 59, 59, 999999999, time.UTC))
+	assert.Equal(timex.EndOf(ts, timex.Month), time.Date(2012, time.February, 29, 23, 59, 59, 999999999, time.UTC))
+	assert.Equal(timex.EndOf(ts, timex.Year), time.Date(2012, time.December, 31, 23, 59, 59, 999999999, time.UTC))
+}
+
 // Test crontab keeping the job.
 func TestCrontabKeep(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
