@@ -5,54 +5,87 @@
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The behaviors package provides several generic and always
-// useful standard behaviors for the Tideland Go Library Cells.
-// They are simply created with NewXyzBehavior(). The configuration
+// Package behaviors provides several generic and always useful
+// standard behaviors for the Tideland Go Library Cells. They are
+// simply created by calling NewXyzBehavior(). Their configuration
 // is done by constructor arguments. Additionally some of them take
 // functions or implementations of interfaces to control their
-// processing.
+// processing. These behaviors are:
 //
-// The behaviors are:
+// Broadcaster
 //
-// - the broadcaster behavior simply emits all received events to all
-// subscribers;
+// The broadcaster behavior simply emits all received events to all
+// of its subscribers. It is intended to be used as a top level behavior
+// to directly rigger multiple handlers instead of emitting an event
+// manually to those handlers.
 //
-// - the callback behavior allows to pass a number of function which
-// will be called in order when an event is received;
+// Callback
 //
-// - the collector behavior collects all received events and also emits
-// them, they can be retrieved and resetted;
+// The callback behavior allows you to provide a number of functions
+// which will be called when an event is received. Those functions
+// have the topic and the payload of the event as argument.
 //
-// - the configurator behavior reads a configuration out of a file
-// named in the payload and can optionally also validate it with a
-// defined function;
+// Collector
 //
-// - the counter behavior increments and emits counters identified by
-// the return value of a configurable function and the individual events,
-// the counters can be retrieved and resetted;
-//
-// - the filter behavior is created with a filtering function which is
-// called for each event, when it returns true the event is emitted;
-//
-// - the FSM behavior implements a finite state machine, state functions
-// process the events and return the following state;
-//
-// - the logger behavior logs every event at info level;
-//
-// - the mapper behavior is created with a mapping function processing
-// each event and returning a new mapped one;
-//
-// - the round robin behavior distributes each received event round robin
-// to its subscribers;
-//
-// - the scene behavior stores a received payload at the event topic as
-// key in the event scene, useful in testing scenarios;
-//
-// - the simple behavior allows to define the event processing in one
-// simple function;
-//
-// - the ticker behavior emits a tick event in a defined interval to its
+// The collector behavior collects all received events. They can be
+// retrieved and resetted. It also emits all received events to its
 // subscribers.
+//
+// Configurator
+//
+// After receiving a ReadConfigurationTopic with a filename as
+// payload the configuration behavior reads this configuration
+// and emits it. If it is started with a validator the configuration
+// is validated after the reading.
+//
+// Counter
+//
+// The counter behavior is created with a counter function as argument.
+// This function is called for each event and returns the IDs of counters
+// which are incremented then. The counters are emitted each time and
+// also can be resetted.
+//
+// Filter
+//
+// The filter behavior is created with a filtering function which is
+// called for each event. If this function call returns true the event
+// emitted, otherwise it is dropped.
+//
+// Finite State Machine
+//
+// The FSM behavior implements a finite state machine. State functions
+// process the events and return the following state function.
+//
+// Logger
+//
+// The logger behavior logs every event. The used level is INFO.
+//
+// Mapper
+//
+// The mapper behavior is created with a mapping. It is called with each
+// received event and returns a new mapped one.
+//
+// Round Robin
+//
+// The round robin behavior distributes each received event round robin
+// to its subscribers. It can be used for load balancing.
+//
+// Scene
+//
+// The scene behavior stores a received payload using the event topic as
+// key in the event scene. So it can be used later by other behaviors
+// or by the external environments, which can wait until the setting.
+//
+// Simple Processor
+//
+// The simple behavior is created with a simple event processing function.
+// Useful if no state and no complex recovery is needed.
+//
+// Ticker
+//
+// The ticker behavior emits a tick event in a defined interval to its
+// subscribers. So they can process chronological tasks beside other
+// events.
 package behaviors
 
 //--------------------

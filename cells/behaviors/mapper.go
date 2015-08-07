@@ -51,7 +51,9 @@ func (b *mapperBehavior) ProcessEvent(event cells.Event) error {
 	if err != nil {
 		return err
 	}
-	b.ctx.Emit(mappedEvent)
+	if mappedEvent != nil {
+		b.ctx.Emit(mappedEvent)
+	}
 	return nil
 }
 
