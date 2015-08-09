@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-08-09
+
+- Added `Collect()` and `DoAll()` to errors
+
 ## 2015-08-02
 
 - Added `BeginOf()` and `EndOf()` to timex
