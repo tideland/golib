@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/tideland/golib/cells"
-	"github.com/tideland/golib/logger"
 )
 
 //--------------------
@@ -41,35 +40,34 @@ const (
 )
 
 //--------------------
-// TEST BEHAVIOR
+// TEST BEHAVIORS
 //--------------------
 
-// testBehavior implements a simple behavior used in the tests.
-// It collects and re-emits all events, returns them with the
-// topic "processed" and delets all collected with the
+// collectBehavior collects and re-emits all events, returns them
+// on the topic "processed" and delets all collected on the
 // topic "reset".
-type testBehavior struct {
+type collectBehavior struct {
 	ctx         cells.Context
 	processed   []string
 	recoverings int
 }
 
-var _ cells.Behavior = &testBehavior{}
+var _ cells.Behavior = (*collectBehavior)(nil)
 
-func newTestBehavior() *testBehavior {
-	return &testBehavior{nil, []string{}, 0}
+func newCollectBehavior() *collectBehavior {
+	return &collectBehavior{nil, []string{}, 0}
 }
 
-func (b *testBehavior) Init(ctx cells.Context) error {
+func (b *collectBehavior) Init(ctx cells.Context) error {
 	b.ctx = ctx
 	return nil
 }
 
-func (b *testBehavior) Terminate() error {
+func (b *collectBehavior) Terminate() error {
 	return nil
 }
 
-func (b *testBehavior) ProcessEvent(event cells.Event) error {
+func (b *collectBehavior) ProcessEvent(event cells.Event) error {
 	switch event.Topic() {
 	case cells.ProcessedTopic:
 		processed := make([]string, len(b.processed))
@@ -92,11 +90,6 @@ func (b *testBehavior) ProcessEvent(event cells.Event) error {
 		if err != nil {
 			return err
 		}
-	case emitTopic:
-		return b.ctx.EmitNew(sleepTopic, event.Payload(), event.Scene())
-	case sleepTopic:
-		logger.Debugf("BEHAVIOR %q SLEEPS NOW!", b.ctx.ID())
-		time.Sleep(2 * time.Second)
 	case panicTopic:
 		panic("Ouch!")
 	case subscribersTopic:
@@ -116,7 +109,7 @@ func (b *testBehavior) ProcessEvent(event cells.Event) error {
 	return nil
 }
 
-func (b *testBehavior) Recover(r interface{}) error {
+func (b *collectBehavior) Recover(r interface{}) error {
 	b.recoverings++
 	if b.recoverings > 5 {
 		return cells.NewCannotRecoverError(b.ctx.ID(), r)
@@ -124,20 +117,20 @@ func (b *testBehavior) Recover(r interface{}) error {
 	return nil
 }
 
-// testEventBufferBehavior allows testing the setting
+// eventBufferBehavior allows testing the setting
 // of the event buffer size.
 type testEventBufferBehavior struct {
-	*testBehavior
+	*collectBehavior
 
 	size int
 }
 
 var _ cells.BehaviorEventBufferSize = (*testEventBufferBehavior)(nil)
 
-func newTestEventBufferBehavior(size int) cells.Behavior {
+func newEventBufferBehavior(size int) cells.Behavior {
 	return &testEventBufferBehavior{
-		testBehavior: newTestBehavior(),
-		size:         size,
+		collectBehavior: newCollectBehavior(),
+		size:            size,
 	}
 }
 
@@ -145,60 +138,56 @@ func (b *testEventBufferBehavior) EventBufferSize() int {
 	return b.size
 }
 
-// testRecoveringFrequencyBehavior allows testing the setting
+// recoveringFrequencyBehavior allows testing the setting
 // of the recovering frequency.
-type testRecoveringFrequencyBehavior struct {
-	*testBehavior
+type recoveringFrequencyBehavior struct {
+	*collectBehavior
 
 	number   int
 	duration time.Duration
 }
 
-var _ cells.BehaviorRecoveringFrequency = (*testRecoveringFrequencyBehavior)(nil)
+var _ cells.BehaviorRecoveringFrequency = (*recoveringFrequencyBehavior)(nil)
 
-func newTestRecoveringFrequencyBehavior(number int, duration time.Duration) cells.Behavior {
-	return &testRecoveringFrequencyBehavior{
-		testBehavior: newTestBehavior(),
-		number:       number,
-		duration:     duration,
+func newRecoveringFrequencyBehavior(number int, duration time.Duration) cells.Behavior {
+	return &recoveringFrequencyBehavior{
+		collectBehavior: newCollectBehavior(),
+		number:          number,
+		duration:        duration,
 	}
 }
 
-func (b *testRecoveringFrequencyBehavior) RecoveringFrequency() (int, time.Duration) {
+func (b *recoveringFrequencyBehavior) RecoveringFrequency() (int, time.Duration) {
 	return b.number, b.duration
 }
 
-// testEmitTimeoutBehavior allows testing the setting
-// of the event buffer size.
-type testEmitTimeoutBehavior struct {
-	*testBehavior
+// emitTimeoutBehavior allows testing the setting
+// of the emit timeout time.
+type emitTimeoutBehavior struct {
+	*collectBehavior
 
 	timeout time.Duration
 }
 
-var _ cells.BehaviorEmitTimeout = (*testEmitTimeoutBehavior)(nil)
+var _ cells.BehaviorEmitTimeout = (*emitTimeoutBehavior)(nil)
 
-func newTestEmitTimeoutBehavior(timeout time.Duration) cells.Behavior {
-	return &testEmitTimeoutBehavior{
-		testBehavior: newTestBehavior(),
-		timeout:      timeout,
+func newEmitTimeoutBehavior(timeout time.Duration) cells.Behavior {
+	return &emitTimeoutBehavior{
+		collectBehavior: newCollectBehavior(),
+		timeout:         timeout,
 	}
 }
 
-func (b *testEmitTimeoutBehavior) EmitTimeout() time.Duration {
+func (b *emitTimeoutBehavior) EmitTimeout() time.Duration {
 	return b.timeout
 }
-
-//--------------------
-// BEHAVIORS
-//--------------------
 
 // emitBehavior simply emits the sleep topic to its subscribers.
 type emitBehavior struct {
 	ctx cells.Context
 }
 
-var _ cells.Behavior = &emitBehavior{}
+var _ cells.Behavior = (*emitBehavior)(nil)
 
 func newEmitBehavior() *emitBehavior {
 	return &emitBehavior{}
@@ -214,7 +203,6 @@ func (b *emitBehavior) Terminate() error {
 }
 
 func (b *emitBehavior) ProcessEvent(event cells.Event) error {
-	logger.Infof("cell %q emits sleep event", b.ctx.ID())
 	return b.ctx.EmitNew(sleepTopic, event.Payload(), nil)
 }
 
@@ -222,16 +210,12 @@ func (b *emitBehavior) Recover(r interface{}) error {
 	return nil
 }
 
-func (b *emitBehavior) EmitTimeout() time.Duration {
-	return 2500 * time.Millisecond
-}
-
 // sleepBehavior simply emits the sleep topic to its subscribers.
 type sleepBehavior struct {
 	ctx cells.Context
 }
 
-var _ cells.Behavior = &sleepBehavior{}
+var _ cells.Behavior = (*sleepBehavior)(nil)
 
 func newSleepBehavior() *sleepBehavior {
 	return &sleepBehavior{}
@@ -247,7 +231,6 @@ func (b *sleepBehavior) Terminate() error {
 }
 
 func (b *sleepBehavior) ProcessEvent(event cells.Event) error {
-	logger.Infof("cell %q sleeps a bit, payload is %v", b.ctx.ID(), event.Payload())
 	time.Sleep(4 * time.Second)
 	return nil
 }
@@ -257,7 +240,7 @@ func (b *sleepBehavior) Recover(r interface{}) error {
 }
 
 func (b *sleepBehavior) EmitTimeout() time.Duration {
-	return 2500 * time.Millisecond
+	return 2 * time.Second
 }
 
 // EOF

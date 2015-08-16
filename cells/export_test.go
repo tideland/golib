@@ -1,4 +1,4 @@
-// Tideland Go Library - Cells - Unit Test Export
+// Tideland Go Library - Cells - Unit Tests - Export
 //
 // Copyright (C) 2010-2015 Frank Mueller / Tideland / Oldenburg / Germany
 //

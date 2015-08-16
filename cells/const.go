@@ -43,7 +43,7 @@ const (
 
 	// minEventBufferSize is the minimum size of the
 	// event buffer per cell.
-	minEventBufferSize = 4
+	minEventBufferSize = 16
 
 	// minRecoveringNumber and minRecoveringDuration
 	// control the default recovering frequency.

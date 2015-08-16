@@ -18,7 +18,6 @@ import (
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cells"
 	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/logger"
 )
 
 //--------------------
@@ -120,7 +119,7 @@ func TestEnvironmentStartStopCell(t *testing.T) {
 	env := cells.NewEnvironment("start-stop")
 	defer env.Stop()
 
-	err := env.StartCell("foo", newTestBehavior())
+	err := env.StartCell("foo", newCollectBehavior())
 	assert.Nil(err)
 
 	hasFoo := env.HasCell("foo")
@@ -147,17 +146,17 @@ func TestBehaviorEventBufferSize(t *testing.T) {
 	env := cells.NewEnvironment("event-buffer")
 	defer env.Stop()
 
-	err := env.StartCell("negative", newTestEventBufferBehavior(-8))
+	err := env.StartCell("negative", newEventBufferBehavior(-8))
 	assert.Nil(err)
 	ci := cells.InspectCell(env, "negative")
 	assert.Equal(ci.EventBufferSize(), cells.MinEventBufferSize)
 
-	err = env.StartCell("low", newTestEventBufferBehavior(1))
+	err = env.StartCell("low", newEventBufferBehavior(1))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "low")
 	assert.Equal(ci.EventBufferSize(), cells.MinEventBufferSize)
 
-	err = env.StartCell("high", newTestEventBufferBehavior(2*cells.MinEventBufferSize))
+	err = env.StartCell("high", newEventBufferBehavior(2*cells.MinEventBufferSize))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "high")
 	assert.Equal(ci.EventBufferSize(), 2*cells.MinEventBufferSize)
@@ -171,19 +170,19 @@ func TestBehaviorRecoveringFrequency(t *testing.T) {
 	env := cells.NewEnvironment("recovering-frequency")
 	defer env.Stop()
 
-	err := env.StartCell("negative", newTestRecoveringFrequencyBehavior(-1, time.Second))
+	err := env.StartCell("negative", newRecoveringFrequencyBehavior(-1, time.Second))
 	assert.Nil(err)
 	ci := cells.InspectCell(env, "negative")
 	assert.Equal(ci.RecoveringNumber(), cells.MinRecoveringNumber)
 	assert.Equal(ci.RecoveringDuration(), cells.MinRecoveringDuration)
 
-	err = env.StartCell("low", newTestRecoveringFrequencyBehavior(10, time.Millisecond))
+	err = env.StartCell("low", newRecoveringFrequencyBehavior(10, time.Millisecond))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "low")
 	assert.Equal(ci.RecoveringNumber(), cells.MinRecoveringNumber)
 	assert.Equal(ci.RecoveringDuration(), cells.MinRecoveringDuration)
 
-	err = env.StartCell("high", newTestRecoveringFrequencyBehavior(12, time.Minute))
+	err = env.StartCell("high", newRecoveringFrequencyBehavior(12, time.Minute))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "high")
 	assert.Equal(ci.RecoveringNumber(), 12)
@@ -194,30 +193,31 @@ func TestBehaviorRecoveringFrequency(t *testing.T) {
 // the emit timeout.
 func TestBehaviorEmitTimeoutSetting(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	minSeconds := int(cells.MinEmitTimeout.Seconds())
+	maxSeconds := int(cells.MaxEmitTimeout.Seconds())
 
 	env := cells.NewEnvironment("emit-timeout-setting")
 	defer env.Stop()
 
-	err := env.StartCell("low", newTestEmitTimeoutBehavior(time.Millisecond))
+	err := env.StartCell("low", newEmitTimeoutBehavior(time.Millisecond))
 	assert.Nil(err)
 	ci := cells.InspectCell(env, "low")
-	assert.Equal(ci.EmitTimeout(), cells.MinEmitTimeout)
+	assert.Equal(ci.EmitTimeout(), minSeconds)
 
-	err = env.StartCell("correct", newTestEmitTimeoutBehavior(10*time.Second))
+	err = env.StartCell("correct", newEmitTimeoutBehavior(10*time.Second))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "correct")
-	assert.Equal(ci.EmitTimeout(), 10*time.Second)
+	assert.Equal(ci.EmitTimeout(), 10)
 
-	err = env.StartCell("high", newTestEmitTimeoutBehavior(2*cells.MaxEmitTimeout))
+	err = env.StartCell("high", newEmitTimeoutBehavior(2*cells.MaxEmitTimeout))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "high")
-	assert.Equal(ci.EmitTimeout(), cells.MaxEmitTimeout)
+	assert.Equal(ci.EmitTimeout(), maxSeconds)
 }
 
 // TestBehaviorEmitTimeoutError tests the timeout error handling
 // when one or more emit need too much time.
 func TestBehaviorEmitTimeoutError(t *testing.T) {
-	logger.SetLevel(logger.LevelDebug)
 	assert := audit.NewTestingAssertion(t, true)
 
 	env := cells.NewEnvironment("emit-timeout-error")
@@ -232,14 +232,10 @@ func TestBehaviorEmitTimeoutError(t *testing.T) {
 
 	// Emit more events than queue can take while the subscriber works.
 	for i := 0; i < 25; i++ {
-		err = env.EmitNew("emitter", emitTopic, i, nil)
-		if err != nil {
-			logger.Errorf("emitting %d failed: %v", i, err)
-		}
-		time.Sleep(100 * time.Millisecond)
+		env.EmitNew("emitter", emitTopic, i, nil)
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 }
 
 // TestEnvironmentSubscribeStop subscribing and stopping
@@ -249,9 +245,9 @@ func TestEnvironmentSubscribeStop(t *testing.T) {
 	env := cells.NewEnvironment("subscribe-unsubscribe-stop")
 	defer env.Stop()
 
-	assert.Nil(env.StartCell("foo", newTestBehavior()))
-	assert.Nil(env.StartCell("bar", newTestBehavior()))
-	assert.Nil(env.StartCell("baz", newTestBehavior()))
+	assert.Nil(env.StartCell("foo", newCollectBehavior()))
+	assert.Nil(env.StartCell("bar", newCollectBehavior()))
+	assert.Nil(env.StartCell("baz", newCollectBehavior()))
 
 	assert.Nil(env.Subscribe("foo", "bar", "baz"))
 	assert.Nil(env.Subscribe("bar", "foo", "baz"))
@@ -269,13 +265,13 @@ func TestEnvironmentSubscribeUnsubscribe(t *testing.T) {
 	env := cells.NewEnvironment("subscribe-unsubscribe")
 	defer env.Stop()
 
-	err := env.StartCell("foo", newTestBehavior())
+	err := env.StartCell("foo", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("bar", newTestBehavior())
+	err = env.StartCell("bar", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("baz", newTestBehavior())
+	err = env.StartCell("baz", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("yadda", newTestBehavior())
+	err = env.StartCell("yadda", newCollectBehavior())
 	assert.Nil(err)
 
 	err = env.Subscribe("humpf", "foo")
@@ -311,11 +307,11 @@ func TestEnvironmentStopUnsubscribe(t *testing.T) {
 	env := cells.NewEnvironment("stop-unsubscribe")
 	defer env.Stop()
 
-	err := env.StartCell("foo", newTestBehavior())
+	err := env.StartCell("foo", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("bar", newTestBehavior())
+	err = env.StartCell("bar", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("baz", newTestBehavior())
+	err = env.StartCell("baz", newCollectBehavior())
 	assert.Nil(err)
 
 	err = env.Subscribe("foo", "bar", "baz")
@@ -338,11 +334,11 @@ func TestEnvironmentSubscribersDo(t *testing.T) {
 	env := cells.NewEnvironment("subscribers-do")
 	defer env.Stop()
 
-	err := env.StartCell("foo", newTestBehavior())
+	err := env.StartCell("foo", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("bar", newTestBehavior())
+	err = env.StartCell("bar", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("baz", newTestBehavior())
+	err = env.StartCell("baz", newCollectBehavior())
 	assert.Nil(err)
 
 	err = env.Subscribe("foo", "bar", "baz")
@@ -369,11 +365,11 @@ func TestEnvironmentScenario(t *testing.T) {
 	env := cells.NewEnvironment("scenario")
 	defer env.Stop()
 
-	err := env.StartCell("foo", newTestBehavior())
+	err := env.StartCell("foo", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("bar", newTestBehavior())
+	err = env.StartCell("bar", newCollectBehavior())
 	assert.Nil(err)
-	err = env.StartCell("collector", newTestBehavior())
+	err = env.StartCell("collector", newCollectBehavior())
 	assert.Nil(err)
 
 	err = env.Subscribe("foo", "bar")
@@ -396,6 +392,24 @@ func TestEnvironmentScenario(t *testing.T) {
 	assert.Length(collected, 2, "two collected events")
 	assert.Contents(`<topic: "lorem" / payload: <"default": 4711>>`, collected)
 	assert.Contents(`<topic: "ipsum" / payload: <"default": 1234>>`, collected)
+}
+
+//--------------------
+// BENCHMARKS
+//--------------------
+
+// BenchmarkSmpleEmit is a simple emitting to one cell.
+func BenchmarkSmpleEmit(b *testing.B) {
+	env := cells.NewEnvironment("simple-emit")
+	defer env.Stop()
+
+	env.StartCell("collector", newCollectBehavior())
+
+	event, _ := cells.NewEvent("foo", "bar", nil)
+
+	for i := 0; i < b.N; i++ {
+		env.Emit("collector", event)
+	}
 }
 
 // EOF
