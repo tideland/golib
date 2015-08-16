@@ -62,7 +62,7 @@ func (ci *CellInsight) RecoveringDuration() time.Duration {
 	return ci.c.recoveringDuration
 }
 
-func (ci *CellInsight) EmitTimeout() time.Duration {
+func (ci *CellInsight) EmitTimeout() int {
 	return ci.c.emitTimeout
 }
 

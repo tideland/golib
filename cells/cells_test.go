@@ -12,13 +12,13 @@ package cells_test
 //--------------------
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cells"
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/logger"
 )
 
 //--------------------
@@ -32,7 +32,7 @@ func TestEvent(t *testing.T) {
 	event, err := cells.NewEvent("foo", "bar", nil)
 	assert.Nil(err)
 	assert.Equal(event.Topic(), "foo")
-	assert.Equal(event.String(), "<event: \"foo\" / payload: <\"default\": bar>>")
+	assert.Equal(event.String(), "<topic: \"foo\" / payload: <\"default\": bar>>")
 
 	bar, ok := event.Payload().Get(cells.DefaultPayload)
 	assert.True(ok)
@@ -190,12 +190,12 @@ func TestBehaviorRecoveringFrequency(t *testing.T) {
 	assert.Equal(ci.RecoveringDuration(), time.Minute)
 }
 
-// TestBehaviorEmitTimeout tests the setting of
+// TestBehaviorEmitTimeoutSetting tests the setting of
 // the emit timeout.
-func TestBehaviorEmitTimeout(t *testing.T) {
+func TestBehaviorEmitTimeoutSetting(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
-	env := cells.NewEnvironment("emit-timeout")
+	env := cells.NewEnvironment("emit-timeout-setting")
 	defer env.Stop()
 
 	err := env.StartCell("low", newTestEmitTimeoutBehavior(time.Millisecond))
@@ -212,6 +212,34 @@ func TestBehaviorEmitTimeout(t *testing.T) {
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "high")
 	assert.Equal(ci.EmitTimeout(), cells.MaxEmitTimeout)
+}
+
+// TestBehaviorEmitTimeoutError tests the timeout error handling
+// when one or more emit need too much time.
+func TestBehaviorEmitTimeoutError(t *testing.T) {
+	logger.SetLevel(logger.LevelDebug)
+	assert := audit.NewTestingAssertion(t, true)
+
+	env := cells.NewEnvironment("emit-timeout-error")
+	defer env.Stop()
+
+	err := env.StartCell("emitter", newEmitBehavior())
+	assert.Nil(err)
+	err = env.StartCell("sleeper", newSleepBehavior())
+	assert.Nil(err)
+	err = env.Subscribe("emitter", "sleeper")
+	assert.Nil(err)
+
+	// Emit more events than queue can take while the subscriber works.
+	for i := 0; i < 25; i++ {
+		err = env.EmitNew("emitter", emitTopic, i, nil)
+		if err != nil {
+			logger.Errorf("emitting %d failed: %v", i, err)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	time.Sleep(5 * time.Second)
 }
 
 // TestEnvironmentSubscribeStop subscribing and stopping
@@ -327,11 +355,11 @@ func TestEnvironmentSubscribersDo(t *testing.T) {
 	collected, err := env.Request("bar", cells.ProcessedTopic, nil, nil, cells.DefaultTimeout)
 	assert.Nil(err)
 	assert.Length(collected, 1)
-	assert.Contents(`<event: "love" / payload: <"default": foo loves bar>>`, collected)
+	assert.Contents(`<topic: "love" / payload: <"default": foo loves bar>>`, collected)
 	collected, err = env.Request("baz", cells.ProcessedTopic, nil, nil, cells.DefaultTimeout)
 	assert.Nil(err)
 	assert.Length(collected, 1)
-	assert.Contents(`<event: "love" / payload: <"default": foo loves baz>>`, collected)
+	assert.Contents(`<topic: "love" / payload: <"default": foo loves baz>>`, collected)
 }
 
 // TestEnvironmentScenario tests creating and using the
@@ -366,163 +394,8 @@ func TestEnvironmentScenario(t *testing.T) {
 	collected, err := env.Request("collector", cells.ProcessedTopic, nil, nil, cells.DefaultTimeout)
 	assert.Nil(err)
 	assert.Length(collected, 2, "two collected events")
-	assert.Contents(`<event: "lorem" / payload: <"default": 4711>>`, collected)
-	assert.Contents(`<event: "ipsum" / payload: <"default": 1234>>`, collected)
-}
-
-//--------------------
-// HELPERS
-//--------------------
-
-const (
-	// iterateTopic lets the test behavior iterate over its subscribers.
-	iterateTopic = "iterate!!"
-
-	// panicTopic lets the test behavior panic to check recovering.
-	panicTopic = "panic!"
-
-	// subscribersTopic returns the current subscribers.
-	subscribersTopic = "subscribers?"
-)
-
-// testBehavior implements a simple behavior used in the tests.
-// It collects and re-emits all events, returns them with the
-// topic "processed" and delets all collected with the
-// topic "reset".
-type testBehavior struct {
-	ctx         cells.Context
-	processed   []string
-	recoverings int
-}
-
-var _ cells.Behavior = &testBehavior{}
-
-func newTestBehavior() *testBehavior {
-	return &testBehavior{nil, []string{}, 0}
-}
-
-func (b *testBehavior) Init(ctx cells.Context) error {
-	b.ctx = ctx
-	return nil
-}
-
-func (b *testBehavior) Terminate() error {
-	return nil
-}
-
-func (b *testBehavior) ProcessEvent(event cells.Event) error {
-	switch event.Topic() {
-	case cells.ProcessedTopic:
-		processed := make([]string, len(b.processed))
-		copy(processed, b.processed)
-		err := event.Respond(processed)
-		if err != nil {
-			return err
-		}
-	case cells.ResetTopic:
-		b.processed = []string{}
-	case cells.PingTopic:
-		err := event.Respond(cells.PongResponse)
-		if err != nil {
-			return err
-		}
-	case iterateTopic:
-		err := b.ctx.SubscribersDo(func(s cells.Subscriber) error {
-			return s.ProcessNewEvent("love", b.ctx.ID()+" loves "+s.ID(), event.Scene())
-		})
-		if err != nil {
-			return err
-		}
-	case panicTopic:
-		panic("Ouch!")
-	case subscribersTopic:
-		var ids []string
-		b.ctx.SubscribersDo(func(s cells.Subscriber) error {
-			ids = append(ids, s.ID())
-			return nil
-		})
-		err := event.Respond(ids)
-		if err != nil {
-			return err
-		}
-	default:
-		b.processed = append(b.processed, fmt.Sprintf("%v", event))
-		b.ctx.Emit(event)
-	}
-	return nil
-}
-
-func (b *testBehavior) Recover(r interface{}) error {
-	b.recoverings++
-	if b.recoverings > 5 {
-		return cells.NewCannotRecoverError(b.ctx.ID(), r)
-	}
-	return nil
-}
-
-// testEventBufferBehavior allows testing the setting
-// of the event buffer size.
-type testEventBufferBehavior struct {
-	*testBehavior
-
-	size int
-}
-
-var _ cells.BehaviorEventBufferSize = (*testEventBufferBehavior)(nil)
-
-func newTestEventBufferBehavior(size int) cells.Behavior {
-	return &testEventBufferBehavior{
-		testBehavior: newTestBehavior(),
-		size:         size,
-	}
-}
-
-func (b *testEventBufferBehavior) EventBufferSize() int {
-	return b.size
-}
-
-// testRecoveringFrequencyBehavior allows testing the setting
-// of the recovering frequency.
-type testRecoveringFrequencyBehavior struct {
-	*testBehavior
-
-	number   int
-	duration time.Duration
-}
-
-var _ cells.BehaviorRecoveringFrequency = (*testRecoveringFrequencyBehavior)(nil)
-
-func newTestRecoveringFrequencyBehavior(number int, duration time.Duration) cells.Behavior {
-	return &testRecoveringFrequencyBehavior{
-		testBehavior: newTestBehavior(),
-		number:       number,
-		duration:     duration,
-	}
-}
-
-func (b *testRecoveringFrequencyBehavior) RecoveringFrequency() (int, time.Duration) {
-	return b.number, b.duration
-}
-
-// testEmitTimeoutBehavior allows testing the setting
-// of the event buffer size.
-type testEmitTimeoutBehavior struct {
-	*testBehavior
-
-	timeout time.Duration
-}
-
-var _ cells.BehaviorEmitTimeout = (*testEmitTimeoutBehavior)(nil)
-
-func newTestEmitTimeoutBehavior(timeout time.Duration) cells.Behavior {
-	return &testEmitTimeoutBehavior{
-		testBehavior: newTestBehavior(),
-		timeout:      timeout,
-	}
-}
-
-func (b *testEmitTimeoutBehavior) EmitTimeout() time.Duration {
-	return b.timeout
+	assert.Contents(`<topic: "lorem" / payload: <"default": 4711>>`, collected)
+	assert.Contents(`<topic: "ipsum" / payload: <"default": 1234>>`, collected)
 }
 
 // EOF
