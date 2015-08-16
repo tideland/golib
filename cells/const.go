@@ -47,7 +47,7 @@ const (
 
 	// minRecoveringNumber and minRecoveringDuration
 	// control the default recovering frequency.
-	minRecoveringNumber   = 1
+	minRecoveringNumber   = 10
 	minRecoveringDuration = time.Second
 
 	// minEmitTimeout is the minimum allowed timeout

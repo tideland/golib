@@ -313,7 +313,7 @@ func (e *event) String() string {
 	if e.payload == nil {
 		return fmt.Sprintf("<event: %q>", e.topic)
 	}
-	return fmt.Sprintf("<event: %q / payload: %v>", e.topic, e.payload)
+	return fmt.Sprintf("<topic: %q / payload: %v>", e.topic, e.payload)
 }
 
 // EOF
