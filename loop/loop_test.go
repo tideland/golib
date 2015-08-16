@@ -30,7 +30,8 @@ var (
 // TESTS
 //--------------------
 
-// Test the simple backend returning nil after stop.
+// TestSimpleStop tests the simple backend returning nil
+// after a stop.
 func TestSimpleStop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	done := false
@@ -44,7 +45,8 @@ func TestSimpleStop(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
-// Test the simple backend returning an error after kill.
+// TestSimpleKill tests the simple backend returning an error
+// after a kill.
 func TestSimpleKill(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	done := false
@@ -60,7 +62,7 @@ func TestSimpleKill(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
-// Test an internal error.
+// TestError tests an internal error.
 func TestError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	done := false
@@ -76,7 +78,7 @@ func TestError(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
-// Test an error in a deferred function inside the loop.
+// TestDeferredError tests an error in a deferred function inside the loop.
 func TestDeferredError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	done := false
@@ -90,30 +92,12 @@ func TestDeferredError(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
-// Test recoverings after panics.
-func TestRecoverings(t *testing.T) {
-	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	count := 0
-	l := loop.GoRecoverable(generateSimplePanicBackend(&done, &count), checkRecovering)
-
-	time.Sleep(veryLongDelay)
-
-	assert.ErrorMatch(l.Stop(), "too many panics", "error has to be 'too many panics'")
-	assert.True(done, "backend has done")
-	assert.Equal(count, 5, "loop has to be restarted 5 times")
-
-	status, _ := l.Error()
-
-	assert.Equal(loop.Stopped, status, "loop is stopped")
-}
-
-// Test regular stop of a recovered loop.
+// TestStopRecoverings tests the regular stop of a recovered loop.
 func TestStopRecoverings(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	done := false
 	count := 0
-	l := loop.GoRecoverable(generateSimplePanicBackend(&done, &count), ignorePanics)
+	l := loop.GoRecoverable(generateRecoverPanicBackend(&done, &count), ignorePanics)
 
 	time.Sleep(longDelay)
 
@@ -125,12 +109,43 @@ func TestStopRecoverings(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
-// Test error inside a recovered loop.
+// TestEndRecoverings tests the regular internal stop of a recovered loop.
+func TestEndRecoverings(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	done := false
+	count := 0
+	l := loop.GoRecoverable(generateRecoverNoErrorBackend(&done, &count), ignorePanics)
+
+	time.Sleep(longDelay)
+
+	status, _ := l.Error()
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestRecoveringsPanic test recoverings after panics.
+func TestRecoveringsPanic(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	done := false
+	count := 0
+	l := loop.GoRecoverable(generateRecoverPanicBackend(&done, &count), checkRecovering)
+
+	time.Sleep(veryLongDelay)
+
+	assert.ErrorMatch(l.Stop(), "too many panics")
+	assert.True(done)
+	assert.Equal(count, 5)
+
+	status, _ := l.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestRecoveringsError tests recoverings after errors
 func TestRecoveringsError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	done := false
 	count := 0
-	l := loop.GoRecoverable(generateErrorPanicBackend(&done, &count), catchTimeout)
+	l := loop.GoRecoverable(generateRecoverErrorBackend(&done, &count), catchTimeout)
 
 	time.Sleep(longDelay)
 
@@ -227,7 +242,7 @@ func generateDeferredErrorBackend(done *bool) loop.LoopFunc {
 	}
 }
 
-func generateSimplePanicBackend(done *bool, count *int) loop.LoopFunc {
+func generateRecoverPanicBackend(done *bool, count *int) loop.LoopFunc {
 	return func(l loop.Loop) error {
 		defer func() { t := true; *done = t }()
 		c := *count
@@ -243,9 +258,11 @@ func generateSimplePanicBackend(done *bool, count *int) loop.LoopFunc {
 	}
 }
 
-func generateErrorPanicBackend(done *bool, count *int) loop.LoopFunc {
+func generateRecoverErrorBackend(done *bool, count *int) loop.LoopFunc {
 	return func(l loop.Loop) error {
 		defer func() { t := true; *done = t }()
+		c := *count
+		*count = c + 1
 		for {
 			select {
 			case <-l.ShallStop():
@@ -254,6 +271,16 @@ func generateErrorPanicBackend(done *bool, count *int) loop.LoopFunc {
 				return errors.New("timed out")
 			}
 		}
+	}
+}
+
+func generateRecoverNoErrorBackend(done *bool, count *int) loop.LoopFunc {
+	return func(l loop.Loop) error {
+		defer func() { t := true; *done = t }()
+		c := *count
+		*count = c + 1
+		time.Sleep(shortDelay)
+		return nil
 	}
 }
 

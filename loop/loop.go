@@ -183,6 +183,7 @@ func (l *loop) recoverableLoop() {
 	rs := Recoverings{}
 	loop := func() {
 		defer func() {
+			// Loop ended due to a panic, check recovering.
 			if r := recover(); r != nil {
 				var err error
 				rs = append(rs, &Recovering{time.Now(), r})
@@ -194,14 +195,17 @@ func (l *loop) recoverableLoop() {
 		}()
 		err := l.loopFunc(l)
 		if err != nil {
+			// Loop ends with error, check recovering.
 			rs = append(rs, &Recovering{time.Now(), err})
 			if rs, err = l.recoverFunc(rs); err != nil {
 				l.Kill(err)
 				run = false
 			}
+		} else {
+			// Loop ends w/o any error.
+			l.Kill(nil)
+			run = false
 		}
-		l.Kill(err)
-		run = false
 	}
 	for run {
 		loop()
