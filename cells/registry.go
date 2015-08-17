@@ -35,9 +35,7 @@ func (cr *celler) stop() error {
 	for id := range cr.subscribers {
 		ucr := cr.registry.cellers[id]
 		delete(ucr.subscriptions, subscriberID)
-		if err := ucr.updateSubscribers(); err != nil {
-			return err
-		}
+		ucr.updateSubscribers()
 	}
 	for id := range cr.subscriptions {
 		ucr, ok := cr.registry.cellers[id]
@@ -45,23 +43,21 @@ func (cr *celler) stop() error {
 			panic("subscriptions out of sync with cellers")
 		}
 		delete(ucr.subscribers, subscriberID)
-		if err := ucr.updateSubscribers(); err != nil {
-			return err
-		}
+		ucr.updateSubscribers()
 	}
 	return cr.cell.stop()
 }
 
 // updateSubscribers notifies the cell about the
 // current subscribers.
-func (cr *celler) updateSubscribers() error {
+func (cr *celler) updateSubscribers() {
 	var cells []*cell
 	for id := range cr.subscribers {
 		if scr, ok := cr.registry.cellers[id]; ok {
 			cells = append(cells, scr.cell)
 		}
 	}
-	return cr.cell.updateSubscribers(cells)
+	cr.cell.subscribers.update(cells)
 }
 
 //--------------------
@@ -144,7 +140,7 @@ func (r *registry) subscribe(emitterID string, subscriberIDs ...string) error {
 		return errors.New(ErrInvalidID, errorMessages, emitterID)
 	}
 	// Subscribe to subscriber IDs.
-	if err := r.checkIDs(subscriberIDs...); err != nil {
+	if err := r.checkIDs(emitterID, subscriberIDs...); err != nil {
 		return err
 	}
 	for _, subscriberID := range subscriberIDs {
@@ -165,7 +161,7 @@ func (r *registry) unsubscribe(emitterID string, subscriberIDs ...string) error 
 		return errors.New(ErrInvalidID, errorMessages, emitterID)
 	}
 	// Unsubscribe from subscriber IDs.
-	if err := r.checkIDs(subscriberIDs...); err != nil {
+	if err := r.checkIDs(emitterID, subscriberIDs...); err != nil {
 		return err
 	}
 	for _, subscriberID := range subscriberIDs {
@@ -209,10 +205,13 @@ func (r *registry) cells(ids ...string) ([]*cell, error) {
 
 // checkIDs checks if the passed IDs are valid. It is only
 // called internally, so no locking.
-func (r *registry) checkIDs(ids ...string) error {
-	for _, id := range ids {
-		if _, ok := r.cellers[id]; !ok {
-			return errors.New(ErrInvalidID, errorMessages, id)
+func (r *registry) checkIDs(emitterID string, subscriberIDs ...string) error {
+	for _, subscriberID := range subscriberIDs {
+		if subscriberID == emitterID {
+			return errors.New(ErrInvalidID, errorMessages, subscriberID)
+		}
+		if _, ok := r.cellers[subscriberID]; !ok {
+			return errors.New(ErrInvalidID, errorMessages, subscriberID)
 		}
 	}
 	return nil

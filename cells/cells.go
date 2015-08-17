@@ -104,7 +104,7 @@ type BehaviorRecoveringFrequency interface {
 
 // BehaviorEmitTimeout is an additional optional interface for a behavior to
 // set the maximum time an emitter is waiting for a receiving cell to accept the
-// emitted event (will never been higher than seconds).
+// emitted event (will always between 5 and 30 seconds with a 5 seconds timing).
 type BehaviorEmitTimeout interface {
 	EmitTimeout() time.Duration
 }

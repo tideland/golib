@@ -47,12 +47,12 @@ const (
 
 	// minRecoveringNumber and minRecoveringDuration
 	// control the default recovering frequency.
-	minRecoveringNumber   = 1
+	minRecoveringNumber   = 10
 	minRecoveringDuration = time.Second
 
 	// minEmitTimeout is the minimum allowed timeout
 	// for event emitting (see below).
-	minEmitTimeout = time.Second
+	minEmitTimeout = 5 * time.Second
 
 	// maxEmitTimeout is the maximum time to emit an
 	// event into a cells event buffer before a timeout

@@ -13,6 +13,7 @@ package cells
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -24,6 +25,45 @@ import (
 )
 
 //--------------------
+// SUBSCRIBERS
+//--------------------
+
+// subscribers manages the subscriber cells of a cell in a
+// synchronized way.
+type subscribers struct {
+	mutex sync.RWMutex
+	cells []*cell
+}
+
+// update sets the subscriber cells to the passed ones.
+func (s *subscribers) update(cells []*cell) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.cells = cells
+}
+
+// do executes the passed function for all subscriber cells
+// and collects potential errors.
+func (s *subscribers) do(f func(s Subscriber) error) error {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	var errs []error
+	for _, sc := range s.cells {
+		if err := f(sc); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	switch len(errs) {
+	case 0:
+		return nil
+	case 1:
+		return errs[0]
+	default:
+		return errors.Collect(errs...)
+	}
+}
+
+//--------------------
 // CELL
 //--------------------
 
@@ -33,12 +73,12 @@ type cell struct {
 	id                 string
 	measuringID        string
 	behavior           Behavior
-	subscribers        []*cell
+	subscribers        *subscribers
 	eventc             chan Event
-	subscriberc        chan []*cell
 	recoveringNumber   int
 	recoveringDuration time.Duration
-	emitTimeout        time.Duration
+	emitTimeoutTicker  *time.Ticker
+	emitTimeout        int
 	loop               loop.Loop
 }
 
@@ -47,11 +87,12 @@ func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 	logger.Infof("starting cell %q", id)
 	// Init cell runtime.
 	c := &cell{
-		env:         env,
-		id:          id,
-		measuringID: identifier.Identifier("cells", env.id, "cell", id),
-		behavior:    behavior,
-		subscriberc: make(chan []*cell),
+		env:               env,
+		id:                id,
+		measuringID:       identifier.Identifier("cells", env.id, "cell", id),
+		behavior:          behavior,
+		subscribers:       &subscribers{},
+		emitTimeoutTicker: time.NewTicker(5 * time.Second),
 	}
 	// Set configuration.
 	if bebs, ok := behavior.(BehaviorEventBufferSize); ok {
@@ -65,7 +106,7 @@ func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 	}
 	if brf, ok := behavior.(BehaviorRecoveringFrequency); ok {
 		number, duration := brf.RecoveringFrequency()
-		if duration.Seconds()/float64(number) < 1.0 {
+		if duration.Seconds()/float64(number) < 0.1 {
 			number = minRecoveringNumber
 			duration = minRecoveringDuration
 		}
@@ -83,9 +124,9 @@ func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 		case timeout > maxEmitTimeout:
 			timeout = maxEmitTimeout
 		}
-		c.emitTimeout = timeout
+		c.emitTimeout = int(timeout.Seconds() / 5)
 	} else {
-		c.emitTimeout = maxEmitTimeout
+		c.emitTimeout = int(maxEmitTimeout.Seconds() / 5)
 	}
 	// Init behavior.
 	if err := behavior.Init(c); err != nil {
@@ -108,12 +149,9 @@ func (c *cell) ID() string {
 
 // Emit implements the Context interface.
 func (c *cell) Emit(event Event) error {
-	for _, sc := range c.subscribers {
-		if err := sc.ProcessEvent(event); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.SubscribersDo(func(cs Subscriber) error {
+		return cs.ProcessEvent(event)
+	})
 }
 
 // EmitNew implements the Context interface.
@@ -127,17 +165,16 @@ func (c *cell) EmitNew(topic string, payload interface{}, scene scene.Scene) err
 
 // ProcessEvent implements the Subscriber interface.
 func (c *cell) ProcessEvent(event Event) error {
-	start := time.Now()
+	emitTimeoutTicks := 0
 	for {
 		select {
 		case c.eventc <- event:
 			return nil
 		case <-c.loop.IsStopping():
 			return errors.New(ErrInactive, errorMessages, c.id)
-		default:
-			time.Sleep(time.Second)
-			now := time.Now()
-			if now.Sub(start) > c.emitTimeout {
+		case <-c.emitTimeoutTicker.C:
+			emitTimeoutTicks++
+			if emitTimeoutTicks > c.emitTimeout {
 				op := fmt.Sprintf("emitting %q to %q", event.Topic(), c.id)
 				return errors.New(ErrTimeout, errorMessages, op)
 			}
@@ -156,52 +193,40 @@ func (c *cell) ProcessNewEvent(topic string, payload interface{}, scene scene.Sc
 
 // SubscribersDo implements the Subscriber interface.
 func (c *cell) SubscribersDo(f func(s Subscriber) error) error {
-	for _, sc := range c.subscribers {
-		if err := f(sc); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// updateSubscribers sets the subscribers of the cell.
-func (c *cell) updateSubscribers(cells []*cell) error {
-	select {
-	case c.subscriberc <- cells:
-	case <-c.loop.IsStopping():
-		return errors.New(ErrInactive, errorMessages, c.id)
-	}
-	return nil
+	return c.subscribers.do(f)
 }
 
 // stop terminates the cell.
 func (c *cell) stop() error {
-	defer logger.Infof("cell %q terminated", c.id)
-	return c.loop.Stop()
+	c.emitTimeoutTicker.Stop()
+	err := c.loop.Stop()
+	if err != nil {
+		logger.Errorf("cell %q terminated with error: %v", c.id, err)
+	} else {
+		logger.Infof("cell %q terminated", c.id)
+	}
+	return err
 }
 
 // backendLoop is the backend for the processing of messages.
 func (c *cell) backendLoop(l loop.Loop) error {
 	monitoring.IncrVariable(identifier.Identifier("cells", c.env.ID(), "total-cells"))
 	defer monitoring.DecrVariable(identifier.Identifier("cells", c.env.ID(), "total-cells"))
-
 	for {
 		select {
 		case <-l.ShallStop():
 			return c.behavior.Terminate()
-		case subscribers := <-c.subscriberc:
-			c.subscribers = subscribers
 		case event := <-c.eventc:
 			if event == nil {
 				panic("received illegal nil event!")
 			}
 			measuring := monitoring.BeginMeasuring(c.measuringID)
+			defer measuring.EndMeasuring()
 			err := c.behavior.ProcessEvent(event)
 			if err != nil {
-				c.loop.Kill(err)
-				continue
+				logger.Errorf("cell %q processed event %q with error: %v", c.id, event.Topic(), err)
+				return err
 			}
-			measuring.EndMeasuring()
 		}
 	}
 }
@@ -211,15 +236,20 @@ func (c *cell) backendLoop(l loop.Loop) error {
 // during the last minute or the behaviors Recover() signals, that it cannot
 // handle the error.
 func (c *cell) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
-	logger.Errorf("recovering cell %q after error: %v", c.id, rs.Last().Reason)
+	logger.Warningf("recovering cell %q after error: %v", c.id, rs.Last().Reason)
 	// Check frequency.
 	if rs.Frequency(c.recoveringNumber, c.recoveringDuration) {
-		return nil, errors.New(ErrRecoveredTooOften, errorMessages, rs.Last().Reason)
+		err := errors.New(ErrRecoveredTooOften, errorMessages, rs.Last().Reason)
+		logger.Errorf("recovering frequency of cell %q too high", c.id)
+		return nil, err
 	}
 	// Try to recover.
 	if err := c.behavior.Recover(rs.Last().Reason); err != nil {
-		return nil, errors.Annotate(err, ErrEventRecovering, errorMessages, rs.Last().Reason)
+		err := errors.Annotate(err, ErrEventRecovering, errorMessages, rs.Last().Reason)
+		logger.Errorf("recovering of cell %q failed", c.id, err)
+		return nil, err
 	}
+	logger.Infof("successfully recovered cell %q", c.id)
 	return rs.Trim(c.recoveringNumber), nil
 }
 

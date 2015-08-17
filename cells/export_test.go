@@ -1,4 +1,4 @@
-// Tideland Go Library - Cells - Unit Test Export
+// Tideland Go Library - Cells - Unit Tests - Export
 //
 // Copyright (C) 2010-2015 Frank Mueller / Tideland / Oldenburg / Germany
 //
@@ -62,7 +62,7 @@ func (ci *CellInsight) RecoveringDuration() time.Duration {
 	return ci.c.recoveringDuration
 }
 
-func (ci *CellInsight) EmitTimeout() time.Duration {
+func (ci *CellInsight) EmitTimeout() int {
 	return ci.c.emitTimeout
 }
 
