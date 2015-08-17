@@ -9,32 +9,32 @@ I hope you like them. ;)
 
 ## Packages
 
-| Name           | Purpose                                            | Documentation                                                                                                                                   |
-|----------------|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| Audit          | Unit Testing Support                               | [![GoDoc](https://godoc.org/github.com/tideland/golib/audit?status.svg)](https://godoc.org/github.com/tideland/golib/audit)                     |
-| Cache          | Lazy Loading and Caching of Values                 | [![GoDoc](https://godoc.org/github.com/tideland/golib/cache?status.svg)](https://godoc.org/github.com/tideland/golib/cache)                     |
-| Cells          | Event and Behavior based Applications              | [![GoDoc](https://godoc.org/github.com/tideland/golib/cells?status.svg)](https://godoc.org/github.com/tideland/golib/cells)                     |
-| Cell Behaviors | Standard Behaviors for Cells                       | [![GoDoc](https://godoc.org/github.com/tideland/golib/cells/behaviors?status.svg)](https://godoc.org/github.com/tideland/golib/cells/behaviors) |
-| Collections    | Ring Buffer, Stacks, Trees, and more               | [![GoDoc](https://godoc.org/github.com/tideland/golib/collections?status.svg)](https://godoc.org/github.com/tideland/golib/collections)         |
-| Configuration  | Reading and Access to SML-formatted Configurations | [![GoDoc](https://godoc.org/github.com/tideland/golib/configuration?status.svg)](https://godoc.org/github.com/tideland/golib/configuration)     |
-| Errors         | Detailed Error Values                              | [![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)                   |
-| Feed (Atom)    | Atom Feed Client                                   | [![GoDoc](https://godoc.org/github.com/tideland/golib/feed/atom?status.svg)](https://godoc.org/github.com/tideland/golib/feed/atom)             |
-| Feed (RSS)     | RSS Feed Client                                    | [![GoDoc](https://godoc.org/github.com/tideland/golib/feed/rss?status.svg)](https://godoc.org/github.com/tideland/golib/feed/rss)               |
-| Identifier     | Identifier Generation, like UUIDs                  | [![GoDoc](https://godoc.org/github.com/tideland/golib/identifier?status.svg)](https://godoc.org/github.com/tideland/golib/identifier)           |
-| Logger         | Flexible Logging                                   | [![GoDoc](https://godoc.org/github.com/tideland/golib/logger?status.svg)](https://godoc.org/github.com/tideland/golib/logger)                   |
-| Loop           | Goroutine Control including Recovering             | [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)                       |
-| Map/Reduce     | Map/Reduce for Data Analysis                       | [![GoDoc](https://godoc.org/github.com/tideland/golib/mapreduce?status.svg)](https://godoc.org/github.com/tideland/golib/mapreduce)             |
-| Monitoring     | Application Monitoring                             | [![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring)           |
-| Numerics       | Functions for Statistical Analysis                 | [![GoDoc](https://godoc.org/github.com/tideland/golib/numerics?status.svg)](https://godoc.org/github.com/tideland/golib/numerics)               |
-| Redis Client   | Client for Redis Database                          | [![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)                     |
-| Scene          | Context-based Shared Data Access                   | [![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)                     |
-| Scroller       | Continuous Filtered Reading/Writing                | [![GoDoc](https://godoc.org/github.com/tideland/golib/scroller?status.svg)](https://godoc.org/github.com/tideland/golib/scroller)               |
-| SML            | Simple Markup Language                             | [![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)                         |
-| Sort           | Parallel Quicksort                                 | [![GoDoc](https://godoc.org/github.com/tideland/golib/sort?status.svg)](https://godoc.org/github.com/tideland/golib/sort)                       |
-| Stringex       | String Extensions                                  | [![GoDoc](https://godoc.org/github.com/tideland/golib/stringex?status.svg)](https://godoc.org/github.com/tideland/golib/stringex)               |
-| Timex          | Time Extensions                                    | [![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)                     |
-| Version        | Semantic Versioning                                | [![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)                 |
-| Web            | RESTful Web Request Handling                       | [![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)                         |
+| Name           | Purpose                                            | Version | Documentation                                                                                                                                   |
+|----------------|----------------------------------------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| Audit          | Unit Testing Support                               | 4.2.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/audit?status.svg)](https://godoc.org/github.com/tideland/golib/audit)                     |
+| Cache          | Lazy Loading and Caching of Values                 | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/cache?status.svg)](https://godoc.org/github.com/tideland/golib/cache)                     |
+| Cells          | Event and Behavior based Applications              | 4.2.2   | [![GoDoc](https://godoc.org/github.com/tideland/golib/cells?status.svg)](https://godoc.org/github.com/tideland/golib/cells)                     |
+| Cell Behaviors | Standard Behaviors for Cells                       | 4.3.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/cells/behaviors?status.svg)](https://godoc.org/github.com/tideland/golib/cells/behaviors) |
+| Collections    | Ring Buffer, Stacks, Trees, and more               | 2.2.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/collections?status.svg)](https://godoc.org/github.com/tideland/golib/collections)         |
+| Configuration  | Reading and Access to SML-formatted Configurations | 3.1.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/configuration?status.svg)](https://godoc.org/github.com/tideland/golib/configuration)     |
+| Errors         | Detailed Error Values                              | 4.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)                   |
+| Feed (Atom)    | Atom Feed Client                                   | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/feed/atom?status.svg)](https://godoc.org/github.com/tideland/golib/feed/atom)             |
+| Feed (RSS)     | RSS Feed Client                                    | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/feed/rss?status.svg)](https://godoc.org/github.com/tideland/golib/feed/rss)               |
+| Identifier     | Identifier Generation, like UUIDs                  | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/identifier?status.svg)](https://godoc.org/github.com/tideland/golib/identifier)           |
+| Logger         | Flexible Logging                                   | 4.1.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/logger?status.svg)](https://godoc.org/github.com/tideland/golib/logger)                   |
+| Loop           | Goroutine Control including Recovering             | 3.1.1   | [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)                       |
+| Map/Reduce     | Map/Reduce for Data Analysis                       | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/mapreduce?status.svg)](https://godoc.org/github.com/tideland/golib/mapreduce)             |
+| Monitoring     | Application Monitoring                             | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/monitoring?status.svg)](https://godoc.org/github.com/tideland/golib/monitoring)           |
+| Numerics       | Functions for Statistical Analysis                 | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/numerics?status.svg)](https://godoc.org/github.com/tideland/golib/numerics)               |
+| Redis Client   | Client for Redis Database                          | 4.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)                     |
+| Scene          | Context-based Shared Data Access                   | 2.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/scene?status.svg)](https://godoc.org/github.com/tideland/golib/scene)                     |
+| Scroller       | Continuous Filtered Reading/Writing                | 2.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/scroller?status.svg)](https://godoc.org/github.com/tideland/golib/scroller)               |
+| SML            | Simple Markup Language                             | 3.1.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/sml?status.svg)](https://godoc.org/github.com/tideland/golib/sml)                         |
+| Sort           | Parallel Quicksort                                 | 3.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/sort?status.svg)](https://godoc.org/github.com/tideland/golib/sort)                       |
+| Stringex       | String Extensions                                  | 1.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/stringex?status.svg)](https://godoc.org/github.com/tideland/golib/stringex)               |
+| Timex          | Time Extensions                                    | 3.2.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/timex?status.svg)](https://godoc.org/github.com/tideland/golib/timex)                     |
+| Version        | Semantic Versioning                                | 2.0.0   | [![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)                 |
+| Web            | RESTful Web Request Handling                       | 4.0.1   | [![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)                         |
 
 ## Contributors
 

@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2015-08-17
+
+- Fixed race condition in cells
+- Optimised time handling in cells
+
 ## 2015-08-09
 
 - Added `Collect()` and `DoAll()` to errors

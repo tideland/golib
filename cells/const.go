@@ -52,7 +52,7 @@ const (
 
 	// minEmitTimeout is the minimum allowed timeout
 	// for event emitting (see below).
-	minEmitTimeout = time.Second
+	minEmitTimeout = 5 * time.Second
 
 	// maxEmitTimeout is the maximum time to emit an
 	// event into a cells event buffer before a timeout

@@ -35,9 +35,7 @@ func (cr *celler) stop() error {
 	for id := range cr.subscribers {
 		ucr := cr.registry.cellers[id]
 		delete(ucr.subscriptions, subscriberID)
-		if err := ucr.updateSubscribers(); err != nil {
-			return err
-		}
+		ucr.updateSubscribers()
 	}
 	for id := range cr.subscriptions {
 		ucr, ok := cr.registry.cellers[id]
@@ -45,23 +43,21 @@ func (cr *celler) stop() error {
 			panic("subscriptions out of sync with cellers")
 		}
 		delete(ucr.subscribers, subscriberID)
-		if err := ucr.updateSubscribers(); err != nil {
-			return err
-		}
+		ucr.updateSubscribers()
 	}
 	return cr.cell.stop()
 }
 
 // updateSubscribers notifies the cell about the
 // current subscribers.
-func (cr *celler) updateSubscribers() error {
+func (cr *celler) updateSubscribers() {
 	var cells []*cell
 	for id := range cr.subscribers {
 		if scr, ok := cr.registry.cellers[id]; ok {
 			cells = append(cells, scr.cell)
 		}
 	}
-	return cr.cell.updateSubscribers(cells)
+	cr.cell.subscribers.update(cells)
 }
 
 //--------------------

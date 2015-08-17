@@ -193,8 +193,8 @@ func TestBehaviorRecoveringFrequency(t *testing.T) {
 // the emit timeout.
 func TestBehaviorEmitTimeoutSetting(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	minSeconds := int(cells.MinEmitTimeout.Seconds())
-	maxSeconds := int(cells.MaxEmitTimeout.Seconds())
+	minSeconds := int(cells.MinEmitTimeout.Seconds() / 5)
+	maxSeconds := int(cells.MaxEmitTimeout.Seconds() / 5)
 
 	env := cells.NewEnvironment("emit-timeout-setting")
 	defer env.Stop()
@@ -207,7 +207,7 @@ func TestBehaviorEmitTimeoutSetting(t *testing.T) {
 	err = env.StartCell("correct", newEmitTimeoutBehavior(10*time.Second))
 	assert.Nil(err)
 	ci = cells.InspectCell(env, "correct")
-	assert.Equal(ci.EmitTimeout(), 10)
+	assert.Equal(ci.EmitTimeout(), 2)
 
 	err = env.StartCell("high", newEmitTimeoutBehavior(2*cells.MaxEmitTimeout))
 	assert.Nil(err)
