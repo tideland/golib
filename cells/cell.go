@@ -13,6 +13,7 @@ package cells
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -24,6 +25,45 @@ import (
 )
 
 //--------------------
+// SUBSCRIBERS
+//--------------------
+
+// subscribers manages the subscriber cells of a cell in a
+// synchronized way.
+type subscribers struct {
+	mutex sync.RWMutex
+	cells []*cell
+}
+
+// update sets the subscriber cells to the passed ones.
+func (s *subscribers) update(cells []*cell) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.cells = cells
+}
+
+// do executes the passed function for all subscriber cells
+// and collects potential errors.
+func (s *subscribers) do(f func(s Subscriber) error) error {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	var errs []error
+	for _, sc := range s.cells {
+		if err := f(sc); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	switch len(errs) {
+	case 0:
+		return nil
+	case 1:
+		return errs[0]
+	default:
+		return errors.Collect(errs...)
+	}
+}
+
+//--------------------
 // CELL
 //--------------------
 
@@ -33,9 +73,8 @@ type cell struct {
 	id                 string
 	measuringID        string
 	behavior           Behavior
-	subscribers        []*cell
+	subscribers        *subscribers
 	eventc             chan Event
-	subscriberc        chan []*cell
 	recoveringNumber   int
 	recoveringDuration time.Duration
 	emitTimeoutTicker  *time.Ticker
@@ -52,8 +91,8 @@ func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 		id:                id,
 		measuringID:       identifier.Identifier("cells", env.id, "cell", id),
 		behavior:          behavior,
-		subscriberc:       make(chan []*cell),
-		emitTimeoutTicker: time.NewTicker(time.Second),
+		subscribers:       &subscribers{},
+		emitTimeoutTicker: time.NewTicker(5 * time.Second),
 	}
 	// Set configuration.
 	if bebs, ok := behavior.(BehaviorEventBufferSize); ok {
@@ -85,9 +124,9 @@ func newCell(env *environment, id string, behavior Behavior) (*cell, error) {
 		case timeout > maxEmitTimeout:
 			timeout = maxEmitTimeout
 		}
-		c.emitTimeout = int(timeout.Seconds())
+		c.emitTimeout = int(timeout.Seconds() / 5)
 	} else {
-		c.emitTimeout = int(maxEmitTimeout.Seconds())
+		c.emitTimeout = int(maxEmitTimeout.Seconds() / 5)
 	}
 	// Init behavior.
 	if err := behavior.Init(c); err != nil {
@@ -110,20 +149,9 @@ func (c *cell) ID() string {
 
 // Emit implements the Context interface.
 func (c *cell) Emit(event Event) error {
-	var errs []error
-	for _, sc := range c.subscribers {
-		if err := sc.ProcessEvent(event); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	switch len(errs) {
-	case 0:
-		return nil
-	case 1:
-		return errs[0]
-	default:
-		return errors.Collect(errs...)
-	}
+	return c.SubscribersDo(func(cs Subscriber) error {
+		return cs.ProcessEvent(event)
+	})
 }
 
 // EmitNew implements the Context interface.
@@ -165,26 +193,12 @@ func (c *cell) ProcessNewEvent(topic string, payload interface{}, scene scene.Sc
 
 // SubscribersDo implements the Subscriber interface.
 func (c *cell) SubscribersDo(f func(s Subscriber) error) error {
-	for _, sc := range c.subscribers {
-		if err := f(sc); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// updateSubscribers sets the subscribers of the cell.
-func (c *cell) updateSubscribers(cells []*cell) error {
-	select {
-	case c.subscriberc <- cells:
-	case <-c.loop.IsStopping():
-		return errors.New(ErrInactive, errorMessages, c.id)
-	}
-	return nil
+	return c.subscribers.do(f)
 }
 
 // stop terminates the cell.
 func (c *cell) stop() error {
+	c.emitTimeoutTicker.Stop()
 	err := c.loop.Stop()
 	if err != nil {
 		logger.Errorf("cell %q terminated with error: %v", c.id, err)
@@ -202,8 +216,6 @@ func (c *cell) backendLoop(l loop.Loop) error {
 		select {
 		case <-l.ShallStop():
 			return c.behavior.Terminate()
-		case subscribers := <-c.subscriberc:
-			c.subscribers = subscribers
 		case event := <-c.eventc:
 			if event == nil {
 				panic("received illegal nil event!")
