@@ -14,6 +14,7 @@ package cells
 import (
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -28,8 +29,10 @@ import (
 
 // Environment implements the Environment interface.
 type environment struct {
-	id    string
-	cells *registry
+	mutex   sync.RWMutex
+	id      string
+	cells   *registry
+	monitor Monitoring
 }
 
 // NewEnvironment creates a new environment.
@@ -41,51 +44,71 @@ func NewEnvironment(idParts ...interface{}) Environment {
 		id = identifier.Identifier(idParts...)
 	}
 	env := &environment{
-		id:    id,
-		cells: newRegistry(),
+		id:      id,
+		cells:   newRegistry(),
+		monitor: NewNullMonitoring(),
 	}
 	runtime.SetFinalizer(env, (*environment).Stop)
 	logger.Infof("cells environment %q started", env.ID())
 	return env
 }
 
-// ID is specified on the Environment interface.
+// ID implements the Environment interface.
 func (env *environment) ID() string {
+	env.mutex.RLock()
+	defer env.mutex.RUnlock()
+
 	return env.id
 }
 
-// StartCell is specified on the Environment interface.
+// SetMonitoring implements the Environment interface.
+func (env *environment) SetMonitoring(m Monitoring) {
+	env.mutex.Lock()
+	defer env.mutex.Unlock()
+
+	env.monitor = m
+}
+
+// monitoring provides access to the environments monitoring.
+func (env *environment) monitoring() Monitoring {
+	env.mutex.RLock()
+	defer env.mutex.RUnlock()
+
+	return env.monitor
+}
+
+// StartCell implements the Environment interface.
 func (env *environment) StartCell(id string, behavior Behavior) error {
 	return env.cells.startCell(env, id, behavior)
 }
 
-// StopCell is specified on the Environment interface.
+// StopCell implements the Environment interface.
 func (env *environment) StopCell(id string) error {
 	return env.cells.stopCell(id)
 }
 
-// HasCell is specified on the Environment interface.
+// HasCell implements the Environment interface.
 func (env *environment) HasCell(id string) bool {
 	_, err := env.cells.cells(id)
 	return err == nil
 }
 
-// Subscribe is specified on the Environment interface.
+// Subscribe implements the Environment interface.
 func (env *environment) Subscribe(emitterID string, subscriberIDs ...string) error {
 	return env.cells.subscribe(emitterID, subscriberIDs...)
 }
 
-// Subscribers is specified on the Environment interface.
+// Subscribers implements the Environment interface.
 func (env *environment) Subscribers(id string) ([]string, error) {
 	return env.cells.subscribers(id)
 }
 
-// Unsubscribe is specified on the Environment interface.
+// Unsubscribe implements the Environment interface.
 func (env *environment) Unsubscribe(emitterID string, subscriberIDs ...string) error {
 	return env.cells.unsubscribe(emitterID, subscriberIDs...)
 }
 
-// Emit is specified on the Environment interface.
+// Emit implements the Environment interface.
 func (env *environment) Emit(id string, event Event) error {
 	cs, err := env.cells.cells(id)
 	if err != nil {
@@ -94,7 +117,7 @@ func (env *environment) Emit(id string, event Event) error {
 	return cs[0].ProcessEvent(event)
 }
 
-// EmitNew is specified on the Environment interface.
+// EmitNew implements the Environment interface.
 func (env *environment) EmitNew(id, topic string, payload interface{}, scene scene.Scene) error {
 	event, err := NewEvent(topic, payload, scene)
 	if err != nil {
@@ -103,7 +126,7 @@ func (env *environment) EmitNew(id, topic string, payload interface{}, scene sce
 	return env.Emit(id, event)
 }
 
-// Request is specified on the Environment interface.
+// Request implements the Environment interface.
 func (env *environment) Request(
 	id, topic string,
 	payload interface{},
@@ -128,7 +151,7 @@ func (env *environment) Request(
 	}
 }
 
-// Stop manages the proper finalization of an env.
+// Stop implements the Environment interface.
 func (env *environment) Stop() error {
 	runtime.SetFinalizer(env, nil)
 	if err := env.cells.stop(); err != nil {

@@ -398,8 +398,9 @@ func TestEnvironmentScenario(t *testing.T) {
 // BENCHMARKS
 //--------------------
 
-// BenchmarkSmpleEmit is a simple emitting to one cell.
-func BenchmarkSmpleEmit(b *testing.B) {
+// BenchmarkSmpleEmitNullMonitoring is a simple emitting to one cell
+// with the null monitor.
+func BenchmarkSmpleEmitNullMonitoring(b *testing.B) {
 	env := cells.NewEnvironment("simple-emit")
 	defer env.Stop()
 
@@ -411,5 +412,22 @@ func BenchmarkSmpleEmit(b *testing.B) {
 		env.Emit("collector", event)
 	}
 }
+
+// BenchmarkSmpleEmitStandardMonitoring is a simple emitting to one cell
+// with the standard monitor.
+func BenchmarkSmpleEmitStandardMonitoring(b *testing.B) {
+	env := cells.NewEnvironment("simple-emit")
+	defer env.Stop()
+
+	env.SetMonitoring(cells.NewStandardMonitoring())
+	env.StartCell("collector", newCollectBehavior())
+
+	event, _ := cells.NewEvent("foo", "bar", nil)
+
+	for i := 0; i < b.N; i++ {
+		env.Emit("collector", event)
+	}
+}
+
 
 // EOF

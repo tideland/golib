@@ -27,6 +27,9 @@ type Environment interface {
 	// the ID can by set manually or is generated automatically.
 	ID() string
 
+	// SetMonitoring sets the monitoring used by the environment.
+	SetMonitoring(m Monitoring)
+
 	// StartCell starts a new cell with a given ID and its behavior.
 	StartCell(id string, behavior Behavior) error
 
@@ -57,7 +60,7 @@ type Environment interface {
 	// event.Respond().
 	Request(id, topic string, payload interface{}, scn scene.Scene, timeout time.Duration) (interface{}, error)
 
-	// Stop manages the proper finalization of an env.
+	// Stop manages the proper finalization of an environment.
 	Stop() error
 }
 

@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2015-08-18
+
+- Monitoring in cells is now pluggable
+
 ## 2015-08-17
 
 - Fixed race condition in cells
