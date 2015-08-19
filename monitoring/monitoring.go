@@ -15,12 +15,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
+	"sync"
 	"time"
-
-	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/logger"
-	"github.com/tideland/golib/loop"
 )
 
 //--------------------
@@ -57,6 +53,8 @@ type Measuring interface {
 // MeasuringPoint defines the collected information for one execution
 // time measuring point.
 type MeasuringPoint interface {
+	fmt.Stringer
+
 	// ID returns the identifier of the measuring point.
 	ID() string
 
@@ -85,6 +83,8 @@ func (m MeasuringPoints) Less(i, j int) bool { return m[i].ID() < m[j].ID() }
 // StaySetVariable contains the cumulated values
 // for one stay-set variable.
 type StaySetVariable interface {
+	fmt.Stringer
+
 	// ID returns the identifier of the stay-set variable.
 	ID() string
 
@@ -119,6 +119,8 @@ type DynamicStatusRetriever func() (string, error)
 
 // DynamicStatusValue contains one retrieved value.
 type DynamicStatusValue interface {
+	fmt.Stringer
+
 	// ID returns the identifier of the status value.
 	ID() string
 
@@ -201,7 +203,7 @@ func SetBackend(mb MonitoringBackend) MonitoringBackend {
 
 // BeginMeasuring starts a new measuring with a given id.
 // All measurings with the same id will be aggregated.
-func BeginMeasuring(id string) *Measuring {
+func BeginMeasuring(id string) Measuring {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	return backend.BeginMeasuring(id)

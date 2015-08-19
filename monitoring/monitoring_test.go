@@ -26,7 +26,7 @@ import (
 //--------------------
 
 // Test of the ETM monitor.
-func TestEtmMonitor(t *testing.T) {
+func TestETMMonitor(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	// Generate measurings.
 	for i := 0; i < 500; i++ {
@@ -43,18 +43,18 @@ func TestEtmMonitor(t *testing.T) {
 	assert.ErrorMatch(err, `.* measuring point "foo" does not exist`)
 	mp, err = monitoring.ReadMeasuringPoint("mp:task:5")
 	assert.Nil(err, "No error expected.")
-	assert.Equal(mp.Id, "mp:task:5", "should get the right one")
-	assert.True(mp.Count > 0, "should be measured several times")
+	assert.Equal(mp.ID(), "mp:task:5", "should get the right one")
+	assert.True(mp.Count() > 0, "should be measured several times")
 	assert.Match(mp.String(), `Measuring Point "mp:task:5" \(.*\)`, "string representation should look fine")
-	monitoring.MeasuringPointsDo(func(mp *monitoring.MeasuringPoint) {
-		assert.Match(mp.Id, "mp:task:[0-9]", "id has to match the pattern")
-		assert.True(mp.MinDuration <= mp.AvgDuration && mp.AvgDuration <= mp.MaxDuration,
+	monitoring.MeasuringPointsDo(func(mp monitoring.MeasuringPoint) {
+		assert.Match(mp.ID(), "mp:task:[0-9]", "id has to match the pattern")
+		assert.True(mp.MinDuration() <= mp.AvgDuration() && mp.AvgDuration() <= mp.MaxDuration(),
 			"avg should be somewhere between min and max")
 	})
 }
 
 // Test of the SSI monitor.
-func TestSsiMonitor(t *testing.T) {
+func TestSSIMonitor(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	// Generate values.
 	for i := 0; i < 500; i++ {
@@ -69,18 +69,18 @@ func TestSsiMonitor(t *testing.T) {
 	assert.ErrorMatch(err, `.* stay-set variable "foo" does not exist`)
 	ssv, err = monitoring.ReadVariable("ssv:value:5")
 	assert.Nil(err, "no error expected")
-	assert.Equal(ssv.Id, "ssv:value:5", "should get the right one")
-	assert.True(ssv.Count > 0, "should be set several times")
+	assert.Equal(ssv.ID(), "ssv:value:5", "should get the right one")
+	assert.True(ssv.Count() > 0, "should be set several times")
 	assert.Match(ssv.String(), `Stay-Set Variable "ssv:value:5" (.*)`)
-	monitoring.StaySetVariablesDo(func(ssv *monitoring.StaySetVariable) {
-		assert.Match(ssv.Id, "ssv:value:[0-9]", "id has to match the pattern")
-		assert.True(ssv.MinValue <= ssv.AvgValue && ssv.AvgValue <= ssv.MaxValue,
+	monitoring.StaySetVariablesDo(func(ssv monitoring.StaySetVariable) {
+		assert.Match(ssv.ID(), "ssv:value:[0-9]", "id has to match the pattern")
+		assert.True(ssv.MinValue() <= ssv.AvgValue() && ssv.AvgValue() <= ssv.MaxValue(),
 			"avg should be somewhere between min and max")
 	})
 }
 
 // Test of the DSR monitor.
-func TestDsrMonitor(t *testing.T) {
+func TestDSRMonitor(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	// Register monitoring funcs.
 	monitoring.Register("dsr:a", func() (string, error) { return "A", nil })

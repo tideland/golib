@@ -12,6 +12,7 @@ package monitoring
 //--------------------
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -64,18 +65,18 @@ func (c *command) close() {
 // MEASURING
 //--------------------
 
-// standardMeasuring implements the Measuring interface.
-type standardMeasuring struct {
-	backend   *standardMonitoringBackend
+// stdMeasuring implements the Measuring interface.
+type stdMeasuring struct {
+	backend   *stdMonitoringBackend
 	id        string
 	startTime time.Time
 	duration  time.Duration
 }
 
 // EndMEasuring implements the Measuring interface.
-func (m *standardMeasuring) EndMeasuring() time.Duration {
+func (m *stdMeasuring) EndMeasuring() time.Duration {
 	m.duration = time.Now().Sub(m.startTime)
-	m.backend.measuringChan <- m
+	m.backend.measuringC <- m
 	return m.duration
 }
 
@@ -83,8 +84,8 @@ func (m *standardMeasuring) EndMeasuring() time.Duration {
 // MEASURING POINT
 //--------------------
 
-// standardMeasuringPoint implements the MeasuringPoint interface.
-type standardMeasuringPoint struct {
+// stdMeasuringPoint implements the MeasuringPoint interface.
+type stdMeasuringPoint struct {
 	id          string
 	count       int64
 	minDuration time.Duration
@@ -92,9 +93,9 @@ type standardMeasuringPoint struct {
 	avgDuration time.Duration
 }
 
-// newStandardMeasuringPoint creates a new measuring point out of a measuring.
-func newStandardMeasuringPoint(m *standardMeasuring) *standardMeasuringPoint {
-	return &standardMeasuringPoint{
+// newStdMeasuringPoint creates a new measuring point out of a measuring.
+func newStdMeasuringPoint(m *stdMeasuring) *stdMeasuringPoint {
+	return &stdMeasuringPoint{
 		id:          m.id,
 		count:       1,
 		minDuration: m.duration,
@@ -103,10 +104,25 @@ func newStandardMeasuringPoint(m *standardMeasuring) *standardMeasuringPoint {
 	}
 }
 
+// ID implements the MeasuringPoint interface.
+func (mp *stdMeasuringPoint) ID() string { return mp.id }
+
+// Count implements the MeasuringPoint interface.
+func (mp *stdMeasuringPoint) Count() int64 { return mp.count }
+
+// MinDuration implements the MeasuringPoint interface.
+func (mp *stdMeasuringPoint) MinDuration() time.Duration { return mp.minDuration }
+
+// MaxDuration implements the MeasuringPoint interface.
+func (mp *stdMeasuringPoint) MaxDuration() time.Duration { return mp.maxDuration }
+
+// AvgDuration implements the MeasuringPoint interface.
+func (mp *stdMeasuringPoint) AvgDuration() time.Duration { return mp.avgDuration }
+
 // Uupdate a measuring point with a measuring.
-func (mp *standardMeasuringPoint) update(m *standardMeasuring) {
+func (mp *stdMeasuringPoint) update(m *stdMeasuring) {
 	average := mp.avgDuration.Nanoseconds()
-	mp.Count++
+	mp.count++
 	if mp.minDuration > m.duration {
 		mp.minDuration = m.duration
 	}
@@ -117,7 +133,7 @@ func (mp *standardMeasuringPoint) update(m *standardMeasuring) {
 }
 
 // String implements the Stringer interface.
-func (mp *standardMeasuringPoint) String() string {
+func (mp *stdMeasuringPoint) String() string {
 	return fmt.Sprintf("Measuring Point %q (%dx / min %s / max %s / avg %s)", mp.id, mp.count, mp.minDuration, mp.maxDuration, mp.avgDuration)
 }
 
@@ -125,15 +141,15 @@ func (mp *standardMeasuringPoint) String() string {
 // STAY-SET VARIABLE
 //--------------------
 
-// standardSSVChange represents the change of a stay-set variable.
-type standardSSVChange struct {
+// stdSSVChange represents the change of a stay-set variable.
+type stdSSVChange struct {
 	id       string
 	absolute bool
 	variable int64
 }
 
-// standardStaySetVariable implements the StaySetVariable interface.
-type standardStaySetVariable struct {
+// stdStaySetVariable implements the StaySetVariable interface.
+type stdStaySetVariable struct {
 	id       string
 	count    int64
 	actValue int64
@@ -143,9 +159,9 @@ type standardStaySetVariable struct {
 	total    int64
 }
 
-// newStaySetVariable creates a new stay-set variable out of a variable.
-func newStaySetVariable(v *standardSSVChange) *standardStaySetVariable {
-	return &standardStaySetVariable{
+// newStdStaySetVariable creates a new stay-set variable out of a variable.
+func newStdStaySetVariable(v *stdSSVChange) *stdStaySetVariable {
+	return &stdStaySetVariable{
 		id:       v.id,
 		count:    1,
 		actValue: v.variable,
@@ -155,8 +171,26 @@ func newStaySetVariable(v *standardSSVChange) *standardStaySetVariable {
 	}
 }
 
+// ID implements the StaySetVariable interface.
+func (ssv *stdStaySetVariable) ID() string { return ssv.id }
+
+// Count implements the StaySetVariable interface.
+func (ssv *stdStaySetVariable) Count() int64 { return ssv.count }
+
+// ActValue implements the StaySetVariable interface.
+func (ssv *stdStaySetVariable) ActValue() int64 { return ssv.actValue }
+
+// MinValue implements the StaySetVariable interface.
+func (ssv *stdStaySetVariable) MinValue() int64 { return ssv.minValue }
+
+// MaxValue implements the StaySetVariable interface.
+func (ssv *stdStaySetVariable) MaxValue() int64 { return ssv.maxValue }
+
+// MinValue implements the StaySetVariable interface.
+func (ssv *stdStaySetVariable) AvgValue() int64 { return ssv.avgValue }
+
 // update a stay-set variable with a change.
-func (ssv *standardStaySetVariable) update(chg *standardSSVChange) {
+func (ssv *stdStaySetVariable) update(chg *stdSSVChange) {
 	ssv.count++
 	if chg.absolute {
 		ssv.actValue = chg.variable
@@ -174,7 +208,7 @@ func (ssv *standardStaySetVariable) update(chg *standardSSVChange) {
 }
 
 // String implements the Stringer interface.
-func (ssv *standardStaySetVariable) String() string {
+func (ssv *stdStaySetVariable) String() string {
 	return fmt.Sprintf("Stay-Set Variable %q (%dx / act %d / min %d / max %d / avg %d)",
 		ssv.id, ssv.count, ssv.actValue, ssv.minValue, ssv.maxValue, ssv.avgValue)
 }
@@ -183,20 +217,26 @@ func (ssv *standardStaySetVariable) String() string {
 // DYNAMIC STATUS RETRIEVER
 //--------------------
 
-// standardRetrieverRegistration allows the registration of a retriever function.
-type standardRetrieverRegistration struct {
+// stdRetrieverRegistration allows the registration of a retriever function.
+type stdRetrieverRegistration struct {
 	id  string
 	dsr DynamicStatusRetriever
 }
 
-// standardDynamicStatusValue implements the DynamicStatusValue interface.
-type standardDynamicStatusValue struct {
+// stdDynamicStatusValue implements the DynamicStatusValue interface.
+type stdDynamicStatusValue struct {
 	id    string
 	value string
 }
 
+// ID implements the DynamicStatusValue interface.
+func (dsv *stdDynamicStatusValue) ID() string { return dsv.id }
+
+// Value implements the DynamicStatusValue interface.
+func (dsv *stdDynamicStatusValue) Value() string { return dsv.value }
+
 // String implements the Stringer interface.
-func (dsv *standardDynamicStatusValue) String() string {
+func (dsv *stdDynamicStatusValue) String() string {
 	return fmt.Sprintf("Dynamic Status Value %q (value = %q)", dsv.id, dsv.value)
 }
 
@@ -204,37 +244,37 @@ func (dsv *standardDynamicStatusValue) String() string {
 // MONITORING BACKEND
 //--------------------
 
-// standardMonitoringBackend implements the MonitoringBackend interface.
-type standardMonitoringBackend struct {
-	etmData                   map[string]*MeasuringPoint
-	ssvData                   map[string]*StaySetVariable
-	dsrData                   map[string]DynamicStatusRetriever
-	measuringChan             chan *Measuring
-	ssvChangeChan             chan *ssvChange
-	retrieverRegistrationChan chan *retrieverRegistration
-	commandChan               chan *command
-	backend                   loop.Loop
+// stdMonitoringBackend implements the MonitoringBackend interface.
+type stdMonitoringBackend struct {
+	etmData                map[string]*stdMeasuringPoint
+	ssvData                map[string]*stdStaySetVariable
+	dsrData                map[string]DynamicStatusRetriever
+	measuringC             chan *stdMeasuring
+	ssvChangeC             chan *stdSSVChange
+	retrieverRegistrationC chan *stdRetrieverRegistration
+	commandC               chan *command
+	backend                loop.Loop
 }
 
 // NewStandardMonitoringBackend starts the standard monitoring backend.
 func NewStandardMonitoringBackend() MonitoringBackend {
-	m := &standardMonitoringBackend{
-		measuringChan:             make(chan *Measuring, 1000),
-		ssvChangeChan:             make(chan *ssvChange, 1000),
-		retrieverRegistrationChan: make(chan *retrieverRegistration, 10),
-		commandChan:               make(chan *command),
+	m := &stdMonitoringBackend{
+		measuringC:             make(chan *stdMeasuring, 1000),
+		ssvChangeC:             make(chan *stdSSVChange, 1000),
+		retrieverRegistrationC: make(chan *stdRetrieverRegistration, 10),
+		commandC:               make(chan *command),
 	}
 	m.backend = loop.GoRecoverable(m.backendLoop, m.checkRecovering)
 	return m
 }
 
 // BeginMeasuring implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) BeginMeasuring(id string) *Measuring {
-	return &standardMeasuring{b, id, time.Now(), time.Now()}
+func (b *stdMonitoringBackend) BeginMeasuring(id string) Measuring {
+	return &stdMeasuring{b, id, time.Now(), 0}
 }
 
 // ReadMeasuringPoint implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) ReadMeasuringPoint(id string) (MeasuringPoint, error) {
+func (b *stdMonitoringBackend) ReadMeasuringPoint(id string) (MeasuringPoint, error) {
 	resp, err := b.command(cmdMeasuringPointRead, id)
 	if err != nil {
 		return nil, err
@@ -243,7 +283,7 @@ func (b *standardMonitoringBackend) ReadMeasuringPoint(id string) (MeasuringPoin
 }
 
 // MeasuringPointsDo implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) MeasuringPointsDo(f func(MeasuringPoint)) error {
+func (b *stdMonitoringBackend) MeasuringPointsDo(f func(MeasuringPoint)) error {
 	resp, err := b.command(cmdMeasuringPointsReadAll, nil)
 	if err != nil {
 		return err
@@ -256,22 +296,22 @@ func (b *standardMonitoringBackend) MeasuringPointsDo(f func(MeasuringPoint)) er
 }
 
 // SetVariable implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) SetVariable(id string, v int64) {
-	b.ssvChangeChan <- &standardSSVChange{id, true, v}
+func (b *stdMonitoringBackend) SetVariable(id string, v int64) {
+	b.ssvChangeC <- &stdSSVChange{id, true, v}
 }
 
 // IncrVariable implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) IncrVariable(id string) {
-	b.ssvChangeChan <- &standardSSVChange{id, false, 1}
+func (b *stdMonitoringBackend) IncrVariable(id string) {
+	b.ssvChangeC <- &stdSSVChange{id, false, 1}
 }
 
 // DecrVariable implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) DecrVariable(id string) {
-	b.ssvChangeChan <- &standardSSVChange{id, false, -1}
+func (b *stdMonitoringBackend) DecrVariable(id string) {
+	b.ssvChangeC <- &stdSSVChange{id, false, -1}
 }
 
 // ReadVariable implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) ReadVariable(id string) (StaySetVariable, error) {
+func (b *stdMonitoringBackend) ReadVariable(id string) (StaySetVariable, error) {
 	resp, err := b.command(cmdStaySetVariableRead, id)
 	if err != nil {
 		return nil, err
@@ -280,7 +320,7 @@ func (b *standardMonitoringBackend) ReadVariable(id string) (StaySetVariable, er
 }
 
 // StaySetVariablesDo implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) StaySetVariablesDo(f func(StaySetVariable)) error {
+func (b *stdMonitoringBackend) StaySetVariablesDo(f func(StaySetVariable)) error {
 	resp, err := b.command(cmdStaySetVariablesReadAll, nil)
 	if err != nil {
 		return err
@@ -293,12 +333,12 @@ func (b *standardMonitoringBackend) StaySetVariablesDo(f func(StaySetVariable)) 
 }
 
 // Register implements the MonitorBackend interface.
-func  (b *standardMonitoringBackend) Register(id string, rf DynamicStatusRetriever) {
-	v.retrieverRegistrationChan <- &retrieverRegistration{id, rf}
+func (b *stdMonitoringBackend) Register(id string, rf DynamicStatusRetriever) {
+	b.retrieverRegistrationC <- &stdRetrieverRegistration{id, rf}
 }
 
 // ReadStatus implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) ReadStatus(id string) (string, error) {
+func (b *stdMonitoringBackend) ReadStatus(id string) (string, error) {
 	resp, err := b.command(cmdDynamicStatusRetrieverRead, id)
 	if err != nil {
 		return "", err
@@ -307,8 +347,8 @@ func (b *standardMonitoringBackend) ReadStatus(id string) (string, error) {
 }
 
 // DynamicStatusValuesDo implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
-	resp, err := monitor.command(cmdDynamicStatusRetrieversReadAll, f)
+func (b *stdMonitoringBackend) DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
+	resp, err := b.command(cmdDynamicStatusRetrieversReadAll, f)
 	if err != nil {
 		return err
 	}
@@ -320,8 +360,8 @@ func (b *standardMonitoringBackend) DynamicStatusValuesDo(f func(DynamicStatusVa
 }
 
 // Reset implements the MonitorBackend interface.
-func (b *standardMonitoringBackend) Reset() error {
-	_, err := m.command(cmdReset, nil)
+func (b *stdMonitoringBackend) Reset() error {
+	_, err := b.command(cmdReset, nil)
 	if err != nil {
 		return err
 	}
@@ -329,9 +369,9 @@ func (b *standardMonitoringBackend) Reset() error {
 }
 
 // command sends a command to the system monitor and waits for a response.
-func (b *standardMonitoringBackend) command(opCode int, args interface{}) (interface{}, error) {
+func (b *stdMonitoringBackend) command(opCode int, args interface{}) (interface{}, error) {
 	cmd := &command{opCode, args, make(chan interface{})}
-	b.commandChan <- cmd
+	b.commandC <- cmd
 	resp, ok := <-cmd.respChan
 	if !ok {
 		return nil, errors.New(ErrMonitorPanicked, errorMessages)
@@ -343,14 +383,14 @@ func (b *standardMonitoringBackend) command(opCode int, args interface{}) (inter
 }
 
 // init the system monitor.
-func (b *standardMonitoringBackend) init() {
-	b.etmData = make(map[string]*MeasuringPoint)
-	b.ssvData = make(map[string]*StaySetVariable)
+func (b *stdMonitoringBackend) init() {
+	b.etmData = make(map[string]*stdMeasuringPoint)
+	b.ssvData = make(map[string]*stdStaySetVariable)
 	b.dsrData = make(map[string]DynamicStatusRetriever)
 }
 
 // backendLoop runs the system monitor.
-func (b *standardMonitoringBackend) backendLoop(l loop.Loop) error {
+func (b *stdMonitoringBackend) backendLoop(l loop.Loop) error {
 	// Init the monitor.
 	b.init()
 	// Run loop.
@@ -358,24 +398,24 @@ func (b *standardMonitoringBackend) backendLoop(l loop.Loop) error {
 		select {
 		case <-l.ShallStop():
 			return nil
-		case measuring := <-b.measuringChan:
+		case measuring := <-b.measuringC:
 			// Received a new measuring.
 			if mp, ok := b.etmData[measuring.id]; ok {
 				mp.update(measuring)
 			} else {
-				b.etmData[measuring.id] = newMeasuringPoint(measuring)
+				b.etmData[measuring.id] = newStdMeasuringPoint(measuring)
 			}
-		case ssvChange := <-m.ssvChangeChan:
+		case ssvChange := <-b.ssvChangeC:
 			// Received a new change.
-			if ssv, ok := m.ssvData[ssvChange.id]; ok {
+			if ssv, ok := b.ssvData[ssvChange.id]; ok {
 				ssv.update(ssvChange)
 			} else {
-				b.ssvData[ssvChange.id] = newStaySetVariable(ssvChange)
+				b.ssvData[ssvChange.id] = newStdStaySetVariable(ssvChange)
 			}
-		case registration := <-m.retrieverRegistrationChan:
+		case registration := <-b.retrieverRegistrationC:
 			// Received a new retriever for registration.
 			b.dsrData[registration.id] = registration.dsr
-		case cmd := <-b.commandChan:
+		case cmd := <-b.commandC:
 			// Received a command to process.
 			b.processCommand(cmd)
 		}
@@ -383,7 +423,7 @@ func (b *standardMonitoringBackend) backendLoop(l loop.Loop) error {
 }
 
 // processCommand handles the received commands of the monitor.
-func (b *standardMonitoringBackend) processCommand(cmd *command) {
+func (b *stdMonitoringBackend) processCommand(cmd *command) {
 	defer cmd.close()
 	switch cmd.opCode {
 	case cmdReset:
@@ -453,7 +493,7 @@ func (b *standardMonitoringBackend) processCommand(cmd *command) {
 			if err != nil {
 				cmd.respond(err)
 			}
-			dsv := &standardDynamicStatusValue{id, v}
+			dsv := &stdDynamicStatusValue{id, v}
 			resp = append(resp, dsv)
 		}
 		sort.Sort(resp)
@@ -462,7 +502,7 @@ func (b *standardMonitoringBackend) processCommand(cmd *command) {
 }
 
 // checkRecovering checks if the backend can be recovered.
-func (b *standardMonitoringBackend) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
+func (b *stdMonitoringBackend) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
 	if rs.Frequency(12, time.Minute) {
 		logger.Errorf("standard monitor cannot be recovered: %v", rs.Last().Reason)
 		return nil, errors.New(ErrMonitorCannotBeRecovered, errorMessages, rs.Last().Reason)
