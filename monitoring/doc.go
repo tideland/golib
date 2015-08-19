@@ -6,11 +6,11 @@
 // by the new BSD license.
 
 // The Tideland Go Library monitoring package supports three kinds of
-// system monitoring.
-//
-// They are helpful to understand what's happening inside a system during
-// runtime. So execution times can be measured and analyzed, stay-set
-// indicators integrated and dynamic control value retrieval provided.
+// system monitoring. They are helpful to understand what's happening
+// inside a system during runtime. So execution times can be measured
+// and analyzed, stay-set variables integrated and dynamic control
+// value retrieval provided. The backend is exchangeable and the whole
+// monitoring can be turned off.
 package monitoring
 
 //--------------------
@@ -27,7 +27,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(3, 0, 0)
+	return version.New(4, 0, 0)
 }
 
 // EOF
