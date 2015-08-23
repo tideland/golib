@@ -14,7 +14,6 @@ package cells
 import (
 	"fmt"
 	"runtime"
-	"sync"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -29,10 +28,8 @@ import (
 
 // Environment implements the Environment interface.
 type environment struct {
-	mutex   sync.RWMutex
-	id      string
-	cells   *registry
-	monitor Monitoring
+	id    string
+	cells *registry
 }
 
 // NewEnvironment creates a new environment.
@@ -44,9 +41,8 @@ func NewEnvironment(idParts ...interface{}) Environment {
 		id = identifier.Identifier(idParts...)
 	}
 	env := &environment{
-		id:      id,
-		cells:   newRegistry(),
-		monitor: NewNullMonitoring(),
+		id:    id,
+		cells: newRegistry(),
 	}
 	runtime.SetFinalizer(env, (*environment).Stop)
 	logger.Infof("cells environment %q started", env.ID())
@@ -55,26 +51,7 @@ func NewEnvironment(idParts ...interface{}) Environment {
 
 // ID implements the Environment interface.
 func (env *environment) ID() string {
-	env.mutex.RLock()
-	defer env.mutex.RUnlock()
-
 	return env.id
-}
-
-// SetMonitoring implements the Environment interface.
-func (env *environment) SetMonitoring(m Monitoring) {
-	env.mutex.Lock()
-	defer env.mutex.Unlock()
-
-	env.monitor = m
-}
-
-// monitoring provides access to the environments monitoring.
-func (env *environment) monitoring() Monitoring {
-	env.mutex.RLock()
-	defer env.mutex.RUnlock()
-
-	return env.monitor
 }
 
 // StartCell implements the Environment interface.

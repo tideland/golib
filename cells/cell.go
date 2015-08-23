@@ -20,6 +20,7 @@ import (
 	"github.com/tideland/golib/identifier"
 	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/loop"
+	"github.com/tideland/golib/monitoring"
 	"github.com/tideland/golib/scene"
 )
 
@@ -210,8 +211,8 @@ func (c *cell) stop() error {
 // backendLoop is the backend for the processing of messages.
 func (c *cell) backendLoop(l loop.Loop) error {
 	totalCellsID := identifier.Identifier("cells", c.env.ID(), "total-cells")
-	c.env.monitoring().IncrVariable(totalCellsID)
-	defer c.env.monitoring().DecrVariable(totalCellsID)
+	monitoring.IncrVariable(totalCellsID)
+	defer monitoring.DecrVariable(totalCellsID)
 
 	for {
 		select {
@@ -221,9 +222,9 @@ func (c *cell) backendLoop(l loop.Loop) error {
 			if event == nil {
 				panic("received illegal nil event!")
 			}
-			measuring := c.env.monitoring().BeginMeasuring(c.measuringID)
+			measuring := monitoring.BeginMeasuring(c.measuringID)
 			err := c.behavior.ProcessEvent(event)
-			measuring.End()
+			measuring.EndMeasuring()
 			if err != nil {
 				logger.Errorf("cell %q processed event %q with error: %v", c.id, event.Topic(), err)
 				return err

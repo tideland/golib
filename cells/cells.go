@@ -27,9 +27,6 @@ type Environment interface {
 	// the ID can by set manually or is generated automatically.
 	ID() string
 
-	// SetMonitoring sets the monitoring used by the environment.
-	SetMonitoring(m Monitoring)
-
 	// StartCell starts a new cell with a given ID and its behavior.
 	StartCell(id string, behavior Behavior) error
 
