@@ -43,6 +43,19 @@ const (
 // TEST BEHAVIORS
 //--------------------
 
+// nullBehavior does nothing.
+type nullBehavior struct{}
+
+var _ cells.Behavior = (*nullBehavior)(nil)
+
+func (b *nullBehavior) Init(ctx cells.Context) error { return nil }
+
+func (b *nullBehavior) Terminate() error { return nil }
+
+func (b *nullBehavior) ProcessEvent(event cells.Event) error { return nil }
+
+func (b *nullBehavior) Recover(r interface{}) error { return nil }
+
 // collectBehavior collects and re-emits all events, returns them
 // on the topic "processed" and delets all collected on the
 // topic "reset".

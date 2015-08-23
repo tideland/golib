@@ -20,7 +20,7 @@ import (
 //--------------------
 
 // nullMeasuring implements the Measuring interface.
-type nullMeasuring struct {}
+type nullMeasuring struct{}
 
 // EndMEasuring implements the Measuring interface.
 func (m *nullMeasuring) EndMeasuring() time.Duration { return 0 }
@@ -30,7 +30,7 @@ func (m *nullMeasuring) EndMeasuring() time.Duration { return 0 }
 //--------------------
 
 // nullMeasuringPoint implements the MeasuringPoint interface.
-type nullMeasuringPoint struct {}
+type nullMeasuringPoint struct{}
 
 // ID implements the MeasuringPoint interface.
 func (mp *nullMeasuringPoint) ID() string { return "null" }
@@ -55,7 +55,7 @@ func (mp *nullMeasuringPoint) String() string { return "Null Measuring Point" }
 //--------------------
 
 // nullStaySetVariable implements the StaySetVariable interface.
-type nullStaySetVariable struct {}
+type nullStaySetVariable struct{}
 
 // ID implements the StaySetVariable interface.
 func (ssv *nullStaySetVariable) ID() string { return "null" }
@@ -83,7 +83,7 @@ func (ssv *nullStaySetVariable) String() string { return "Null Stay-Set Variable
 //--------------------
 
 // nullDynamicStatusValue implements the DynamicStatusValue interface.
-type nullDynamicStatusValue struct {}
+type nullDynamicStatusValue struct{}
 
 // ID implements the DynamicStatusValue interface.
 func (dsv *nullDynamicStatusValue) ID() string { return "null" }
@@ -98,44 +98,62 @@ func (dsv *nullDynamicStatusValue) String() string { return "Null Dynamic Status
 // MONITORING BACKEND
 //--------------------
 
-// nullMonitoringBackend implements the MonitoringBackend interface.
-type nullMonitoringBackend struct {}
+// nullBackend implements the Backend interface.
+type nullBackend struct{}
 
-// NewNullMonitoringBackend starts the null monitoring backend doing nothing.
-func NewNullMonitoringBackend() MonitoringBackend { return &nullMonitoringBackend{} }
+// NewNullBackend starts the null monitoring backend doing nothing.
+func NewNullBackend() Backend { return &nullBackend{} }
 
 // BeginMeasuring implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) BeginMeasuring(id string) Measuring { return &nullMeasuring{} }
+func (b *nullBackend) BeginMeasuring(id string) Measuring { return &nullMeasuring{} }
 
 // ReadMeasuringPoint implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) ReadMeasuringPoint(id string) (MeasuringPoint, error) { return &nullMeasuringPoint{}, nil }
+func (b *nullBackend) ReadMeasuringPoint(id string) (MeasuringPoint, error) {
+	return &nullMeasuringPoint{}, nil
+}
 
 // MeasuringPointsDo implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) MeasuringPointsDo(f func(MeasuringPoint)) error { return nil }
+func (b *nullBackend) MeasuringPointsDo(f func(MeasuringPoint)) error { return nil }
 
 // SetVariable implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) SetVariable(id string, v int64) {}
+func (b *nullBackend) SetVariable(id string, v int64) {}
 
 // IncrVariable implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) IncrVariable(id string) {}
+func (b *nullBackend) IncrVariable(id string) {}
 
 // DecrVariable implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) DecrVariable(id string) {}
+func (b *nullBackend) DecrVariable(id string) {}
 
 // ReadVariable implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) ReadVariable(id string) (StaySetVariable, error) { return &nullStaySetVariable{}, nil }
+func (b *nullBackend) ReadVariable(id string) (StaySetVariable, error) {
+	return &nullStaySetVariable{}, nil
+}
 
 // StaySetVariablesDo implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) StaySetVariablesDo(f func(StaySetVariable)) error { return nil }
+func (b *nullBackend) StaySetVariablesDo(f func(StaySetVariable)) error { return nil }
 
 // Register implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) Register(id string, rf DynamicStatusRetriever) {}
+func (b *nullBackend) Register(id string, rf DynamicStatusRetriever) {}
 
 // ReadStatus implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) ReadStatus(id string) (string, error) { return "", nil }
+func (b *nullBackend) ReadStatus(id string) (string, error) { return "", nil }
 
 // DynamicStatusValuesDo implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) DynamicStatusValuesDo(f func(DynamicStatusValue)) error { return nil }
+func (b *nullBackend) DynamicStatusValuesDo(f func(DynamicStatusValue)) error { return nil }
+
+// SetMeasuringsFilter implements the MonitorBackend interface.
+func (b *nullBackend) SetMeasuringsFilter(f IDFilter) IDFilter { return nil }
+
+// SetVariablesFilter implements the MonitorBackend interface.
+func (b *nullBackend) SetVariablesFilter(f IDFilter) IDFilter { return nil }
+
+// SetRetrieversFilter implements the MonitorBackend interface.
+func (b *nullBackend) SetRetrieversFilter(f IDFilter) IDFilter { return nil }
 
 // Reset implements the MonitorBackend interface.
-func (b *nullMonitoringBackend) Reset() error { return nil }
+func (b *nullBackend) Reset() error { return nil }
+
+// Stop implements the MonitorBackend interface.
+func (b *nullBackend) Stop() {}
+
+// EOF

@@ -18,6 +18,7 @@ import (
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cells"
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/monitoring"
 )
 
 //--------------------
@@ -401,33 +402,33 @@ func TestEnvironmentScenario(t *testing.T) {
 // BenchmarkSmpleEmitNullMonitoring is a simple emitting to one cell
 // with the null monitor.
 func BenchmarkSmpleEmitNullMonitoring(b *testing.B) {
-	env := cells.NewEnvironment("simple-emit")
+	monitoring.SetBackend(monitoring.NewNullBackend())
+	env := cells.NewEnvironment("simple-emit-null")
 	defer env.Stop()
 
-	env.StartCell("collector", newCollectBehavior())
+	env.StartCell("null", &nullBehavior{})
 
 	event, _ := cells.NewEvent("foo", "bar", nil)
 
 	for i := 0; i < b.N; i++ {
-		env.Emit("collector", event)
+		env.Emit("null", event)
 	}
 }
 
 // BenchmarkSmpleEmitStandardMonitoring is a simple emitting to one cell
 // with the standard monitor.
 func BenchmarkSmpleEmitStandardMonitoring(b *testing.B) {
-	env := cells.NewEnvironment("simple-emit")
+	monitoring.SetBackend(monitoring.NewStandardBackend())
+	env := cells.NewEnvironment("simple-emit-standard")
 	defer env.Stop()
 
-	env.SetMonitoring(cells.NewStandardMonitoring())
-	env.StartCell("collector", newCollectBehavior())
+	env.StartCell("null", &nullBehavior{})
 
 	event, _ := cells.NewEvent("foo", "bar", nil)
 
 	for i := 0; i < b.N; i++ {
-		env.Emit("collector", event)
+		env.Emit("null", event)
 	}
 }
-
 
 // EOF

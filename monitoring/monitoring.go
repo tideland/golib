@@ -41,6 +41,11 @@ const (
 // INTERFACES
 //--------------------
 
+// IDFilter allows to add filter for execution time measurings,
+// stay-set values, and dynamic status retriever. If set only
+// monitorings with the filter returning true will be done.
+type IDFilter func(id string) bool
+
 // Measuring defines one execution time measuring containg the ID and
 // the starting time of the measuring and able to pass this data after
 // the end of the measuring to its backend.
@@ -137,10 +142,10 @@ func (d DynamicStatusValues) Len() int           { return len(d) }
 func (d DynamicStatusValues) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
 func (d DynamicStatusValues) Less(i, j int) bool { return d[i].ID() < d[j].ID() }
 
-// MonitorBackend defines the interface for a type managing all
+// Backend defines the interface for a type managing all
 // the information provided or needed by the public functions
 // of the monitoring package.
-type MonitoringBackend interface {
+type Backend interface {
 	// BeginMeasuring starts a new measuring with a given id.
 	BeginMeasuring(id string) Measuring
 
@@ -177,36 +182,54 @@ type MonitoringBackend interface {
 	// status values.
 	DynamicStatusValuesDo(f func(DynamicStatusValue)) error
 
+	// SetMeasuringFilter sets the new filter for measurings
+	// and returns the current one.
+	SetMeasuringsFilter(f IDFilter) IDFilter
+
+	// SetMeasuringFilter sets the new filter for variables
+	// and returns the current one.
+	SetVariablesFilter(f IDFilter) IDFilter
+
+	// SetRetrieversFilter sets the new filter for status retrievers
+	// and returns the current one.
+	SetRetrieversFilter(f IDFilter) IDFilter
+
 	// Reset clears all monitored values.
 	Reset() error
+
+	// Stop tells the backend that a new one has been set.
+	Stop()
 }
 
 //--------------------
 // MONITORING API
 //--------------------
 
-// mutex controls the switching of the backend.
-var mutex sync.RWMutex
+// monitor is the global monitor.
+var monitor struct {
+	sync.RWMutex
+	backend Backend
+}
 
-// backend is the one global monitor instance.
-var backend MonitoringBackend = NewStandardMonitoringBackend()
+// init initializes the global monitor.
+func init() {
+	monitor.backend = NewStandardBackend()
+}
 
-// SetBackend allows to switch the monitoring backend, the
-// old one is returned.
-func SetBackend(mb MonitoringBackend) MonitoringBackend {
-	mutex.Lock()
-	defer mutex.Unlock()
-	old := backend
-	backend = mb
-	return old
+// SetBackend allows to switch the monitoring backend.
+func SetBackend(mb Backend) {
+	monitor.Lock()
+	defer monitor.Unlock()
+	monitor.backend.Stop()
+	monitor.backend = mb
 }
 
 // BeginMeasuring starts a new measuring with a given id.
 // All measurings with the same id will be aggregated.
 func BeginMeasuring(id string) Measuring {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.BeginMeasuring(id)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.BeginMeasuring(id)
 }
 
 // Measure the execution of a function.
@@ -218,17 +241,17 @@ func Measure(id string, f func()) time.Duration {
 
 // ReadMeasuringPoint returns the measuring point for an id.
 func ReadMeasuringPoint(id string) (MeasuringPoint, error) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.ReadMeasuringPoint(id)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.ReadMeasuringPoint(id)
 }
 
 // MeasuringPointsDo performs the function f for
 // all measuring points.
 func MeasuringPointsDo(f func(MeasuringPoint)) error {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.MeasuringPointsDo(f)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.MeasuringPointsDo(f)
 }
 
 // MeasuringPointsWrite prints the measuring points for which
@@ -256,38 +279,38 @@ func MeasuringPointsPrintAll() error {
 
 // SetVariable sets a value of a stay-set variable.
 func SetVariable(id string, v int64) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	backend.SetVariable(id, v)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.SetVariable(id, v)
 }
 
 // IncrVariable increases a stay-set variable.
 func IncrVariable(id string) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	backend.IncrVariable(id)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.IncrVariable(id)
 }
 
 // DecrVariable decreases a stay-set variable.
 func DecrVariable(id string) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	backend.DecrVariable(id)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.DecrVariable(id)
 }
 
 // ReadVariable returns the stay-set variable for an id.
 func ReadVariable(id string) (StaySetVariable, error) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.ReadVariable(id)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.ReadVariable(id)
 }
 
 // StaySetVariablesDo performs the function f for all
 // variables.
 func StaySetVariablesDo(f func(StaySetVariable)) error {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.StaySetVariablesDo(f)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.StaySetVariablesDo(f)
 }
 
 // StaySetVariablesWrite prints the stay-set variables for which
@@ -315,24 +338,24 @@ func StaySetVariablesPrintAll() error {
 
 // Register registers a new dynamic status retriever function.
 func Register(id string, rf DynamicStatusRetriever) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	backend.Register(id, rf)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.Register(id, rf)
 }
 
 // ReadStatus returns the dynamic status for an id.
 func ReadStatus(id string) (string, error) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.ReadStatus(id)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.ReadStatus(id)
 }
 
 // DynamicStatusValuesDo performs the function f for all
 // status values.
 func DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.DynamicStatusValuesDo(f)
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.DynamicStatusValuesDo(f)
 }
 
 // DynamicStatusValuesWrite prints the status values for which
@@ -357,11 +380,35 @@ func DynamicStatusValuesPrintAll() error {
 	return DynamicStatusValuesWrite(os.Stdout, func(dsv DynamicStatusValue) bool { return true })
 }
 
+// SetMeasuringFilter sets the new filter for measurings
+// and returns the current one.
+func SetMeasuringsFilter(f IDFilter) IDFilter {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.SetMeasuringsFilter(f)
+}
+
+// SetMeasuringFilter sets the new filter for variables
+// and returns the current one.
+func SetVariablesFilter(f IDFilter) IDFilter {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.SetVariablesFilter(f)
+}
+
+// SetRetrieversFilter sets the new filter for status retrievers
+// and returns the current one.
+func SetRetrieversFilter(f IDFilter) IDFilter {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.SetRetrieversFilter(f)
+}
+
 // Reset clears all monitored values.
 func Reset() error {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return backend.Reset()
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.Reset()
 }
 
 // EOF

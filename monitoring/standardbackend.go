@@ -67,7 +67,7 @@ func (c *command) close() {
 
 // stdMeasuring implements the Measuring interface.
 type stdMeasuring struct {
-	backend   *stdMonitoringBackend
+	backend   *stdBackend
 	id        string
 	startTime time.Time
 	duration  time.Duration
@@ -75,6 +75,9 @@ type stdMeasuring struct {
 
 // EndMEasuring implements the Measuring interface.
 func (m *stdMeasuring) EndMeasuring() time.Duration {
+	if m.backend == nil {
+		return 0
+	}
 	m.duration = time.Now().Sub(m.startTime)
 	m.backend.measuringC <- m
 	return m.duration
@@ -241,11 +244,14 @@ func (dsv *stdDynamicStatusValue) String() string {
 }
 
 //--------------------
-// MONITORING BACKEND
+// BACKEND
 //--------------------
 
-// stdMonitoringBackend implements the MonitoringBackend interface.
-type stdMonitoringBackend struct {
+// stdBackend implements the Backend interface.
+type stdBackend struct {
+	etmFilter              IDFilter
+	ssvFilter              IDFilter
+	dsrFilter              IDFilter
 	etmData                map[string]*stdMeasuringPoint
 	ssvData                map[string]*stdStaySetVariable
 	dsrData                map[string]DynamicStatusRetriever
@@ -256,12 +262,12 @@ type stdMonitoringBackend struct {
 	backend                loop.Loop
 }
 
-// NewStandardMonitoringBackend starts the standard monitoring backend.
-func NewStandardMonitoringBackend() MonitoringBackend {
-	m := &stdMonitoringBackend{
-		measuringC:             make(chan *stdMeasuring, 1000),
-		ssvChangeC:             make(chan *stdSSVChange, 1000),
-		retrieverRegistrationC: make(chan *stdRetrieverRegistration, 10),
+// NewStandardBackend starts the standard monitoring backend.
+func NewStandardBackend() Backend {
+	m := &stdBackend{
+		measuringC:             make(chan *stdMeasuring, 1024),
+		ssvChangeC:             make(chan *stdSSVChange, 1024),
+		retrieverRegistrationC: make(chan *stdRetrieverRegistration, 16),
 		commandC:               make(chan *command),
 	}
 	m.backend = loop.GoRecoverable(m.backendLoop, m.checkRecovering)
@@ -269,12 +275,15 @@ func NewStandardMonitoringBackend() MonitoringBackend {
 }
 
 // BeginMeasuring implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) BeginMeasuring(id string) Measuring {
+func (b *stdBackend) BeginMeasuring(id string) Measuring {
+	if b.etmFilter != nil && !b.etmFilter(id) {
+		return &stdMeasuring{}
+	}
 	return &stdMeasuring{b, id, time.Now(), 0}
 }
 
 // ReadMeasuringPoint implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) ReadMeasuringPoint(id string) (MeasuringPoint, error) {
+func (b *stdBackend) ReadMeasuringPoint(id string) (MeasuringPoint, error) {
 	resp, err := b.command(cmdMeasuringPointRead, id)
 	if err != nil {
 		return nil, err
@@ -283,7 +292,7 @@ func (b *stdMonitoringBackend) ReadMeasuringPoint(id string) (MeasuringPoint, er
 }
 
 // MeasuringPointsDo implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) MeasuringPointsDo(f func(MeasuringPoint)) error {
+func (b *stdBackend) MeasuringPointsDo(f func(MeasuringPoint)) error {
 	resp, err := b.command(cmdMeasuringPointsReadAll, nil)
 	if err != nil {
 		return err
@@ -296,22 +305,31 @@ func (b *stdMonitoringBackend) MeasuringPointsDo(f func(MeasuringPoint)) error {
 }
 
 // SetVariable implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) SetVariable(id string, v int64) {
+func (b *stdBackend) SetVariable(id string, v int64) {
+	if b.ssvFilter != nil && !b.ssvFilter(id) {
+		return
+	}
 	b.ssvChangeC <- &stdSSVChange{id, true, v}
 }
 
 // IncrVariable implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) IncrVariable(id string) {
+func (b *stdBackend) IncrVariable(id string) {
+	if b.ssvFilter != nil && !b.ssvFilter(id) {
+		return
+	}
 	b.ssvChangeC <- &stdSSVChange{id, false, 1}
 }
 
 // DecrVariable implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) DecrVariable(id string) {
+func (b *stdBackend) DecrVariable(id string) {
+	if b.ssvFilter != nil && !b.ssvFilter(id) {
+		return
+	}
 	b.ssvChangeC <- &stdSSVChange{id, false, -1}
 }
 
 // ReadVariable implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) ReadVariable(id string) (StaySetVariable, error) {
+func (b *stdBackend) ReadVariable(id string) (StaySetVariable, error) {
 	resp, err := b.command(cmdStaySetVariableRead, id)
 	if err != nil {
 		return nil, err
@@ -320,7 +338,7 @@ func (b *stdMonitoringBackend) ReadVariable(id string) (StaySetVariable, error) 
 }
 
 // StaySetVariablesDo implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) StaySetVariablesDo(f func(StaySetVariable)) error {
+func (b *stdBackend) StaySetVariablesDo(f func(StaySetVariable)) error {
 	resp, err := b.command(cmdStaySetVariablesReadAll, nil)
 	if err != nil {
 		return err
@@ -333,12 +351,15 @@ func (b *stdMonitoringBackend) StaySetVariablesDo(f func(StaySetVariable)) error
 }
 
 // Register implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) Register(id string, rf DynamicStatusRetriever) {
+func (b *stdBackend) Register(id string, rf DynamicStatusRetriever) {
+	if b.dsrFilter != nil && !b.dsrFilter(id) {
+		return
+	}
 	b.retrieverRegistrationC <- &stdRetrieverRegistration{id, rf}
 }
 
 // ReadStatus implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) ReadStatus(id string) (string, error) {
+func (b *stdBackend) ReadStatus(id string) (string, error) {
 	resp, err := b.command(cmdDynamicStatusRetrieverRead, id)
 	if err != nil {
 		return "", err
@@ -347,7 +368,7 @@ func (b *stdMonitoringBackend) ReadStatus(id string) (string, error) {
 }
 
 // DynamicStatusValuesDo implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
+func (b *stdBackend) DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
 	resp, err := b.command(cmdDynamicStatusRetrieversReadAll, f)
 	if err != nil {
 		return err
@@ -359,8 +380,29 @@ func (b *stdMonitoringBackend) DynamicStatusValuesDo(f func(DynamicStatusValue))
 	return nil
 }
 
+// SetMeasuringsFilter implements the MonitorBackend interface.
+func (b *stdBackend) SetMeasuringsFilter(f IDFilter) IDFilter {
+	old := b.etmFilter
+	b.etmFilter = f
+	return old
+}
+
+// SetVariablesFilter implements the MonitorBackend interface.
+func (b *stdBackend) SetVariablesFilter(f IDFilter) IDFilter {
+	old := b.ssvFilter
+	b.ssvFilter = f
+	return old
+}
+
+// SetRetrieversFilter implements the MonitorBackend interface.
+func (b *stdBackend) SetRetrieversFilter(f IDFilter) IDFilter {
+	old := b.dsrFilter
+	b.dsrFilter = f
+	return old
+}
+
 // Reset implements the MonitorBackend interface.
-func (b *stdMonitoringBackend) Reset() error {
+func (b *stdBackend) Reset() error {
 	_, err := b.command(cmdReset, nil)
 	if err != nil {
 		return err
@@ -368,13 +410,18 @@ func (b *stdMonitoringBackend) Reset() error {
 	return nil
 }
 
+// Stop implements the MonitorBackend interface.
+func (b *stdBackend) Stop() {
+	b.backend.Stop()
+}
+
 // command sends a command to the system monitor and waits for a response.
-func (b *stdMonitoringBackend) command(opCode int, args interface{}) (interface{}, error) {
+func (b *stdBackend) command(opCode int, args interface{}) (interface{}, error) {
 	cmd := &command{opCode, args, make(chan interface{})}
 	b.commandC <- cmd
 	resp, ok := <-cmd.respChan
 	if !ok {
-		return nil, errors.New(ErrMonitorPanicked, errorMessages)
+		return nil, errors.New(ErrMonitoringPanicked, errorMessages)
 	}
 	if err, ok := resp.(error); ok {
 		return nil, err
@@ -383,14 +430,14 @@ func (b *stdMonitoringBackend) command(opCode int, args interface{}) (interface{
 }
 
 // init the system monitor.
-func (b *stdMonitoringBackend) init() {
+func (b *stdBackend) init() {
 	b.etmData = make(map[string]*stdMeasuringPoint)
 	b.ssvData = make(map[string]*stdStaySetVariable)
 	b.dsrData = make(map[string]DynamicStatusRetriever)
 }
 
 // backendLoop runs the system monitor.
-func (b *stdMonitoringBackend) backendLoop(l loop.Loop) error {
+func (b *stdBackend) backendLoop(l loop.Loop) error {
 	// Init the monitor.
 	b.init()
 	// Run loop.
@@ -423,7 +470,7 @@ func (b *stdMonitoringBackend) backendLoop(l loop.Loop) error {
 }
 
 // processCommand handles the received commands of the monitor.
-func (b *stdMonitoringBackend) processCommand(cmd *command) {
+func (b *stdBackend) processCommand(cmd *command) {
 	defer cmd.close()
 	switch cmd.opCode {
 	case cmdReset:
@@ -502,11 +549,13 @@ func (b *stdMonitoringBackend) processCommand(cmd *command) {
 }
 
 // checkRecovering checks if the backend can be recovered.
-func (b *stdMonitoringBackend) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
+func (b *stdBackend) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
 	if rs.Frequency(12, time.Minute) {
 		logger.Errorf("standard monitor cannot be recovered: %v", rs.Last().Reason)
-		return nil, errors.New(ErrMonitorCannotBeRecovered, errorMessages, rs.Last().Reason)
+		return nil, errors.New(ErrMonitoringCannotBeRecovered, errorMessages, rs.Last().Reason)
 	}
 	logger.Warningf("standard monitor recovered: %v", rs.Last().Reason)
 	return rs.Trim(12), nil
 }
+
+// EOF
