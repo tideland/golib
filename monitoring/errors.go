@@ -20,35 +20,35 @@ import (
 //--------------------
 
 const (
-	ErrMonitorPanicked = iota + 1
-	ErrMonitorCannotBeRecovered
+	ErrMonitoringPanicked = iota + 1
+	ErrMonitoringCannotBeRecovered
 	ErrMeasuringPointNotExists
 	ErrStaySetVariableNotExists
 	ErrDynamicStatusNotExists
 )
 
 var errorMessages = errors.Messages{
-	ErrMonitorPanicked:          "monitor backend panicked",
-	ErrMonitorCannotBeRecovered: "monitor cannot be recovered: %v",
-	ErrMeasuringPointNotExists:  "measuring point %q does not exist",
-	ErrStaySetVariableNotExists: "stay-set variable %q does not exist",
-	ErrDynamicStatusNotExists:   "dynamic status %q does not exist",
+	ErrMonitoringPanicked:          "monitoring backend panicked",
+	ErrMonitoringCannotBeRecovered: "monitoring backend cannot be recovered: %v",
+	ErrMeasuringPointNotExists:     "measuring point %q does not exist",
+	ErrStaySetVariableNotExists:    "stay-set variable %q does not exist",
+	ErrDynamicStatusNotExists:      "dynamic status %q does not exist",
 }
 
 //--------------------
 // TESTING
 //--------------------
 
-// IsMonitorPanickedError returns true, if the error signals that
-// the monitor backend panicked.
-func IsMonitorPanickedError(err error) bool {
-	return errors.IsError(err, ErrMonitorPanicked)
+// IsMonitoringPanickedError returns true, if the error signals that
+// the monitoring backend panicked.
+func IsMonitoringPanickedError(err error) bool {
+	return errors.IsError(err, ErrMonitoringPanicked)
 }
 
-// IsMonitorCannotBeRecoveredError returns true, if the error signals that
-// the monitor backend has panicked to often and cannot be recovered.
-func IsMonitorCannotBeRecoveredError(err error) bool {
-	return errors.IsError(err, ErrMonitorCannotBeRecovered)
+// IsMonitoringCannotBeRecoveredError returns true, if the error signals that
+// the monitoring backend has panicked to often and cannot be recovered.
+func IsMonitoringCannotBeRecoveredError(err error) bool {
+	return errors.IsError(err, ErrMonitoringCannotBeRecovered)
 }
 
 // IsMeasuringPointNotExistsError returns true, if the error signals that

@@ -1,5 +1,13 @@
 # Tideland Go Library
 
+## 2015-08-23
+
+- The backend of the monitoring package is now pluggable
+- Beside the standard backend a null backend doing nothing
+  has been added
+- So last changes in cells have been rolled back as the
+  monitoring handling is now a global topic
+
 ## 2015-08-18
 
 - Monitoring in cells is now pluggable

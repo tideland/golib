@@ -12,12 +12,11 @@ package monitoring
 //--------------------
 
 import (
-	"sort"
+	"fmt"
+	"io"
+	"os"
+	"sync"
 	"time"
-
-	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/logger"
-	"github.com/tideland/golib/loop"
 )
 
 //--------------------
@@ -25,222 +24,391 @@ import (
 //--------------------
 
 const (
-	cmdReset = iota
-	cmdMeasuringPointRead
-	cmdMeasuringPointsReadAll
-	cmdStaySetVariableRead
-	cmdStaySetVariablesReadAll
-	cmdDynamicStatusRetrieverRead
-	cmdDynamicStatusRetrieversReadAll
+	etmTLine  = "+----------------------------------------------------+------------+--------------------+--------------------+--------------------+\n"
+	etmHeader = "| Measuring Point Name                               | Count      | Min Dur            | Max Dur            | Avg Dur            |\n"
+	etmFormat = "| %-50s | %10d | %18s | %18s | %18s |\n"
+
+	ssvTLine  = "+----------------------------------------------------+-----------+---------------+---------------+---------------+---------------+\n"
+	ssvHeader = "| Stay-Set Variable Name                             | Count     | Act Value     | Min Value     | Max Value     | Avg Value     |\n"
+	ssvFormat = "| %-50s | %9d | %13d | %13d | %13d | %13d |\n"
+
+	dsrTLine  = "+----------------------------------------------------+---------------------------------------------------------------------------+\n"
+	dsrHeader = "| Dynamic Status                                     | Value                                                                     |\n"
+	dsrFormat = "| %-50s | %-73s |\n"
 )
 
 //--------------------
-// SYSTEM MONITOR
+// INTERFACES
 //--------------------
 
-// command encapsulated the data for any command.
-type command struct {
-	opCode   int
-	args     interface{}
-	respChan chan interface{}
+// IDFilter allows to add filter for execution time measurings,
+// stay-set values, and dynamic status retriever. If set only
+// monitorings with the filter returning true will be done.
+type IDFilter func(id string) bool
+
+// Measuring defines one execution time measuring containg the ID and
+// the starting time of the measuring and able to pass this data after
+// the end of the measuring to its backend.
+type Measuring interface {
+	// EndMeasuring ends the measuring and passes its
+	// data to the backend.
+	EndMeasuring() time.Duration
 }
 
-// respond allow to simply respond to a command.
-func (c *command) respond(v interface{}) {
-	c.respChan <- v
+// MeasuringPoint defines the collected information for one execution
+// time measuring point.
+type MeasuringPoint interface {
+	fmt.Stringer
+
+	// ID returns the identifier of the measuring point.
+	ID() string
+
+	// Count returns how often this point has been measured.
+	Count() int64
+
+	// MinDuration returns the shortest execution time.
+	MinDuration() time.Duration
+
+	// MaxDuration returns the longest execution time.
+	MaxDuration() time.Duration
+
+	// AvgDuration returns the average execution time.
+	AvgDuration() time.Duration
 }
 
-// ok is a simple positive response.
-func (c *command) ok() {
-	c.respond(true)
+// MeasuringPoints is a set of measuring points.
+type MeasuringPoints []MeasuringPoint
+
+// Implement the sort interface.
+
+func (m MeasuringPoints) Len() int           { return len(m) }
+func (m MeasuringPoints) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m MeasuringPoints) Less(i, j int) bool { return m[i].ID() < m[j].ID() }
+
+// StaySetVariable contains the cumulated values
+// for one stay-set variable.
+type StaySetVariable interface {
+	fmt.Stringer
+
+	// ID returns the identifier of the stay-set variable.
+	ID() string
+
+	// Count returns how often the value has been changed.
+	Count() int64
+
+	// ActValue returns the current value of the variable.
+	ActValue() int64
+
+	// MinValue returns the minimum value of the variable.
+	MinValue() int64
+
+	// MaxValue returns the maximum value of the variable.
+	MaxValue() int64
+
+	// MinValue returns the average value of the variable.
+	AvgValue() int64
 }
 
-// close closes the response channel.
-func (c *command) close() {
-	close(c.respChan)
+// StaySetVariables is a set of stay-set variables.
+type StaySetVariables []StaySetVariable
+
+// Implement the sort interface.
+
+func (s StaySetVariables) Len() int           { return len(s) }
+func (s StaySetVariables) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s StaySetVariables) Less(i, j int) bool { return s[i].ID() < s[j].ID() }
+
+// DynamicStatusRetriever is called by the server and
+// returns a current status as string.
+type DynamicStatusRetriever func() (string, error)
+
+// DynamicStatusValue contains one retrieved value.
+type DynamicStatusValue interface {
+	fmt.Stringer
+
+	// ID returns the identifier of the status value.
+	ID() string
+
+	// Value returns the retrieved value as string.
+	Value() string
 }
 
-// systemMonitor contains all monitored informations.
-type systemMonitor struct {
-	etmData                   map[string]*MeasuringPoint
-	ssvData                   map[string]*StaySetVariable
-	dsrData                   map[string]DynamicStatusRetriever
-	measuringChan             chan *Measuring
-	ssvChangeChan             chan *ssvChange
-	retrieverRegistrationChan chan *retrieverRegistration
-	commandChan               chan *command
-	backend                   loop.Loop
-}
+// DynamicStatusValues is a set of dynamic status values.
+type DynamicStatusValues []DynamicStatusValue
 
-// newSystemMonitor starts the system monitor.
-func newSystemMonitor() *systemMonitor {
-	m := &systemMonitor{
-		measuringChan:             make(chan *Measuring, 1000),
-		ssvChangeChan:             make(chan *ssvChange, 1000),
-		retrieverRegistrationChan: make(chan *retrieverRegistration, 10),
-		commandChan:               make(chan *command),
-	}
-	m.backend = loop.GoRecoverable(m.backendLoop, m.checkRecovering)
-	return m
-}
+// Implement the sort interface.
 
-// command sends a command to the system monitor and waits for a response.
-func (m *systemMonitor) command(opCode int, args interface{}) (interface{}, error) {
-	cmd := &command{opCode, args, make(chan interface{})}
-	m.commandChan <- cmd
-	resp, ok := <-cmd.respChan
-	if !ok {
-		return nil, errors.New(ErrMonitorPanicked, errorMessages)
-	}
-	if err, ok := resp.(error); ok {
-		return nil, err
-	}
-	return resp, nil
-}
+func (d DynamicStatusValues) Len() int           { return len(d) }
+func (d DynamicStatusValues) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
+func (d DynamicStatusValues) Less(i, j int) bool { return d[i].ID() < d[j].ID() }
 
-// init the system monitor.
-func (m *systemMonitor) init() {
-	m.etmData = make(map[string]*MeasuringPoint)
-	m.ssvData = make(map[string]*StaySetVariable)
-	m.dsrData = make(map[string]DynamicStatusRetriever)
-}
+// Backend defines the interface for a type managing all
+// the information provided or needed by the public functions
+// of the monitoring package.
+type Backend interface {
+	// BeginMeasuring starts a new measuring with a given id.
+	BeginMeasuring(id string) Measuring
 
-// backendLoop runs the system monitor.
-func (m *systemMonitor) backendLoop(l loop.Loop) error {
-	// Init the monitor.
-	m.init()
-	// Run loop.
-	for {
-		select {
-		case <-l.ShallStop():
-			return nil
-		case measuring := <-m.measuringChan:
-			// Received a new measuring.
-			if mp, ok := m.etmData[measuring.id]; ok {
-				mp.update(measuring)
-			} else {
-				m.etmData[measuring.id] = newMeasuringPoint(measuring)
-			}
-		case ssvChange := <-m.ssvChangeChan:
-			// Received a new change.
-			if ssv, ok := m.ssvData[ssvChange.id]; ok {
-				ssv.update(ssvChange)
-			} else {
-				m.ssvData[ssvChange.id] = newStaySetVariable(ssvChange)
-			}
-		case registration := <-m.retrieverRegistrationChan:
-			// Received a new retriever for registration.
-			m.dsrData[registration.id] = registration.dsr
-		case cmd := <-m.commandChan:
-			// Received a command to process.
-			m.processCommand(cmd)
-		}
-	}
-}
+	// ReadMeasuringPoint returns the measuring point for an id.
+	ReadMeasuringPoint(id string) (MeasuringPoint, error)
 
-// processCommand handles the received commands of the monitor.
-func (m *systemMonitor) processCommand(cmd *command) {
-	defer cmd.close()
-	switch cmd.opCode {
-	case cmdReset:
-		// Reset monitoring.
-		m.init()
-		cmd.ok()
-	case cmdMeasuringPointRead:
-		// Read just one measuring point.
-		id := cmd.args.(string)
-		if mp, ok := m.etmData[id]; ok {
-			// Measuring point found.
-			clone := *mp
-			cmd.respond(&clone)
-		} else {
-			// Measuring point does not exist.
-			cmd.respond(errors.New(ErrMeasuringPointNotExists, errorMessages, id))
-		}
-	case cmdMeasuringPointsReadAll:
-		// Read all measuring points.
-		resp := MeasuringPoints{}
-		for _, mp := range m.etmData {
-			clone := *mp
-			resp = append(resp, &clone)
-		}
-		sort.Sort(resp)
-		cmd.respond(resp)
-	case cmdStaySetVariableRead:
-		// Read just one stay-set variable.
-		id := cmd.args.(string)
-		if ssv, ok := m.ssvData[id]; ok {
-			// Variable found.
-			clone := *ssv
-			cmd.respond(&clone)
-		} else {
-			// Variable does not exist.
-			cmd.respond(errors.New(ErrStaySetVariableNotExists, errorMessages, id))
-		}
-	case cmdStaySetVariablesReadAll:
-		// Read all stay-set variables.
-		resp := StaySetVariables{}
-		for _, mp := range m.ssvData {
-			clone := *mp
-			resp = append(resp, &clone)
-		}
-		sort.Sort(resp)
-		cmd.respond(resp)
-	case cmdDynamicStatusRetrieverRead:
-		// Read just one dynamic status value.
-		id := cmd.args.(string)
-		if dsr, ok := m.dsrData[id]; ok {
-			// Dynamic status found.
-			v, err := dsr()
-			if err != nil {
-				cmd.respond(err)
-			} else {
-				cmd.respond(v)
-			}
-		} else {
-			// Dynamic status does not exist.
-			cmd.respond(errors.New(ErrDynamicStatusNotExists, errorMessages, id))
-		}
-	case cmdDynamicStatusRetrieversReadAll:
-		// Read all dynamic status values.
-		resp := DynamicStatusValues{}
-		for id, dsr := range m.dsrData {
-			v, err := dsr()
-			if err != nil {
-				cmd.respond(err)
-			}
-			dsv := &DynamicStatusValue{id, v}
-			resp = append(resp, dsv)
-		}
-		sort.Sort(resp)
-		cmd.respond(resp)
-	}
-}
+	// MeasuringPointsDo performs the function f for
+	// all measuring points.
+	MeasuringPointsDo(f func(MeasuringPoint)) error
 
-// checkRecovering checks if the backend can be recovered.
-func (m *systemMonitor) checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
-	if rs.Frequency(12, time.Minute) {
-		logger.Errorf("monitor cannot be recovered: %v", rs.Last().Reason)
-		return nil, errors.New(ErrMonitorCannotBeRecovered, errorMessages, rs.Last().Reason)
-	}
-	logger.Warningf("monitor recovered: %v", rs.Last().Reason)
-	return rs.Trim(12), nil
+	// SetVariable sets a value of a stay-set variable.
+	SetVariable(id string, v int64)
+
+	// IncrVariable increases a variable.
+	IncrVariable(id string)
+
+	// DecrVariable decreases a variable.
+	DecrVariable(id string)
+
+	// ReadVariable returns the stay-set variable for an id.
+	ReadVariable(id string) (StaySetVariable, error)
+
+	// StaySetVariablesDo performs the function f for all
+	// variables.
+	StaySetVariablesDo(f func(StaySetVariable)) error
+
+	// Register registers a new dynamic status retriever function.
+	Register(id string, rf DynamicStatusRetriever)
+
+	// ReadStatus returns the dynamic status for an id.
+	ReadStatus(id string) (string, error)
+
+	// DynamicStatusValuesDo performs the function f for all
+	// status values.
+	DynamicStatusValuesDo(f func(DynamicStatusValue)) error
+
+	// SetMeasuringFilter sets the new filter for measurings
+	// and returns the current one.
+	SetMeasuringsFilter(f IDFilter) IDFilter
+
+	// SetMeasuringFilter sets the new filter for variables
+	// and returns the current one.
+	SetVariablesFilter(f IDFilter) IDFilter
+
+	// SetRetrieversFilter sets the new filter for status retrievers
+	// and returns the current one.
+	SetRetrieversFilter(f IDFilter) IDFilter
+
+	// Reset clears all monitored values.
+	Reset() error
+
+	// Stop tells the backend that a new one has been set.
+	Stop()
 }
 
 //--------------------
-// GLOBAL MONITORING API
+// MONITORING API
 //--------------------
 
-// monitor is the one global monitor instance.
-var monitor *systemMonitor = newSystemMonitor()
+// monitor is the global monitor.
+var monitor struct {
+	sync.RWMutex
+	backend Backend
+}
+
+// init initializes the global monitor.
+func init() {
+	monitor.backend = NewStandardBackend()
+}
+
+// SetBackend allows to switch the monitoring backend.
+func SetBackend(mb Backend) {
+	monitor.Lock()
+	defer monitor.Unlock()
+	monitor.backend.Stop()
+	monitor.backend = mb
+}
+
+// BeginMeasuring starts a new measuring with a given id.
+// All measurings with the same id will be aggregated.
+func BeginMeasuring(id string) Measuring {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.BeginMeasuring(id)
+}
+
+// Measure the execution of a function.
+func Measure(id string, f func()) time.Duration {
+	m := BeginMeasuring(id)
+	f()
+	return m.EndMeasuring()
+}
+
+// ReadMeasuringPoint returns the measuring point for an id.
+func ReadMeasuringPoint(id string) (MeasuringPoint, error) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.ReadMeasuringPoint(id)
+}
+
+// MeasuringPointsDo performs the function f for
+// all measuring points.
+func MeasuringPointsDo(f func(MeasuringPoint)) error {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.MeasuringPointsDo(f)
+}
+
+// MeasuringPointsWrite prints the measuring points for which
+// the passed function returns true to the passed writer.
+func MeasuringPointsWrite(w io.Writer, ff func(MeasuringPoint) bool) error {
+	fmt.Fprint(w, etmTLine)
+	fmt.Fprint(w, etmHeader)
+	fmt.Fprint(w, etmTLine)
+	if err := MeasuringPointsDo(func(mp MeasuringPoint) {
+		if ff(mp) {
+			fmt.Fprintf(w, etmFormat, mp.ID(), mp.Count(), mp.MinDuration(), mp.MaxDuration(), mp.AvgDuration())
+		}
+	}); err != nil {
+		return err
+	}
+	fmt.Fprint(w, etmTLine)
+	return nil
+}
+
+// MeasuringPointsPrintAll prints all measuring points
+// to STDOUT.
+func MeasuringPointsPrintAll() error {
+	return MeasuringPointsWrite(os.Stdout, func(mp MeasuringPoint) bool { return true })
+}
+
+// SetVariable sets a value of a stay-set variable.
+func SetVariable(id string, v int64) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.SetVariable(id, v)
+}
+
+// IncrVariable increases a stay-set variable.
+func IncrVariable(id string) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.IncrVariable(id)
+}
+
+// DecrVariable decreases a stay-set variable.
+func DecrVariable(id string) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.DecrVariable(id)
+}
+
+// ReadVariable returns the stay-set variable for an id.
+func ReadVariable(id string) (StaySetVariable, error) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.ReadVariable(id)
+}
+
+// StaySetVariablesDo performs the function f for all
+// variables.
+func StaySetVariablesDo(f func(StaySetVariable)) error {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.StaySetVariablesDo(f)
+}
+
+// StaySetVariablesWrite prints the stay-set variables for which
+// the passed function returns true to the passed writer.
+func StaySetVariablesWrite(w io.Writer, ff func(StaySetVariable) bool) error {
+	fmt.Fprint(w, ssvTLine)
+	fmt.Fprint(w, ssvHeader)
+	fmt.Fprint(w, ssvTLine)
+	if err := StaySetVariablesDo(func(ssv StaySetVariable) {
+		if ff(ssv) {
+			fmt.Fprintf(w, ssvFormat, ssv.ID(), ssv.Count(), ssv.ActValue(), ssv.MinValue(), ssv.MaxValue(), ssv.AvgValue())
+		}
+	}); err != nil {
+		return err
+	}
+	fmt.Fprint(w, ssvTLine)
+	return nil
+}
+
+// StaySetVariablesPrintAll prints all stay-set variables
+// to STDOUT.
+func StaySetVariablesPrintAll() error {
+	return StaySetVariablesWrite(os.Stdout, func(ssv StaySetVariable) bool { return true })
+}
+
+// Register registers a new dynamic status retriever function.
+func Register(id string, rf DynamicStatusRetriever) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	monitor.backend.Register(id, rf)
+}
+
+// ReadStatus returns the dynamic status for an id.
+func ReadStatus(id string) (string, error) {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.ReadStatus(id)
+}
+
+// DynamicStatusValuesDo performs the function f for all
+// status values.
+func DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.DynamicStatusValuesDo(f)
+}
+
+// DynamicStatusValuesWrite prints the status values for which
+// the passed function returns true to the passed writer.
+func DynamicStatusValuesWrite(w io.Writer, ff func(DynamicStatusValue) bool) error {
+	fmt.Fprint(w, dsrTLine)
+	fmt.Fprint(w, dsrHeader)
+	fmt.Fprint(w, dsrTLine)
+	if err := DynamicStatusValuesDo(func(dsv DynamicStatusValue) {
+		if ff(dsv) {
+			fmt.Fprintf(w, dsrFormat, dsv.ID(), dsv.Value())
+		}
+	}); err != nil {
+		return err
+	}
+	fmt.Fprint(w, dsrTLine)
+	return nil
+}
+
+// DynamicStatusValuesPrintAll prints all status values to STDOUT.
+func DynamicStatusValuesPrintAll() error {
+	return DynamicStatusValuesWrite(os.Stdout, func(dsv DynamicStatusValue) bool { return true })
+}
+
+// SetMeasuringFilter sets the new filter for measurings
+// and returns the current one.
+func SetMeasuringsFilter(f IDFilter) IDFilter {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.SetMeasuringsFilter(f)
+}
+
+// SetMeasuringFilter sets the new filter for variables
+// and returns the current one.
+func SetVariablesFilter(f IDFilter) IDFilter {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.SetVariablesFilter(f)
+}
+
+// SetRetrieversFilter sets the new filter for status retrievers
+// and returns the current one.
+func SetRetrieversFilter(f IDFilter) IDFilter {
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.SetRetrieversFilter(f)
+}
 
 // Reset clears all monitored values.
 func Reset() error {
-	_, err := monitor.command(cmdReset, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	monitor.RLock()
+	defer monitor.RUnlock()
+	return monitor.backend.Reset()
 }
 
 // EOF
