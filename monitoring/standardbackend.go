@@ -78,7 +78,7 @@ func (m *stdMeasuring) EndMeasuring() time.Duration {
 	if m.backend == nil {
 		return 0
 	}
-	m.duration = time.Now().Sub(m.startTime)
+	m.duration = time.Since(m.startTime)
 	m.backend.measuringC <- m
 	return m.duration
 }
