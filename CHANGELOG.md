@@ -1,46 +1,50 @@
 # Tideland Go Library
 
+## 2015-09-01
+
+- Added filtering to *logger* package
+
 ## 2015-08-23
 
-- The backend of the monitoring package is now pluggable
+- The backend of the *monitoring* package is now pluggable
 - Beside the standard backend a null backend doing nothing
   has been added
-- So last changes in cells have been rolled back as the
-  monitoring handling is now a global topic
+- So last changes in *cells* packge have been rolled back
+  as the monitoring handling is now a global topic
 
 ## 2015-08-18
 
-- Monitoring in cells is now pluggable
+- Monitoring in *cells* package is now pluggable
 
 ## 2015-08-17
 
-- Fixed race condition in cells
-- Optimised time handling in cells
+- Fixed race condition in *cells* package
+- Optimised time handling in *cells* package
 
 ## 2015-08-09
 
-- Added `Collect()` and `DoAll()` to errors
+- Added `Collect()` and `DoAll()` to *errors* package
 
 ## 2015-08-02
 
-- Added `BeginOf()` and `EndOf()` to timex
+- Added `BeginOf()` and `EndOf()` to *timex* package
 
 ## 2015-08-01
 
-- Added `Set` and `StringSet` to collections
-- Added `Retry()` to timex
+- Added `Set` and `StringSet` to *collections* package
+- Added `Retry()` to *timex* package
 
 ## 2015-07-28
 
-- Added assertion `Retry()` to audit
+- Added assertion `Retry()` to *audit* package
 
 ## 2015-07-26
 
-- Added `CallbackBehavior` to cells
+- Added `CallbackBehavior` to *cells* package
 
 ## 2015-07-24
 
-- Fixed cells unsubscribing failure when stopping cell with 
+- Fixed *cells* package unsubscribing failure when stopping cell with 
   bi-directional subscriptions; thanks to Jonathan Camp for
   his fix
 - Added expected value to compare with signal in `Wait()` assertion
@@ -48,41 +52,41 @@
 
 ## 2015-07-23
 
-- Added `ReadFile()` to configuration
-- Added `SimpleProcessorBehavior` to cells 
-- Added `ConfiguratorBehavior` to cells
-- Added assertion `Wait()` to audit
+- Added `ReadFile()` to *configuration* package
+- Added `SimpleProcessorBehavior` to *cells* package
+- Added `ConfiguratorBehavior` to *cells* package
+- Added assertion `Wait()` to *audit* package
 
 ## 2015-07-20
 
-- Simplified `configuration` package for usage with `stringex.Defaulter`
+- Simplified *configuration* package for usage with `stringex.Defaulter`
 
 ## 2015-07-17
 
-- Added `stringex` package
+- Added *stringex* package
 
 ## 2015-07-10
 
-- Added `KeyStringValueTreeBuilder` to SML
+- Added `KeyStringValueTreeBuilder` to *sml* package
 - Several minor fixes
 
 ## 2015-07-05
 
-- Made standard logger backend time format changeable
+- Made time format in *logger* package standard backend changeable
 
 ## 2015-06-28
 
-- Changed configuration API to be more powerful
+- Changed *configuration* package to be more powerful
   and convenient
 
 ## 2015-06-25
 
-- Added new `SceneBehavior` to cells
+- Added new `SceneBehavior` to *cells* package
 
 ## 2015-06-25
 
 - Done migration into new library
-- Added new configuration package
+- Added new *configuration* package
 
 ## 2015-06-05
 
