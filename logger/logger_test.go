@@ -24,20 +24,8 @@ import (
 // TESTS
 //--------------------
 
-// Test log level.
+// TestGetSetLevel tests the setting of the logging level.
 func TestGetSetLevel(t *testing.T) {
-	assert := audit.NewTestingAssertion(t, true)
-
-	logger.SetLevel(logger.LevelDebug)
-	assert.Equal(logger.Level(), logger.LevelDebug)
-	logger.SetLevel(logger.LevelCritical)
-	assert.Equal(logger.Level(), logger.LevelCritical)
-	logger.SetLevel(logger.LevelDebug)
-	assert.Equal(logger.Level(), logger.LevelDebug)
-}
-
-// Test log level filtering.
-func TestLogLevelFiltering(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	ownLogger := &testLogger{}
@@ -61,7 +49,37 @@ func TestLogLevelFiltering(t *testing.T) {
 	assert.Length(ownLogger.logs, 2)
 }
 
-// Test logging with the go logger.
+// TestFiltering tests the filtering of the logging.
+func TestFiltering(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	ownLogger := &testLogger{}
+	logger.SetLogger(ownLogger)
+	logger.SetLevel(logger.LevelDebug)
+	logger.SetFilter(func(level logger.LogLevel, info, msg string) bool {
+		return level >= logger.LevelWarning && level <= logger.LevelError
+	})
+
+	logger.Debugf("Debug.")
+	logger.Infof("Info.")
+	logger.Warningf("Warning.")
+	logger.Errorf("Error.")
+	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 3)
+
+	logger.UnsetFilter()
+
+	ownLogger = &testLogger{}
+	logger.SetLogger(ownLogger)
+	logger.Debugf("Debug.")
+	logger.Infof("Info.")
+	logger.Warningf("Warning.")
+	logger.Errorf("Error.")
+	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 5)
+}
+
+// TestGoLogger tests logging with the go logger.
 func TestGoLogger(t *testing.T) {
 	log.SetOutput(os.Stdout)
 
@@ -75,7 +93,7 @@ func TestGoLogger(t *testing.T) {
 	logger.Criticalf("Critical.")
 }
 
-// Test logging with the syslogger.
+// TestSysLogger tests logging with the syslogger.
 func TestSysLogger(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
@@ -92,7 +110,7 @@ func TestSysLogger(t *testing.T) {
 	logger.Criticalf("Critical.")
 }
 
-// Test logging with an own logger.
+// TestOwnLogger tests logging with an own logger.
 func TestOwnLogger(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	ownLogger := &testLogger{}

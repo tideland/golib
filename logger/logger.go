@@ -56,29 +56,35 @@ func PanicFatalExiter() {
 	panic("program aborted after fatal situation, see log")
 }
 
+// FilterFunc allows to filter the output of the logging. Filters
+// have to return true if the received entry shall be filtered and
+// not output.
+type FilterFunc func(level LogLevel, info, msg string) bool
+
 //--------------------
 // LOG CONTROL
 //--------------------
 
 // Log control variables.
 var (
-	logMux         sync.Mutex
+	logMutex       sync.RWMutex
 	logLevel       LogLevel        = LevelInfo
 	logFatalExiter FatalExiterFunc = OsFatalExiter
+	logFilter      FilterFunc
 )
 
 // Level returns the current log level.
 func Level() LogLevel {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.Lock()
+	defer logMutex.Unlock()
 	return logLevel
 }
 
 // SetLevel switches to a new log level and returns
 // the current one.
 func SetLevel(level LogLevel) LogLevel {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.Lock()
+	defer logMutex.Unlock()
 	current := logLevel
 	switch {
 	case level <= LevelDebug:
@@ -94,10 +100,30 @@ func SetLevel(level LogLevel) LogLevel {
 // SetFatalExiter sets the fatal exiter function and
 // returns the current one.
 func SetFatalExiter(fef FatalExiterFunc) FatalExiterFunc {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.Lock()
+	defer logMutex.Unlock()
 	current := logFatalExiter
 	logFatalExiter = fef
+	return current
+}
+
+// SetFilter sets the global output filter and returns
+// the current one.
+func SetFilter(ff FilterFunc) FilterFunc {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+	current := logFilter
+	logFilter = ff
+	return current
+}
+
+// UnsetFilter removes the global output folter and
+// returns the current one.
+func UnsetFilter() FilterFunc {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+	current := logFilter
+	logFilter = nil
 	return current
 }
 
@@ -107,61 +133,71 @@ func SetFatalExiter(fef FatalExiterFunc) FatalExiterFunc {
 
 // Debugf logs a message at debug level.
 func Debugf(format string, args ...interface{}) {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.RLock()
+	defer logMutex.RUnlock()
 	if logLevel <= LevelDebug {
-		ci := retrieveCallInfo()
-		fi := fmt.Sprintf(format, args...)
+		info := retrieveCallInfo().verboseFormat()
+		msg := fmt.Sprintf(format, args...)
 
-		logBackend.Debug(ci.verboseFormat(), fi)
+		if shallLog(LevelDebug, info, msg) {
+			logBackend.Debug(info, msg)
+		}
 	}
 }
 
 // Infof logs a message at info level.
 func Infof(format string, args ...interface{}) {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.RLock()
+	defer logMutex.RUnlock()
 	if logLevel <= LevelInfo {
-		ci := retrieveCallInfo()
-		fi := fmt.Sprintf(format, args...)
+		info := retrieveCallInfo().shortFormat()
+		msg := fmt.Sprintf(format, args...)
 
-		logBackend.Info(ci.shortFormat(), fi)
+		if shallLog(LevelInfo, info, msg) {
+			logBackend.Info(info, msg)
+		}
 	}
 }
 
 // Warningf logs a message at warning level.
 func Warningf(format string, args ...interface{}) {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.RLock()
+	defer logMutex.RUnlock()
 	if logLevel <= LevelWarning {
-		ci := retrieveCallInfo()
-		fi := fmt.Sprintf(format, args...)
+		info := retrieveCallInfo().shortFormat()
+		msg := fmt.Sprintf(format, args...)
 
-		logBackend.Warning(ci.shortFormat(), fi)
+		if shallLog(LevelWarning, info, msg) {
+			logBackend.Warning(info, msg)
+		}
 	}
 }
 
 // Errorf logs a message at error level.
 func Errorf(format string, args ...interface{}) {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.RLock()
+	defer logMutex.RUnlock()
 	if logLevel <= LevelError {
-		ci := retrieveCallInfo()
-		fi := fmt.Sprintf(format, args...)
+		info := retrieveCallInfo().shortFormat()
+		msg := fmt.Sprintf(format, args...)
 
-		logBackend.Error(ci.shortFormat(), fi)
+		if shallLog(LevelError, info, msg) {
+			logBackend.Error(info, msg)
+		}
 	}
 }
 
 // Criticalf logs a message at critical level.
 func Criticalf(format string, args ...interface{}) {
-	logMux.Lock()
-	defer logMux.Unlock()
+	logMutex.RLock()
+	defer logMutex.RUnlock()
 	if logLevel <= LevelCritical {
-		ci := retrieveCallInfo()
-		fi := fmt.Sprintf(format, args...)
+		info := retrieveCallInfo().verboseFormat()
+		msg := fmt.Sprintf(format, args...)
 
-		logBackend.Critical(ci.verboseFormat(), fi)
+		if shallLog(LevelCritical, info, msg) {
+			logBackend.Critical(info, msg)
+		}
 	}
 }
 
@@ -170,12 +206,12 @@ func Criticalf(format string, args ...interface{}) {
 // function, which by default means exiting the application
 // with error code -1.
 func Fatalf(format string, args ...interface{}) {
-	logMux.Lock()
-	defer logMux.Unlock()
-	ci := retrieveCallInfo()
-	fi := fmt.Sprintf(format, args...)
+	logMutex.RLock()
+	defer logMutex.RUnlock()
+	info := retrieveCallInfo().verboseFormat()
+	msg := fmt.Sprintf(format, args...)
 
-	logBackend.Fatal(ci.verboseFormat(), fi)
+	logBackend.Fatal(info, msg)
 	logFatalExiter()
 }
 
@@ -346,7 +382,8 @@ func (ci *callInfo) verboseFormat() string {
 	return fmt.Sprintf("[%s] (%s:%s:%d)", ci.packageName, ci.fileName, ci.funcName, ci.line)
 }
 
-// retrieveCallInfo
+// retrieveCallInfo returns detailed information about
+// the call location.
 func retrieveCallInfo() *callInfo {
 	pc, file, line, _ := runtime.Caller(2)
 	_, fileName := path.Split(file)
@@ -368,6 +405,17 @@ func retrieveCallInfo() *callInfo {
 		funcName:    funcName,
 		line:        line,
 	}
+}
+
+// shallLog is used inside the logging functions to check if
+// logging is wanted.
+func shallLog(level LogLevel, info, msg string) bool {
+	logMutex.RLock()
+	defer logMutex.RUnlock()
+	if logFilter == nil {
+		return true
+	}
+	return !logFilter(level, info, msg)
 }
 
 // EOF
