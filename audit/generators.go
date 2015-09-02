@@ -191,18 +191,18 @@ func (g *Generator) LimitedWord(lo, hi int) string {
 // others are left as they are. Escape chars start with a caret (^)
 // followed by specializer. Those are:
 //
-// - ^ for a caret
-// - 0 for a number between 0 and 9
-// - 1 for a number between 1 and 9
-// - o for an octal number
-// - h for a hexadecimal number (lower-case)
-// - H for a hexadecimal number (upper-case)
-// - a for any char between a and z
-// - A for any char between A and Z
-// - c for a consonant (lower-case)
-// - C for a consonant (upper-case)
-// - v for a vowel (lower-case)
-// - V for a vowel (upper-case)
+//   - ^ for a caret
+//   - 0 for a number between 0 and 9
+//   - 1 for a number between 1 and 9
+//   - o for an octal number
+//   - h for a hexadecimal number (lower-case)
+//   - H for a hexadecimal number (upper-case)
+//   - a for any char between a and z
+//   - A for any char between A and Z
+//   - c for a consonant (lower-case)
+//   - C for a consonant (upper-case)
+//   - v for a vowel (lower-case)
+//   - V for a vowel (upper-case)
 func (g *Generator) Pattern(pattern string) string {
 	result := []rune{}
 	escaped := false
