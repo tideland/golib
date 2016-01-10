@@ -160,12 +160,15 @@ func (tl *testLogger) Debug(info, msg string) {
 func (tl *testLogger) Info(info, msg string) {
 	tl.logs = append(tl.logs, "[INFO] "+info+" "+msg)
 }
+
 func (tl *testLogger) Warning(info, msg string) {
 	tl.logs = append(tl.logs, "[WARNING] "+info+" "+msg)
 }
+
 func (tl *testLogger) Error(info, msg string) {
 	tl.logs = append(tl.logs, "[ERROR] "+info+" "+msg)
 }
+
 func (tl *testLogger) Critical(info, msg string) {
 	tl.logs = append(tl.logs, "[CRITICAL] "+info+" "+msg)
 }
