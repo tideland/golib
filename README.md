@@ -5,6 +5,9 @@
 The *Tideland Go Library* contains a larger set of useful Google Go packages
 for different purposes.
 
+**Attention:** The `cells` package has been migrated into an own repository
+at https://github.com/tideland/gocells.
+
 I hope you like them. ;)
 
 ## Packages
