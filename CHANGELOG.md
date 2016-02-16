@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2016-02-16
+
+- Removal of the *cells* package after migration to https://github.com/tideland/gocells
+
 ## 2015-09-01
 
 - Added filtering to *logger* package
@@ -7,10 +11,9 @@
 ## 2015-08-23
 
 - The backend of the *monitoring* package is now pluggable
-- Beside the standard backend a null backend doing nothing
-  has been added
-- So last changes in *cells* packge have been rolled back
-  as the monitoring handling is now a global topic
+- Beside the standard backend a null backend doing nothing has been added
+- So last changes in *cells* packge have been rolled back as the monitoring
+  handling is now a global topic
 
 ## 2015-08-18
 
@@ -44,7 +47,7 @@
 
 ## 2015-07-24
 
-- Fixed *cells* package unsubscribing failure when stopping cell with 
+- Fixed *cells* package unsubscribing failure when stopping cell with
   bi-directional subscriptions; thanks to Jonathan Camp for
   his fix
 - Added expected value to compare with signal in `Wait()` assertion
