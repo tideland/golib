@@ -115,9 +115,9 @@ func (nb *NodeBuilder) CommentNode(comment string) error {
 // KeyStringValueTreeBuilder implements Builder to parse a
 // file and create a KeyStringValueTree.
 type KeyStringValueTreeBuilder struct {
-	stack  collections.StringStack
-	tree collections.KeyStringValueTree
-	done bool
+	stack collections.StringStack
+	tree  collections.KeyStringValueTree
+	done  bool
 }
 
 // NewNodeBuilder return a new nnode builder.

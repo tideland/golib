@@ -1,6 +1,6 @@
 // Tideland Go Application Support - Loop
 //
-// Copyright (C) 2013-2014 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -14,21 +14,12 @@ package loop
 import (
 	"sync"
 	"time"
+	// "github.com/tideland/golib/errors"
 )
 
 //--------------------
-// LOOP
+// RECOVERING
 //--------------------
-
-// Status of the loop.
-const (
-	Running = iota
-	Stopping
-	Stopped
-)
-
-// LoopFunc is managed loop function.
-type LoopFunc func(l Loop) error
 
 // Recovering stores time and reason of one of the recoverings.
 type Recovering struct {
@@ -86,6 +77,20 @@ func (rs Recoverings) Last() *Recovering {
 // list of revocerings if needed.
 type RecoverFunc func(rs Recoverings) (Recoverings, error)
 
+//--------------------
+// LOOP
+//--------------------
+
+// Status of the loop.
+const (
+	Running = iota
+	Stopping
+	Stopped
+)
+
+// LoopFunc is managed loop function.
+type LoopFunc func(l Loop) error
+
 // Loop manages running loops in the background as goroutines.
 type Loop interface {
 	// Stop tells the loop to stop working without a passed error and
@@ -122,6 +127,7 @@ type loop struct {
 	startedc    chan struct{}
 	stopc       chan struct{}
 	donec       chan struct{}
+	sentinel    *sentinel
 }
 
 // Go starts the loop function in the background. The loop can be
@@ -138,7 +144,7 @@ func Go(lf LoopFunc) Loop {
 		donec:    make(chan struct{}),
 	}
 	// Start and wait until it's running.
-	go l.singleLoop()
+	go l.simpleLoop()
 	<-l.startedc
 	return l
 }
@@ -168,8 +174,8 @@ func GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop {
 	return l
 }
 
-// singleLoop is the goroutine for a loop which is not recoverable.
-func (l *loop) singleLoop() {
+// simpleLoop is the goroutine for a loop which is not recoverable.
+func (l *loop) simpleLoop() {
 	defer l.done()
 	l.startedc <- struct{}{}
 	l.Kill(l.loopFunc(l))
@@ -225,8 +231,7 @@ func (l *loop) done() {
 // Stop tells the loop to stop working without a passed error and
 // waits until it is done.
 func (l *loop) Stop() error {
-	l.Kill(nil)
-	return l.Wait()
+	return l.stop()
 }
 
 // Kill tells the loop to stop working due to the passed error.
@@ -277,6 +282,154 @@ func (l *loop) ShallStop() <-chan struct{} {
 // with the loop.
 func (l *loop) IsStopping() <-chan struct{} {
 	return l.stopc
+}
+
+// start starts the loop.
+func (l *loop) start() error {
+	return nil
+}
+
+// hasError returns true if the loop has an error.
+func (l *loop) hasError() bool {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+	return l.err != nil
+}
+
+// stop terminates the loop.
+func (l *loop) stop() error {
+	l.Kill(nil)
+	return l.Wait()
+}
+
+// restart stops and starts the loop.
+func (l *loop) restart() error {
+	if err := l.stop(); err != nil {
+		return err
+	}
+	return l.start()
+}
+
+//--------------------
+// SENTINEL
+//--------------------
+
+// Sentinel manages a number of loops or other sentinels.
+type Sentinel interface {
+	// Go works analog to the standard Go function,
+	// but the loop is managed by the sentinel.
+	Go(lf LoopFunc) Loop
+
+	// GoRecoverable works analog to the standard GoRecoverable
+	// function, but the loop is managed by the sentinel.
+	GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop
+
+	// GoSentinel starts a new sentinel managed by this one.
+	GoSentinel() Sentinel
+}
+
+// manageable defines the common interface of loop and sentinel
+// to be managed be a sentinel.
+type manageable interface {
+	// hasError returns true if the child has an error.
+	hasError() bool
+
+	// stop terminates the child.
+	stop() error
+
+	// restart stops and starts the child.
+	restart() error
+}
+
+// sentinel implements the Sentinel interface.
+type sentinel struct {
+	manageables map[manageable]struct{}
+	manageablec chan manageable
+	restartc    chan struct{}
+	loop        Loop
+	sentinel    *sentinel
+}
+
+// Go implements the Sentinel interface.
+func (s *sentinel) Go(lf LoopFunc) Loop {
+	return nil
+}
+
+// GoRecoverable implements the Sentinel interface.
+func (s *sentinel) GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop {
+	return nil
+}
+
+// GoSentinel implements the Sentinel interface.
+func (s *sentinel) GoSentinel() Sentinel {
+	return nil
+}
+
+// backendLoop listens to ending managed loops.
+func (s *sentinel) backendLoop(l Loop) error {
+	for {
+		select {
+		case <-l.ShallStop():
+			// Stop all managed children.
+			return s.stopAllChildren()
+		case m := <-s.manageablec:
+			// Check loop error.
+			if m.hasError() {
+				// Restart all children.
+				if err := s.restartAllChildren(); err != nil {
+					return err
+				}
+			} else {
+				// Child terminated, remove it.
+				delete(s.manageables, m)
+			}
+		case <-s.restartc:
+			// Restart all children.
+			if err := s.restartAllChildren(); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// stopAllChildren terminates all children.
+func (s *sentinel) stopAllChildren() error {
+	return nil
+}
+
+// startAllChildren starts all children.
+func (s *sentinel) startAllChildren() error {
+	return nil
+}
+
+// restartAllChildren stops and starts all children.
+func (s *sentinel) restartAllChildren() error {
+	if err := s.stopAllChildren(); err != nil {
+		return err
+	}
+	return s.startAllChildren()
+}
+
+func (s *sentinel) hasError() bool {
+	return false
+}
+
+func (s *sentinel) stop() error {
+	return nil
+}
+
+func (s *sentinel) restart() error {
+	return nil
+}
+
+// GoSentinel starts a new sentinel.
+func GoSentinel() Sentinel {
+	s := &sentinel{
+		manageables: make(map[manageable]struct{}),
+		manageablec: make(chan manageable),
+	}
+	s.loop = Go(s.backendLoop)
+	return s
 }
 
 // EOF
