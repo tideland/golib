@@ -392,6 +392,10 @@ func (s *sentinel) backendLoop(l Loop) error {
 	}
 }
 
+// checkRecovering checks if a sentinel error shall be recovered.
+func (s *sentinel) checkRecovering(rs Recoverings) (Recoverings, error) {
+}
+
 // stopAllChildren terminates all children.
 func (s *sentinel) stopAllChildren() error {
 	return nil
@@ -428,7 +432,7 @@ func GoSentinel() Sentinel {
 		manageables: make(map[manageable]struct{}),
 		manageablec: make(chan manageable),
 	}
-	s.loop = Go(s.backendLoop)
+	s.loop = GoRecoverable(s.backendLoop, s.checkRecovering)
 	return s
 }
 
