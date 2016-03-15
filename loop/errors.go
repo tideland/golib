@@ -22,13 +22,13 @@ import (
 const (
 	ErrInvalidLoop = iota + 1
 	ErrInvalidSentinel
-	ErrAlreadyManaged
+	ErrLoopPanicked
 )
 
 var errorMessages = errors.Messages{
 	ErrInvalidLoop:     "invalid implementation of loop, sentinel needs own",
 	ErrInvalidSentinel: "loop not managed by this sentinel",
-	ErrAlreadyManaged:  "loop is already managed by another sentinel",
+	ErrLoopPanicked:    "loop panicked: %v",
 }
 
 // EOF
