@@ -20,15 +20,22 @@ import (
 //--------------------
 
 const (
-	ErrInvalidLoop = iota + 1
-	ErrInvalidSentinel
-	ErrLoopPanicked
+	ErrLoopPanicked = iota + 1
+	ErrSentinelRecovers
 )
 
 var errorMessages = errors.Messages{
-	ErrInvalidLoop:     "invalid implementation of loop, sentinel needs own",
-	ErrInvalidSentinel: "loop not managed by this sentinel",
-	ErrLoopPanicked:    "loop panicked: %v",
+	ErrLoopPanicked:     "loop panicked: %v",
+	ErrSentinelRecovers: "sentinel recovers due to error: %v",
+}
+
+//--------------------
+// ERROR
+//--------------------
+
+// IsSentinelRecoversError checks for a recovering error.
+func IsSentinelRecoversError(err error) bool {
+	return errors.IsError(err, ErrSentinelRecovers)
 }
 
 // EOF
