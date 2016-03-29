@@ -93,7 +93,7 @@ Control of goroutines and their possible errors. Additional option of recovering
 in case of an error or a panic. Sentinels can monitor multiple loops and restart
 them all in case of an abnormal end of one of them.
 
-Version 3.2.0
+Version 4.0.0
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)
 

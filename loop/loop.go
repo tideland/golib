@@ -396,6 +396,10 @@ func (l *loop) restart() error {
 
 // Sentinel manages a number of loops or other sentinels.
 type Sentinel interface {
+	// Description returns a descriptive information about the loop. If
+	// it is started without a description a UUID is generated.
+	Description() string
+
 	// Go works analog to the standard Go function,
 	// but the loop is managed by the sentinel.
 	Go(lf LoopFunc, dps ...string) Loop
@@ -502,6 +506,11 @@ func (s *sentinel) GoSentinel(rf RecoverFunc, dps ...string) Sentinel {
 		return nil
 	}
 	return m.(Sentinel)
+}
+
+// Description implements the Sentinel interface.
+func (s *sentinel) Description() string {
+	return s.loop.Description()
 }
 
 // Stop implements the Sentinel interface.
