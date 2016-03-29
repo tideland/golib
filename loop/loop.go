@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/identifier"
+	"github.com/tideland/golib/logger"
 )
 
 //--------------------
@@ -27,8 +29,9 @@ import (
 // Loop.ShallStop(). The loop then has to end working returning
 // a possible error. Wait() then waits until the loop ended and
 // returns the error.
-func Go(lf LoopFunc) Loop {
-	return goLoop(lf, nil, nil)
+func Go(lf LoopFunc, dps ...string) Loop {
+	descr := identifier.JoinedIdentifier(dps...)
+	return goLoop(lf, nil, nil, descr)
 }
 
 // GoRecoverable starts the loop function in the background. The
@@ -41,15 +44,17 @@ func Go(lf LoopFunc) Loop {
 // Recoverings before to the RecoverFunc. If it returns nil the
 // loop will be started again. Otherwise the loop will be killed
 // with that error.
-func GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop {
-	return goLoop(lf, rf, nil)
+func GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...string) Loop {
+	descr := identifier.JoinedIdentifier(dps...)
+	return goLoop(lf, rf, nil, descr)
 }
 
 // GoSentinel starts a new sentinel. It can start simple and
 // recoverable loops as well as nested sentinels. This way a
 // managing tree can be setup.
-func GoSentinel(rf RecoverFunc) Sentinel {
-	return goSentinel(rf, nil)
+func GoSentinel(rf RecoverFunc, dps ...string) Sentinel {
+	descr := identifier.JoinedIdentifier(dps...)
+	return goSentinel(rf, nil, descr)
 }
 
 //--------------------
@@ -119,14 +124,22 @@ type RecoverFunc func(rs Recoverings) (Recoverings, error)
 // manageable is the common interface of loop and sentinel
 // to be managed be a sentinel.
 type manageable interface {
+	// description returns the description of the manageable.
+	description() string
+
 	// error returns the error of the manageable or nil.
 	error() error
 
 	// start starts the child.
 	start()
 
-	// stop terminates the child.
+	// stop terminates the child and tells
+	// a potential sentinel that it's leaving.
 	stop(err error) error
+
+	// restart stops the child w/o an error and
+	// restarts it afterwards.
+	restart() error
 }
 
 //--------------------
@@ -145,6 +158,10 @@ type LoopFunc func(l Loop) error
 
 // Loop manages running loops in the background as goroutines.
 type Loop interface {
+	// Description returns a descriptive information about the loop. If
+	// it is started without a description a UUID is generated.
+	Description() string
+
 	// Stop tells the loop to stop working without a passed error and
 	// waits until it is done.
 	Stop() error
@@ -172,6 +189,7 @@ type Loop interface {
 // Loop manages a loop function.
 type loop struct {
 	mux         sync.Mutex
+	descr       string
 	loopFunc    LoopFunc
 	recoverFunc RecoverFunc
 	err         error
@@ -183,8 +201,9 @@ type loop struct {
 }
 
 // goLoop starts a loop in the background.
-func goLoop(lf LoopFunc, rf RecoverFunc, s *sentinel) *loop {
+func goLoop(lf LoopFunc, rf RecoverFunc, s *sentinel, d string) *loop {
 	l := &loop{
+		descr:       d,
 		loopFunc:    lf,
 		recoverFunc: rf,
 		startedc:    make(chan struct{}),
@@ -192,33 +211,40 @@ func goLoop(lf LoopFunc, rf RecoverFunc, s *sentinel) *loop {
 		donec:       make(chan struct{}),
 		sentinel:    s,
 	}
+	// Check description.
+	if l.descr == "" {
+		l.descr = identifier.NewUUID().String()
+	}
 	// Start the loop.
 	l.start()
 	return l
 }
 
-// Stop tells the loop to stop working without a passed error and
-// waits until it is done.
+// Description implements the Loop interface.
+func (l *loop) Description() string {
+	return l.descr
+}
+
+// Stop implements the Loop interface.
 func (l *loop) Stop() error {
 	return l.stop(nil)
 }
 
-// Kill tells the loop to stop working due to the passed error.
-// Here only the first error will be stored for later evaluation.
+// Kill implements the Loop interface.
 func (l *loop) Kill(err error) {
 	l.stop(err)
 }
 
-// Wait blocks the caller until the loop ended and returns the error.
-func (l *loop) Wait() (err error) {
+// Wait implements the Loop interface.
+func (l *loop) Wait() error {
 	<-l.donec
 	l.mux.Lock()
 	defer l.mux.Unlock()
-	err = l.err
-	return
+	err := l.err
+	return err
 }
 
-// Error returns the current status and error of the loop.
+// Error implements the Loop interface.
 func (l *loop) Error() (status int, err error) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
@@ -227,17 +253,19 @@ func (l *loop) Error() (status int, err error) {
 	return
 }
 
-// ShallStop returns a channel signalling the loop to
-// stop working.
+// ShallStop implements the Loop interface.
 func (l *loop) ShallStop() <-chan struct{} {
 	return l.stopc
 }
 
-// IsStopping returns a channel that can be used to wait until
-// the loop is stopping or to avoid deadlocks when communicating
-// with the loop.
+// IsStopping implements the Loop interface.
 func (l *loop) IsStopping() <-chan struct{} {
 	return l.stopc
+}
+
+// description implements the manageable interface.
+func (l *loop) description() string {
+	return l.descr
 }
 
 // error implements the manageable interface.
@@ -251,6 +279,7 @@ func (l *loop) error() error {
 func (l *loop) start() {
 	go l.run()
 	<-l.startedc
+	logger.Infof("loop '%s' started", l.description())
 }
 
 // run operates the loop as goroutine.
@@ -275,6 +304,7 @@ func (l *loop) run() {
 		}
 		if l.recoverFunc != nil {
 			// Try recovering.
+			logger.Errorf("loop '%s' tries to recover", l.description())
 			var err error
 			recoverings = append(recoverings, &Recovering{time.Now(), reason})
 			if recoverings, err = l.recoverFunc(recoverings); err != nil {
@@ -292,6 +322,7 @@ func (l *loop) run() {
 		defer func() {
 			// Check for recovering.
 			if reason := recover(); reason != nil {
+				logger.Errorf("loop '%s' paniced: %v", l.description(), reason)
 				checkError(reason)
 			}
 		}()
@@ -311,9 +342,6 @@ func (l *loop) done() {
 	if l.status == Stopping {
 		l.status = Stopped
 		close(l.donec)
-		if l.sentinel != nil {
-			l.sentinel.manageablec <- l
-		}
 	}
 }
 
@@ -339,7 +367,27 @@ func (l *loop) terminate(err error) {
 // stop implements the manageable interface.
 func (l *loop) stop(err error) error {
 	l.terminate(err)
-	return l.Wait()
+	werr := l.Wait()
+	if l.sentinel != nil {
+		l.sentinel.manageablec <- l
+	}
+	if werr != nil {
+		logger.Errorf("loop '%s' stopped with error: %v", l.description(), werr)
+		return werr
+	}
+	logger.Infof("loop '%s' stopped", l.description())
+	return nil
+}
+
+// restart implements the manageable interface.
+func (l *loop) restart() error {
+	logger.Warningf("loop '%s' restarts", l.description())
+	l.terminate(nil)
+	if err := l.Wait(); err != nil {
+		return err
+	}
+	l.start()
+	return nil
 }
 
 //--------------------
@@ -350,18 +398,33 @@ func (l *loop) stop(err error) error {
 type Sentinel interface {
 	// Go works analog to the standard Go function,
 	// but the loop is managed by the sentinel.
-	Go(lf LoopFunc) Loop
+	Go(lf LoopFunc, dps ...string) Loop
 
 	// GoRecoverable works analog to the standard GoRecoverable
 	// function, but the loop is managed by the sentinel.
-	GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop
+	GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...string) Loop
 
 	// GoSentinel starts a new sentinel managed by this one.
-	GoSentinel(rf RecoverFunc) Sentinel
+	GoSentinel(rf RecoverFunc, dps ...string) Sentinel
+
+	// Stop tells the loop to stop working without a passed error and
+	// waits until it is done.
+	Stop() error
+
+	// Kill tells the loop to stop working due to the passed error.
+	// Here only the first error will be stored for later evaluation.
+	Kill(err error)
+
+	// Wait blocks the caller until the loop ended and returns the error.
+	Wait() (err error)
+
+	// Error returns the current status and error of the loop.
+	Error() (status int, err error)
 }
 
 // goable contains the information about a loop or sentinel to start.
 type goable struct {
+	descr       string
 	loopFunc    LoopFunc
 	recoverFunc RecoverFunc
 	manageablec chan manageable
@@ -379,22 +442,24 @@ type sentinel struct {
 }
 
 // goSentinel starts a new sentinel.
-func goSentinel(rf RecoverFunc, ps *sentinel) *sentinel {
+func goSentinel(rf RecoverFunc, ps *sentinel, d string) *sentinel {
 	s := &sentinel{
 		recoverFunc: rf,
 		manageables: make(map[manageable]struct{}),
-		manageablec: make(chan manageable, 1),
+		manageablec: make(chan manageable, 4),
 		goablec:     make(chan *goable),
 		startedc:    make(chan struct{}),
 		sentinel:    ps,
 	}
-	s.loop = goLoop(s.backendLoop, s.recoverFunc, s.sentinel)
+	s.loop = goLoop(s.backendLoop, s.recoverFunc, s.sentinel, d)
 	return s
 }
 
 // Go implements the Sentinel interface.
-func (s *sentinel) Go(lf LoopFunc) Loop {
+func (s *sentinel) Go(lf LoopFunc, dps ...string) Loop {
+	descr := identifier.JoinedIdentifier(dps...)
 	g := &goable{
+		descr:       descr,
 		loopFunc:    lf,
 		manageablec: make(chan manageable),
 	}
@@ -407,8 +472,10 @@ func (s *sentinel) Go(lf LoopFunc) Loop {
 }
 
 // GoRecoverable implements the Sentinel interface.
-func (s *sentinel) GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop {
+func (s *sentinel) GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...string) Loop {
+	descr := identifier.JoinedIdentifier(dps...)
 	g := &goable{
+		descr:       descr,
 		loopFunc:    lf,
 		recoverFunc: rf,
 		manageablec: make(chan manageable),
@@ -422,8 +489,10 @@ func (s *sentinel) GoRecoverable(lf LoopFunc, rf RecoverFunc) Loop {
 }
 
 // GoSentinel implements the Sentinel interface.
-func (s *sentinel) GoSentinel(rf RecoverFunc) Sentinel {
+func (s *sentinel) GoSentinel(rf RecoverFunc, dps ...string) Sentinel {
+	descr := identifier.JoinedIdentifier(dps...)
 	g := &goable{
+		descr:       descr,
 		recoverFunc: rf,
 		manageablec: make(chan manageable),
 	}
@@ -433,6 +502,26 @@ func (s *sentinel) GoSentinel(rf RecoverFunc) Sentinel {
 		return nil
 	}
 	return m.(Sentinel)
+}
+
+// Stop implements the Sentinel interface.
+func (s *sentinel) Stop() error {
+	return s.loop.Stop()
+}
+
+// Kill implements the Sentinel interface.
+func (s *sentinel) Kill(err error) {
+	s.loop.Kill(err)
+}
+
+// Wait implements the Sentinel interface.
+func (s *sentinel) Wait() error {
+	return s.loop.Wait()
+}
+
+// Error implements the Sentinel interface.
+func (s *sentinel) Error() (int, error) {
+	return s.loop.Error()
 }
 
 // backendLoop listens to ending managed loops.
@@ -448,23 +537,27 @@ func (s *sentinel) backendLoop(l Loop) error {
 			switch {
 			case g.loopFunc != nil && g.recoverFunc != nil:
 				// Recoverable loop.
-				m = goLoop(g.loopFunc, g.recoverFunc, s)
+				m = goLoop(g.loopFunc, g.recoverFunc, s, g.descr)
 			case g.loopFunc != nil:
 				// Simple loop.
-				m = goLoop(g.loopFunc, nil, s)
+				m = goLoop(g.loopFunc, nil, s, g.descr)
 			case g.recoverFunc != nil:
 				// Sentinel.
-				m = goSentinel(g.recoverFunc, s)
+				m = goSentinel(g.recoverFunc, s, g.descr)
 			}
 			if m != nil {
 				s.manageables[m] = struct{}{}
+				mcc := cap(s.manageablec)
+				if mcc == len(s.manageables) {
+					s.manageablec = make(chan manageable, 2*mcc)
+				}
 			}
 			g.manageablec <- m
 		case m := <-s.manageablec:
 			// Check loop error.
 			if err := m.error(); err != nil {
 				// Restart all children.
-				if err := s.restartAllChildren(err); err != nil {
+				if err := s.restartAllChildren(); err != nil {
 					return err
 				}
 			} else {
@@ -483,24 +576,25 @@ func (s *sentinel) stopAllChildren(err error) error {
 			errs[m] = err
 		}
 	}
+	// TODO: Return potential error!
 	return nil
-}
-
-// startAllChildren starts all children.
-func (s *sentinel) startAllChildren() {
-	for m := range s.manageables {
-		m.start()
-	}
 }
 
 // restartAllChildren stops and starts all children.
-func (s *sentinel) restartAllChildren(err error) error {
-	serr := errors.New(ErrSentinelRecovers, errorMessages, err)
-	if err := s.stopAllChildren(serr); err != nil {
-		return err
+func (s *sentinel) restartAllChildren() error {
+	errs := map[manageable]error{}
+	for m := range s.manageables {
+		if err := m.restart(); err != nil {
+			errs[m] = err
+		}
 	}
-	s.startAllChildren()
+	// TODO: Return potential error!
 	return nil
+}
+
+// description implementes the manageable interface.
+func (s *sentinel) description() string {
+	return s.loop.description()
 }
 
 // error implements the manageable interface.
@@ -516,6 +610,11 @@ func (s *sentinel) start() {
 // stop implements the manageable interface.
 func (s *sentinel) stop(err error) error {
 	return s.loop.stop(err)
+}
+
+// restart implements the manageable interface.
+func (s *sentinel) restart() error {
+	return s.loop.restart()
 }
 
 // EOF

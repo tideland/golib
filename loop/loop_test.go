@@ -17,13 +17,14 @@ import (
 	"time"
 
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/loop"
 )
 
 var (
-	shortDelay    time.Duration = 20 * time.Millisecond
-	longDelay     time.Duration = 50 * time.Millisecond
-	veryLongDelay time.Duration = 200 * time.Millisecond
+	shortTimeout  time.Duration = 25 * time.Millisecond
+	longTimeout   time.Duration = 100 * time.Millisecond
+	longerTimeout time.Duration = 150 * time.Millisecond
 )
 
 //--------------------
@@ -34,11 +35,11 @@ var (
 // after a stop.
 func TestSimpleStop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	l := loop.Go(generateSimpleBackend(&done))
+	donec := audit.MakeSigChan()
+	l := loop.Go(makeSimpleLF(donec), "simple-stop")
 
 	assert.Nil(l.Stop(), "no error after simple stop")
-	assert.True(done, "backend has done")
+	assert.Wait(donec, true, shortTimeout)
 
 	status, _ := l.Error()
 
@@ -49,13 +50,13 @@ func TestSimpleStop(t *testing.T) {
 // after a kill.
 func TestSimpleKill(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	l := loop.Go(generateSimpleBackend(&done))
+	donec := audit.MakeSigChan()
+	l := loop.Go(makeSimpleLF(donec), "simple-kill")
 
 	l.Kill(errors.New("ouch"))
 
 	assert.ErrorMatch(l.Stop(), "ouch", "error has to be 'ouch'")
-	assert.True(done, "backend has done")
+	assert.Wait(donec, true, shortTimeout)
 
 	status, _ := l.Error()
 
@@ -65,13 +66,13 @@ func TestSimpleKill(t *testing.T) {
 // TestError tests an internal error.
 func TestError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	l := loop.Go(generateErrorBackend(&done))
+	donec := audit.MakeSigChan()
+	l := loop.Go(makeErrorLF(donec), "error")
 
-	time.Sleep(longDelay)
+	time.Sleep(longTimeout)
 
 	assert.ErrorMatch(l.Stop(), "timed out", "error has to be 'time out'")
-	assert.True(done, "backend has done")
+	assert.Wait(donec, true, shortTimeout)
 
 	status, _ := l.Error()
 
@@ -81,11 +82,11 @@ func TestError(t *testing.T) {
 // TestDeferredError tests an error in a deferred function inside the loop.
 func TestDeferredError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	l := loop.Go(generateDeferredErrorBackend(&done))
+	donec := audit.MakeSigChan()
+	l := loop.Go(makeDeferredErrorLF(donec), "deferred-error")
 
 	assert.ErrorMatch(l.Stop(), "deferred error", "error has to be 'deferred error'")
-	assert.True(done, "backend has done")
+	assert.Wait(donec, true, shortTimeout)
 
 	status, _ := l.Error()
 
@@ -95,14 +96,13 @@ func TestDeferredError(t *testing.T) {
 // TestStopRecoverings tests the regular stop of a recovered loop.
 func TestStopRecoverings(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	count := 0
-	l := loop.GoRecoverable(generateRecoverPanicBackend(&done, &count), ignorePanics)
+	donec := audit.MakeSigChan()
+	l := loop.GoRecoverable(makeRecoverPanicLF(), makeIgnorePanicsRF(donec), "stop-recoverings")
 
-	time.Sleep(longDelay)
+	time.Sleep(longTimeout)
 
 	assert.Nil(l.Stop(), "no error after simple stop")
-	assert.True(done, "backend has done")
+	assert.Wait(donec, "recovered", longTimeout)
 
 	status, _ := l.Error()
 
@@ -112,11 +112,12 @@ func TestStopRecoverings(t *testing.T) {
 // TestEndRecoverings tests the regular internal stop of a recovered loop.
 func TestEndRecoverings(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	count := 0
-	l := loop.GoRecoverable(generateRecoverNoErrorBackend(&done, &count), ignorePanics)
+	donec := audit.MakeSigChan()
+	l := loop.GoRecoverable(makeRecoverNoErrorLF(donec), makeIgnorePanicsRF(nil), "end-recoverings")
 
-	time.Sleep(longDelay)
+	time.Sleep(longTimeout)
+
+	assert.Wait(donec, true, longTimeout)
 
 	status, _ := l.Error()
 	assert.Equal(loop.Stopped, status)
@@ -125,15 +126,13 @@ func TestEndRecoverings(t *testing.T) {
 // TestRecoveringsPanic test recoverings after panics.
 func TestRecoveringsPanic(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	count := 0
-	l := loop.GoRecoverable(generateRecoverPanicBackend(&done, &count), checkRecovering)
+	donec := audit.MakeSigChan()
+	l := loop.GoRecoverable(makeRecoverPanicLF(), makeCheckCountRF(donec), "recoverings-panic")
 
-	time.Sleep(veryLongDelay)
+	time.Sleep(longerTimeout)
 
 	assert.ErrorMatch(l.Stop(), "too many panics")
-	assert.True(done)
-	assert.Equal(count, 5)
+	assert.Wait(donec, true, longTimeout)
 
 	status, _ := l.Error()
 
@@ -143,18 +142,42 @@ func TestRecoveringsPanic(t *testing.T) {
 // TestRecoveringsError tests recoverings after errors
 func TestRecoveringsError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	done := false
-	count := 0
-	l := loop.GoRecoverable(generateRecoverErrorBackend(&done, &count), catchTimeout)
+	donec := audit.MakeSigChan()
+	l := loop.GoRecoverable(makeRecoverErrorLF(), makeCatchTimeoutRF(donec), "recoverings-error")
 
-	time.Sleep(longDelay)
+	time.Sleep(longerTimeout)
 
 	assert.ErrorMatch(l.Stop(), "timed out", "error has to be 'timed out'")
-	assert.True(done, "backend has done")
+	assert.Wait(donec, "timed out", longTimeout)
 
 	status, _ := l.Error()
 
 	assert.Equal(loop.Stopped, status, "loop is stopped")
+}
+
+// TestSimpleSentinel tests the simple starting and
+// stopping of a sentinel.
+func TestSimpleSentinel(t *testing.T) {
+	logger.SetLevel(logger.LevelDebug)
+	assert := audit.NewTestingAssertion(t, true)
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+	doneCC := audit.MakeSigChan()
+
+	s := loop.GoSentinel(makeCheckCountRF(nil), "simple-sentinel")
+
+	s.Go(makeSimpleLF(doneAC), "loop", "a")
+	s.Go(makeSimpleLF(doneBC), "loop", "b")
+	s.Go(makeSimpleLF(doneCC), "loop", "c")
+
+	assert.Nil(s.Stop())
+	assert.Wait(doneAC, true, shortTimeout)
+	assert.Wait(doneBC, true, shortTimeout)
+	assert.Wait(doneCC, true, shortTimeout)
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
 }
 
 //--------------------
@@ -162,18 +185,28 @@ func TestRecoveringsError(t *testing.T) {
 //--------------------
 
 func ExampleLoopFunc() {
-	printChan := make(chan string)
-	loopFunc := func(l loop.Loop) error {
+	printc := make(chan string)
+	loopf := func(l loop.Loop) error {
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case str := <-printChan:
+			case str := <-printc:
+				if str == "panic" {
+					return errors.New("panic")
+				}
 				println(str)
 			}
 		}
 	}
-	loop.Go(loopFunc)
+	l := loop.Go(loopf)
+
+	printc <- "Hello"
+	printc <- "World"
+
+	if err := l.Stop(); err != nil {
+		panic(err)
+	}
 }
 
 func ExampleRecoverFunc() {
@@ -201,9 +234,9 @@ func ExampleRecoverFunc() {
 // HELPERS
 //--------------------
 
-func generateSimpleBackend(done *bool) loop.LoopFunc {
+func makeSimpleLF(donec chan interface{}) loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { t := true; *done = t }()
+		defer func() { donec <- true }()
 		for {
 			select {
 			case <-l.ShallStop():
@@ -213,23 +246,23 @@ func generateSimpleBackend(done *bool) loop.LoopFunc {
 	}
 }
 
-func generateErrorBackend(done *bool) loop.LoopFunc {
+func makeErrorLF(donec chan interface{}) loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { t := true; *done = t }()
+		defer func() { donec <- true }()
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case <-time.After(shortDelay):
+			case <-time.After(shortTimeout):
 				return errors.New("timed out")
 			}
 		}
 	}
 }
 
-func generateDeferredErrorBackend(done *bool) loop.LoopFunc {
+func makeDeferredErrorLF(donec chan interface{}) loop.LoopFunc {
 	return func(l loop.Loop) (err error) {
-		defer func() { t := true; *done = t }()
+		defer func() { donec <- true }()
 		defer func() {
 			err = errors.New("deferred error")
 		}()
@@ -242,68 +275,72 @@ func generateDeferredErrorBackend(done *bool) loop.LoopFunc {
 	}
 }
 
-func generateRecoverPanicBackend(done *bool, count *int) loop.LoopFunc {
+func makeRecoverPanicLF() loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { t := true; *done = t }()
-		c := *count
-		*count = c + 1
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case <-time.After(shortDelay):
+			case <-time.After(shortTimeout):
 				panic("ouch")
 			}
 		}
 	}
 }
 
-func generateRecoverErrorBackend(done *bool, count *int) loop.LoopFunc {
+func makeRecoverErrorLF() loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { t := true; *done = t }()
-		c := *count
-		*count = c + 1
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case <-time.After(shortDelay):
+			case <-time.After(shortTimeout):
 				return errors.New("timed out")
 			}
 		}
 	}
 }
 
-func generateRecoverNoErrorBackend(done *bool, count *int) loop.LoopFunc {
+func makeRecoverNoErrorLF(donec chan interface{}) loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { t := true; *done = t }()
-		c := *count
-		*count = c + 1
-		time.Sleep(shortDelay)
+		time.Sleep(shortTimeout)
+		donec <- true
 		return nil
 	}
 }
 
-func checkRecovering(rs loop.Recoverings) (loop.Recoverings, error) {
-	if len(rs) >= 5 {
-		return nil, errors.New("too many panics")
+func makeCheckCountRF(donec chan interface{}) loop.RecoverFunc {
+	return func(rs loop.Recoverings) (loop.Recoverings, error) {
+		if len(rs) >= 5 {
+			donec <- len(rs)
+			return nil, errors.New("too many panics")
+		}
+		donec <- true
+		return rs, nil
 	}
-	return rs, nil
 }
 
-func catchTimeout(rs loop.Recoverings) (loop.Recoverings, error) {
-	if len(rs) > 0 {
-		if err, ok := rs.Last().Reason.(error); ok {
-			if err.Error() == "timed out" {
-				return nil, err
+func makeCatchTimeoutRF(donec chan interface{}) loop.RecoverFunc {
+	return func(rs loop.Recoverings) (loop.Recoverings, error) {
+		if len(rs) > 0 {
+			if err, ok := rs.Last().Reason.(error); ok {
+				if err.Error() == "timed out" {
+					donec <- "timed out"
+					return nil, err
+				}
 			}
 		}
+		return nil, nil
 	}
-	return nil, nil
 }
 
-func ignorePanics(rs loop.Recoverings) (loop.Recoverings, error) {
-	return nil, nil
+func makeIgnorePanicsRF(donec chan interface{}) loop.RecoverFunc {
+	return func(rs loop.Recoverings) (loop.Recoverings, error) {
+		if donec != nil {
+			donec <- "recovered"
+		}
+		return nil, nil
+	}
 }
 
 // EOF
