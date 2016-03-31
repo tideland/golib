@@ -17,14 +17,14 @@ import (
 	"time"
 
 	"github.com/tideland/golib/audit"
-	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/loop"
 )
 
 var (
-	shortTimeout  time.Duration = 25 * time.Millisecond
-	longTimeout   time.Duration = 100 * time.Millisecond
-	longerTimeout time.Duration = 150 * time.Millisecond
+	shortTimeout    time.Duration = 25 * time.Millisecond
+	longTimeout     time.Duration = 100 * time.Millisecond
+	longerTimeout   time.Duration = 150 * time.Millisecond
+	veryLongTimeout time.Duration = 1 * time.Second
 )
 
 //--------------------
@@ -158,13 +158,13 @@ func TestRecoveringsError(t *testing.T) {
 // TestSimpleSentinel tests the simple starting and
 // stopping of a sentinel.
 func TestSimpleSentinel(t *testing.T) {
-	logger.SetLevel(logger.LevelDebug)
 	assert := audit.NewTestingAssertion(t, true)
+	sentinelc := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(nil), "simple-sentinel")
+	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel")
 
 	s.Go(makeSimpleLF(doneAC), "loop", "a")
 	s.Go(makeSimpleLF(doneBC), "loop", "b")
@@ -174,6 +174,89 @@ func TestSimpleSentinel(t *testing.T) {
 	assert.Wait(doneAC, true, shortTimeout)
 	assert.Wait(doneBC, true, shortTimeout)
 	assert.Wait(doneCC, true, shortTimeout)
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSimpleSentinelLoopStops tests the simple starting and
+// stopping of a sentinel with one stopping loop.
+func TestSimpleSentinelLoopStops(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sentinelc := audit.MakeSigChan()
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+	doneCC := audit.MakeSigChan()
+
+	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel-loop-stops")
+
+	s.Go(makeSimpleLF(doneAC), "loop", "a")
+	lb := s.Go(makeSimpleLF(doneBC), "loop", "b")
+	s.Go(makeSimpleLF(doneCC), "loop", "c")
+
+	assert.Nil(lb.Stop())
+	assert.Wait(doneBC, true, shortTimeout)
+
+	assert.Nil(s.Stop())
+	assert.Wait(doneAC, true, shortTimeout)
+	assert.Wait(doneCC, true, shortTimeout)
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSimpleSentinelLoopKilled tests the simple starting and
+// stopping of a sentinel with one killed loop.
+func TestSimpleSentinelLoopKilled(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sentinelc := audit.MakeSigChan()
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+	doneCC := audit.MakeSigChan()
+
+	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel-loop-killed")
+
+	s.Go(makeSimpleLF(doneAC), "loop", "a")
+	lb := s.Go(makeSimpleLF(doneBC), "loop", "b")
+	s.Go(makeSimpleLF(doneCC), "loop", "c")
+
+	lb.Kill(errors.New("bang"))
+	assert.Wait(doneBC, true, shortTimeout)
+	assert.Wait(sentinelc, true, shortTimeout)
+
+	time.Sleep(longTimeout)
+
+	assert.Nil(s.Stop())
+	assert.Wait(doneAC, true, shortTimeout)
+	assert.Wait(doneBC, true, shortTimeout)
+	assert.Wait(doneCC, true, shortTimeout)
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSimpleSentinelLoopPanicked tests the simple starting and
+// stopping of a sentinel with one panicking loop.
+func TestSimpleSentinelLoopPanicked(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sentinelc := audit.MakeSigChan()
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+
+	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel-loop-killed")
+
+	s.Go(makeSimpleLF(doneAC), "loop", "a")
+	s.Go(makeSimpleLF(doneBC), "loop", "b")
+	s.Go(makeRecoverPanicLF(), "loop", "c")
+
+	time.Sleep(veryLongTimeout)
+
+	assert.Nil(s.Stop())
+	assert.Wait(doneAC, true, shortTimeout)
+	assert.Wait(doneBC, true, shortTimeout)
 
 	status, _ := s.Error()
 

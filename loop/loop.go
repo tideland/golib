@@ -322,7 +322,7 @@ func (l *loop) run() {
 		defer func() {
 			// Check for recovering.
 			if reason := recover(); reason != nil {
-				logger.Errorf("loop '%s' paniced: %v", l.description(), reason)
+				logger.Errorf("loop '%s' panicked: %v", l.description(), reason)
 				checkError(reason)
 			}
 		}()
@@ -341,7 +341,11 @@ func (l *loop) done() {
 	defer l.mux.Unlock()
 	if l.status == Stopping {
 		l.status = Stopped
-		close(l.donec)
+		select {
+		case <-l.donec:
+		default:
+			close(l.donec)
+		}
 	}
 }
 
@@ -382,8 +386,10 @@ func (l *loop) stop(err error) error {
 // restart implements the manageable interface.
 func (l *loop) restart() error {
 	logger.Warningf("loop '%s' restarts", l.description())
+	l.err = nil
 	l.terminate(nil)
 	if err := l.Wait(); err != nil {
+		logger.Errorf("loop '%s' tried to restart with error: %v", l.description(), err)
 		return err
 	}
 	l.start()
@@ -535,6 +541,7 @@ func (s *sentinel) Error() (int, error) {
 
 // backendLoop listens to ending managed loops.
 func (s *sentinel) backendLoop(l Loop) error {
+	recoverings := Recoverings{}
 	for {
 		select {
 		case <-l.ShallStop():
@@ -565,6 +572,14 @@ func (s *sentinel) backendLoop(l Loop) error {
 		case m := <-s.manageablec:
 			// Check loop error.
 			if err := m.error(); err != nil {
+				// Let the recovering function decide how to procede.
+				var rerr error
+				recoverings = append(recoverings, &Recovering{time.Now(), err})
+				if recoverings, rerr = s.recoverFunc(recoverings); rerr != nil {
+					// Ouch, we'll stop with an error. Let's hope we've
+					// got a sentinel.
+					return rerr
+				}
 				// Restart all children.
 				if err := s.restartAllChildren(); err != nil {
 					return err
