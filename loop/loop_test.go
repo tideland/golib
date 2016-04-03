@@ -24,7 +24,7 @@ var (
 	shortTimeout    time.Duration = 25 * time.Millisecond
 	longTimeout     time.Duration = 100 * time.Millisecond
 	longerTimeout   time.Duration = 150 * time.Millisecond
-	veryLongTimeout time.Duration = 1 * time.Second
+	veryLongTimeout time.Duration = 5 * time.Second
 )
 
 //--------------------
@@ -155,16 +155,36 @@ func TestRecoveringsError(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
+// TestDescription tests the handling of loop and
+// sentinel descriptions.
+func TestDescription(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sentinelC := audit.MakeSigChan()
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+
+	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "one")
+
+    lA := s.Go(makeSimpleLF(doneAC), "two", "three", "four")
+    lB := s.Go(makeSimpleLF(doneBC))
+
+    assert.Equal(s.Description(), "one")
+    assert.Equal(lA.Description(), "two:three:four")
+	assert.Match(lB.Description(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+	assert.Nil(s.Stop())
+}
+
 // TestSimpleSentinel tests the simple starting and
 // stopping of a sentinel.
 func TestSimpleSentinel(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelc := audit.MakeSigChan()
+	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel")
+	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "simple-sentinel")
 
 	s.Go(makeSimpleLF(doneAC), "loop", "a")
 	s.Go(makeSimpleLF(doneBC), "loop", "b")
@@ -180,16 +200,16 @@ func TestSimpleSentinel(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSimpleSentinelLoopStops tests the simple starting and
+// TestSentinelLoopStops tests the simple starting and
 // stopping of a sentinel with one stopping loop.
-func TestSimpleSentinelLoopStops(t *testing.T) {
+func TestSentinelLoopStops(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelc := audit.MakeSigChan()
+	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel-loop-stops")
+	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "sentinel-loop-stops")
 
 	s.Go(makeSimpleLF(doneAC), "loop", "a")
 	lb := s.Go(makeSimpleLF(doneBC), "loop", "b")
@@ -207,24 +227,24 @@ func TestSimpleSentinelLoopStops(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSimpleSentinelLoopKilled tests the simple starting and
+// TestSentinelLoopKilled tests the simple starting and
 // stopping of a sentinel with one killed loop.
-func TestSimpleSentinelLoopKilled(t *testing.T) {
+func TestSentinelLoopKilled(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelc := audit.MakeSigChan()
+	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel-loop-killed")
+	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "sentinel-loop-killed")
 
 	s.Go(makeSimpleLF(doneAC), "loop", "a")
-	lb := s.Go(makeSimpleLF(doneBC), "loop", "b")
+	loobB := s.Go(makeSimpleLF(doneBC), "loop", "b")
 	s.Go(makeSimpleLF(doneCC), "loop", "c")
 
-	lb.Kill(errors.New("bang"))
+	loobB.Kill(errors.New("bang"))
 	assert.Wait(doneBC, true, shortTimeout)
-	assert.Wait(sentinelc, true, shortTimeout)
+	assert.Wait(sentinelC, true, shortTimeout)
 
 	time.Sleep(longTimeout)
 
@@ -238,15 +258,15 @@ func TestSimpleSentinelLoopKilled(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSimpleSentinelLoopPanicked tests the simple starting and
+// TestSentinelLoopPanicked tests the simple starting and
 // stopping of a sentinel with one panicking loop.
-func TestSimpleSentinelLoopPanicked(t *testing.T) {
+func TestSentinelLoopPanicked(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelc := audit.MakeSigChan()
+	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelc), "simple-sentinel-loop-killed")
+	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "sentinel-loop-killed")
 
 	s.Go(makeSimpleLF(doneAC), "loop", "a")
 	s.Go(makeSimpleLF(doneBC), "loop", "b")
