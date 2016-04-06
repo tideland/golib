@@ -146,6 +146,7 @@ type manageable interface {
 // Status of the loop.
 const (
 	Running = iota
+	Restarting
 	Stopping
 	Stopped
 )
@@ -214,7 +215,7 @@ func goLoop(lf LoopFunc, rf RecoverFunc, s *sentinel, d string) *loop {
 		l.descr = identifier.NewUUID().String()
 	}
 	// Start the loop.
-	logger.Infof("loop '%s' starts", l.description())
+	logger.Infof("loop %q starts", l.description())
 	go l.run()
 	<-l.startedC
 	return l
@@ -302,19 +303,24 @@ func (l *loop) stop(err error) error {
 
 // restart implements the manageable interface.
 func (l *loop) restart() error {
-	if l.err != nil {
-		logger.Errorf("loop '%s' restarts after error: %v", l.description(), l.err)
-	} else {
-		logger.Infof("loop '%s' restarts", l.description())
-	}
+	logger.Warningf("loop %q restarts", l.description())
+	l.mux.Lock()
 	l.err = nil
-	l.terminate(nil)
+	l.status = Restarting
+	l.mux.Unlock()
+	select {
+	case <-l.stopC:
+	default:
+		close(l.stopC)
+	}
 	if err := l.Wait(); err != nil {
-		logger.Errorf("loop '%s' failed restarting after error: %v", l.description(), err)
+		logger.Errorf("loop %q failed restarting after error: %v", l.description(), err)
 		return err
 	}
+	l.stopC = make(chan struct{})
 	go l.run()
 	<-l.startedC
+	logger.Infof("loop %q restarted", l.description())
 	return nil
 }
 
@@ -343,10 +349,14 @@ func (l *loop) run() {
 // checkTermination checks if an error has been the reason and if
 // it possibly can be recovered by a recover function.
 func (l *loop) checkTermination(reason interface{}) {
-	if reason == nil {
+	switch {
+	case l.status == Restarting:
+		// Quick exit, we are restarting.
+		return
+	case reason == nil:
 		// Regular end.
 		l.status = Stopping
-	} else if l.recoverF == nil {
+	case l.recoverF == nil:
 		// Error but no recover function.
 		l.status = Stopping
 		if err, ok := reason.(error); ok {
@@ -354,15 +364,15 @@ func (l *loop) checkTermination(reason interface{}) {
 		} else {
 			l.err = errors.New(ErrLoopPanicked, errorMessages, reason)
 		}
-	} else {
+	default:
 		// Try to recover.
-		logger.Errorf("loop '%s' tries to recover", l.description())
+		logger.Errorf("loop %q tries to recover", l.description())
 		l.recoverings = append(l.recoverings, &Recovering{time.Now(), reason})
 		l.recoverings, l.err = l.recoverF(l.recoverings)
 		if l.err != nil {
 			l.status = Stopping
 		} else {
-			logger.Infof("loop '%s' recovered", l.description())
+			logger.Infof("loop %q recovered", l.description())
 		}
 	}
 }
@@ -370,6 +380,16 @@ func (l *loop) checkTermination(reason interface{}) {
 // finalizeTermination notifies listeners that the loop stopped
 // working and a potential sentinal about its status.
 func (l *loop) finalizeTermination() {
+	if l.status == Restarting {
+		// Quickly handling a restart.
+		select {
+		case <-l.doneC:
+		default:
+			close(l.doneC)
+		}
+		return
+	}
+	// Handle a regular stopping.
 	l.status = Stopped
 	select {
 	case <-l.doneC:
@@ -380,9 +400,9 @@ func (l *loop) finalizeTermination() {
 		l.sentinel.manageableC <- l
 	}
 	if l.err != nil {
-		logger.Errorf("loop '%s' stopped with error: %v", l.description(), l.err)
+		logger.Errorf("loop %q stopped with error: %v", l.description(), l.err)
 	} else {
-		logger.Infof("loop '%s' stopped", l.description())
+		logger.Infof("loop %q stopped", l.description())
 	}
 }
 
@@ -552,10 +572,11 @@ func (s *sentinel) backendLoop(l Loop) error {
 				m = goSentinel(g.recoverF, s, g.descr)
 			}
 			if m != nil {
+				// Store manageable and ensure channel size.
 				s.manageables[m] = struct{}{}
 				mcc := cap(s.manageableC)
-				if mcc == len(s.manageables) {
-					s.manageableC = make(chan manageable, 2*mcc)
+				if cap(s.manageableC) < len(s.manageables) {
+					s.manageableC = make(chan manageable, mcc+4)
 				}
 			}
 			g.manageableC <- m
@@ -627,7 +648,10 @@ func (s *sentinel) stop(err error) error {
 
 // restart implements the manageable interface.
 func (s *sentinel) restart() error {
-	return s.loop.restart()
+	logger.Warningf("sentinel %q restarts", s.description())
+	err := s.restartAllChildren()
+	logger.Infof("sentinel %q restarted", s.description())
+	return err
 }
 
 // EOF

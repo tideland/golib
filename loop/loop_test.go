@@ -165,11 +165,11 @@ func TestDescription(t *testing.T) {
 
 	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "one")
 
-    lA := s.Go(makeSimpleLF(doneAC), "two", "three", "four")
-    lB := s.Go(makeSimpleLF(doneBC))
+	lA := s.Go(makeSimpleLF(doneAC), "two", "three", "four")
+	lB := s.Go(makeSimpleLF(doneBC))
 
-    assert.Equal(s.Description(), "one")
-    assert.Equal(lA.Description(), "two:three:four")
+	assert.Equal(s.Description(), "one")
+	assert.Equal(lA.Description(), "two:three:four")
 	assert.Match(lB.Description(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	assert.Nil(s.Stop())
@@ -279,6 +279,71 @@ func TestSentinelLoopPanicked(t *testing.T) {
 	assert.Wait(doneBC, true, shortTimeout)
 
 	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSimpleHierarchicalSentinel tests the simple starting and
+// stopping of hierarchical sentinel.
+func TestSimpleHierarchicalSentinel(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sentinelAC := audit.MakeSigChan()
+	sentinelBC := audit.MakeSigChan()
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+	doneCC := audit.MakeSigChan()
+
+	sA := loop.GoSentinel(makeCheckCountRF(sentinelAC), "simple-hierarchical-sentinel", "a")
+
+	sA.Go(makeSimpleLF(doneAC), "loop", "a")
+
+	sB := sA.GoSentinel(makeCheckCountRF(sentinelBC), "simple-hierarchical-sentinel", "b")
+
+	sB.Go(makeSimpleLF(doneBC), "loop", "b")
+	sB.Go(makeSimpleLF(doneCC), "loop", "c")
+
+	assert.Nil(sA.Stop())
+	assert.Wait(doneAC, true, longTimeout)
+	assert.Wait(doneBC, true, longTimeout)
+	assert.Wait(doneCC, true, longTimeout)
+
+	status, _ := sA.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestKillHierarchicalSentinelHigh tests the killing of a loop
+// on the same level as a sentinel.
+func TestKillHierarchicalSentinelHigh(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sentinelAC := audit.MakeSigChan()
+	sentinelBC := audit.MakeSigChan()
+	doneAC := audit.MakeSigChan()
+	doneBC := audit.MakeSigChan()
+	doneCC := audit.MakeSigChan()
+
+	sA := loop.GoSentinel(makeCheckCountRF(sentinelAC), "kill-hierarchical-sentinel-high", "a")
+
+	lA := sA.Go(makeSimpleLF(doneAC), "loop", "a")
+
+	sB := sA.GoSentinel(makeCheckCountRF(sentinelBC), "kill-hierarchical-sentinel-high", "b")
+
+	sB.Go(makeSimpleLF(doneBC), "loop", "b")
+	sB.Go(makeSimpleLF(doneCC), "loop", "c")
+
+	lA.Kill(errors.New("ouch"))
+	assert.Wait(doneAC, true, longTimeout)
+	assert.Wait(doneBC, true, longTimeout)
+	assert.Wait(doneCC, true, longTimeout)
+
+	assert.Nil(sA.Stop())
+	assert.Wait(doneAC, true, longTimeout)
+	assert.Wait(doneBC, true, longTimeout)
+	assert.Wait(doneCC, true, longTimeout)
+
+	// assert.Wait(sentinelAC, true, longTimeout)
+
+	status, _ := sA.Error()
 
 	assert.Equal(loop.Stopped, status)
 }
