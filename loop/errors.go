@@ -21,10 +21,12 @@ import (
 
 const (
 	ErrLoopPanicked = iota + 1
+	ErrHandlingFailed
 )
 
 var errorMessages = errors.Messages{
-	ErrLoopPanicked: "loop panicked: %v",
+	ErrLoopPanicked:   "loop panicked: %v",
+	ErrHandlingFailed: "nadling of error notification for %q failed",
 }
 
 // EOF
