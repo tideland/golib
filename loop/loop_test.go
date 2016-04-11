@@ -159,14 +159,14 @@ func TestRecoveringsError(t *testing.T) {
 // sentinel descriptions.
 func TestDescription(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "one")
+	s := loop.GoSentinel(nil, "one")
+	lA := loop.Go(makeSimpleLF(doneAC), "two", "three", "four")
+	lB := loop.Go(makeSimpleLF(doneBC))
 
-	lA := s.Go(makeSimpleLF(doneAC), "two", "three", "four")
-	lB := s.Go(makeSimpleLF(doneBC))
+	s.Observe(lA, lB)
 
 	assert.Equal(s.Description(), "one")
 	assert.Equal(lA.Description(), "two:three:four")
@@ -179,16 +179,16 @@ func TestDescription(t *testing.T) {
 // stopping of a sentinel.
 func TestSimpleSentinel(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "simple-sentinel")
+	s := loop.GoSentinel(nil, "simple-sentinel")
+	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
 
-	s.Go(makeSimpleLF(doneAC), "loop", "a")
-	s.Go(makeSimpleLF(doneBC), "loop", "b")
-	s.Go(makeSimpleLF(doneCC), "loop", "c")
+	s.Observe(lA, lB, lC)
 
 	assert.Nil(s.Stop())
 	assert.Wait(doneAC, true, shortTimeout)
@@ -200,22 +200,22 @@ func TestSimpleSentinel(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSentinelLoopStops tests the simple starting and
-// stopping of a sentinel with one stopping loop.
-func TestSentinelLoopStops(t *testing.T) {
+// TestSentinelStoppingLoop tests the stopping
+// of a loop before sentinel stops.
+func TestSentinelStoppingLoop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "sentinel-loop-stops")
+	s := loop.GoSentinel(nil, "sentinel-stopping-loop")
+	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
 
-	s.Go(makeSimpleLF(doneAC), "loop", "a")
-	lb := s.Go(makeSimpleLF(doneBC), "loop", "b")
-	s.Go(makeSimpleLF(doneCC), "loop", "c")
+	s.Observe(lA, lB, lC)
 
-	assert.Nil(lb.Stop())
+	assert.Nil(lB.Stop())
 	assert.Wait(doneBC, true, shortTimeout)
 
 	assert.Nil(s.Stop())
@@ -227,30 +227,27 @@ func TestSentinelLoopStops(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSentinelLoopKilled tests the simple starting and
-// stopping of a sentinel with one killed loop.
-func TestSentinelLoopKilled(t *testing.T) {
+// TestSentinelKillingLoopNoHandler tests the killing
+// of a loop before sentinel stops. The sentinel has
+// no handler and so ignores the error.
+func TestSentinelKillingLoopNoHandler(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "sentinel-loop-killed")
+	s := loop.GoSentinel(nil, "sentinel-killing-loop-no-handler")
+	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
 
-	s.Go(makeSimpleLF(doneAC), "loop", "a")
-	loobB := s.Go(makeSimpleLF(doneBC), "loop", "b")
-	s.Go(makeSimpleLF(doneCC), "loop", "c")
+	s.Observe(lA, lB, lC)
 
-	loobB.Kill(errors.New("bang"))
+	lB.Kill(errors.New("bang!"))
 	assert.Wait(doneBC, true, shortTimeout)
-	assert.Wait(sentinelC, true, shortTimeout)
 
-	time.Sleep(longTimeout)
-
-	assert.Nil(s.Stop())
+	assert.ErrorMatch(s.Stop(), ".*bang!.*")
 	assert.Wait(doneAC, true, shortTimeout)
-	assert.Wait(doneBC, true, shortTimeout)
 	assert.Wait(doneCC, true, shortTimeout)
 
 	status, _ := s.Error()
@@ -258,92 +255,37 @@ func TestSentinelLoopKilled(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSentinelLoopPanicked tests the simple starting and
-// stopping of a sentinel with one panicking loop.
-func TestSentinelLoopPanicked(t *testing.T) {
+// TestSentinelKillingLoopWithHandler tests the killing
+// of a loop before sentinel stops. The sentinel has
+// a handler and restarts the loop.
+func TestSentinelKillingLoopWithHandler(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	sentinelC := audit.MakeSigChan()
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
+	doneCC := audit.MakeSigChan()
+	handlerC := audit.MakeSigChan()
+	handlerF := func(s loop.Sentinel, o loop.Observable) error {
+		o.Restart()
+		handlerC <- true
+		return nil
+	}
 
-	s := loop.GoSentinel(makeCheckCountRF(sentinelC), "sentinel-loop-killed")
+	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-with-handler")
+	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
 
-	s.Go(makeSimpleLF(doneAC), "loop", "a")
-	s.Go(makeSimpleLF(doneBC), "loop", "b")
-	s.Go(makeRecoverPanicLF(), "loop", "c")
+	s.Observe(lA, lB, lC)
 
-	time.Sleep(veryLongTimeout)
+	lB.Kill(errors.New("bang!"))
+	assert.Wait(handlerC, true, shortTimeout)
 
 	assert.Nil(s.Stop())
-	assert.Wait(doneAC, true, shortTimeout)
 	assert.Wait(doneBC, true, shortTimeout)
+	assert.Wait(doneAC, true, shortTimeout)
+	assert.Wait(doneCC, true, shortTimeout)
 
 	status, _ := s.Error()
-
-	assert.Equal(loop.Stopped, status)
-}
-
-// TestSimpleHierarchicalSentinel tests the simple starting and
-// stopping of hierarchical sentinel.
-func TestSimpleHierarchicalSentinel(t *testing.T) {
-	assert := audit.NewTestingAssertion(t, true)
-	sentinelAC := audit.MakeSigChan()
-	sentinelBC := audit.MakeSigChan()
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
-	doneCC := audit.MakeSigChan()
-
-	sA := loop.GoSentinel(makeCheckCountRF(sentinelAC), "simple-hierarchical-sentinel", "a")
-
-	sA.Go(makeSimpleLF(doneAC), "loop", "a")
-
-	sB := sA.GoSentinel(makeCheckCountRF(sentinelBC), "simple-hierarchical-sentinel", "b")
-
-	sB.Go(makeSimpleLF(doneBC), "loop", "b")
-	sB.Go(makeSimpleLF(doneCC), "loop", "c")
-
-	assert.Nil(sA.Stop())
-	assert.Wait(doneAC, true, longTimeout)
-	assert.Wait(doneBC, true, longTimeout)
-	assert.Wait(doneCC, true, longTimeout)
-
-	status, _ := sA.Error()
-
-	assert.Equal(loop.Stopped, status)
-}
-
-// TestKillHierarchicalSentinelHigh tests the killing of a loop
-// on the same level as a sentinel.
-func TestKillHierarchicalSentinelHigh(t *testing.T) {
-	assert := audit.NewTestingAssertion(t, true)
-	sentinelAC := audit.MakeSigChan()
-	sentinelBC := audit.MakeSigChan()
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
-	doneCC := audit.MakeSigChan()
-
-	sA := loop.GoSentinel(makeCheckCountRF(sentinelAC), "kill-hierarchical-sentinel-high", "a")
-
-	lA := sA.Go(makeSimpleLF(doneAC), "loop", "a")
-
-	sB := sA.GoSentinel(makeCheckCountRF(sentinelBC), "kill-hierarchical-sentinel-high", "b")
-
-	sB.Go(makeSimpleLF(doneBC), "loop", "b")
-	sB.Go(makeSimpleLF(doneCC), "loop", "c")
-
-	lA.Kill(errors.New("ouch"))
-	assert.Wait(doneAC, true, longTimeout)
-	assert.Wait(doneBC, true, longTimeout)
-	assert.Wait(doneCC, true, longTimeout)
-
-	assert.Nil(sA.Stop())
-	assert.Wait(doneAC, true, longTimeout)
-	assert.Wait(doneBC, true, longTimeout)
-	assert.Wait(doneCC, true, longTimeout)
-
-	// assert.Wait(sentinelAC, true, longTimeout)
-
-	status, _ := sA.Error()
 
 	assert.Equal(loop.Stopped, status)
 }

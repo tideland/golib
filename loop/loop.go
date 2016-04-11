@@ -146,6 +146,9 @@ type Observable interface {
 
 	// Error returns the current status and error of the observable.
 	Error() (status int, err error)
+
+	// attachSentinel attaches the observable to a sentinel.
+	attachSentinel(s *sentinel)
 }
 
 //--------------------
@@ -240,7 +243,15 @@ func (l *loop) Wait() error {
 
 // Restart implements the Observable interface.
 func (l *loop) Restart() error {
-	// Implement restart.
+	l.err = nil
+	l.recoverings = nil
+	l.status = Running
+	l.stopC = make(chan struct{})
+	l.doneC = make(chan struct{})
+	// Restart the goroutine.
+	logger.Infof("loop %q restarts", l.Description())
+	go l.run()
+	<-l.startedC
 	return nil
 }
 
@@ -251,6 +262,13 @@ func (l *loop) Error() (status int, err error) {
 	status = l.status
 	err = l.err
 	return
+}
+
+// attachSentinel implements the Observable interface.
+func (l *loop) attachSentinel(s *sentinel) {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+	l.sentinel = s
 }
 
 // ShallStop implements the Loop interface.
@@ -347,7 +365,7 @@ func (l *loop) finalizeTermination() {
 			l.sentinel.notifyC <- l
 		} else {
 			// Tell sentinel to remove loop.
-			l.sentinel.removeC <- l
+			l.sentinel.removeC <- []Observable{l}
 		}
 	}
 	if l.err != nil {
@@ -369,8 +387,11 @@ type NotificationHandlerFunc func(s Sentinel, o Observable) error
 type Sentinel interface {
 	Observable
 
-	// Observe tells the sentinel to monitor the passed object.
-	Observe(o Observable)
+	// Observe tells the sentinel to monitor the passed observables.
+	Observe(o ...Observable)
+
+	// Forget tells the sentinel to forget the passed observables.
+	Forget(o ...Observable)
 
 	// ObservablesDo executes the passed function for each observable,
 	// e.g. to react after an error.
@@ -383,9 +404,9 @@ type sentinel struct {
 	descr       string
 	handlerF    NotificationHandlerFunc
 	observables map[Observable]struct{}
-	addC        chan Observable
+	addC        chan []Observable
+	removeC     chan []Observable
 	notifyC     chan Observable
-	removeC     chan Observable
 	loop        *loop
 	sentinel    *sentinel
 }
@@ -396,9 +417,9 @@ func goSentinel(nhf NotificationHandlerFunc, ps *sentinel, d string) *sentinel {
 		descr:       d,
 		handlerF:    nhf,
 		observables: make(map[Observable]struct{}),
-		addC:        make(chan Observable, 1),
-		notifyC:     make(chan Observable, 1),
-		removeC:     make(chan Observable, 1),
+		addC:        make(chan []Observable),
+		removeC:     make(chan []Observable),
+		notifyC:     make(chan Observable),
 		sentinel:    ps,
 	}
 	s.loop = goLoop(s.backendLoop, nil, s.sentinel, d)
@@ -435,9 +456,19 @@ func (s *sentinel) Error() (int, error) {
 	return s.loop.Error()
 }
 
+// attachSentinel implements the Observable interface.
+func (s *sentinel) attachSentinel(ps *sentinel) {
+	s.loop.attachSentinel(ps)
+}
+
 // Observe implements the Sentinel interface.
-func (s *sentinel) Observe(o Observable) {
-	s.addC <- o
+func (s *sentinel) Observe(os ...Observable) {
+	s.addC <- os
+}
+
+// Forget implements the Sentinel interface.
+func (s *sentinel) Forget(os ...Observable) {
+	s.removeC <- os
 }
 
 // ObservablesDo implements the Sentinel interface.
@@ -446,7 +477,7 @@ func (s *sentinel) ObservablesDo(f func(o Observable) error) error {
 	defer s.mux.Unlock()
 	var errs []error
 	for o, _ := range s.observables {
-		if err := f(o); o != nil {
+		if err := f(o); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -465,23 +496,36 @@ func (s *sentinel) backendLoop(l Loop) error {
 			return s.ObservablesDo(func(o Observable) error {
 				return o.Stop()
 			})
-		case o := <-s.addC:
-			// Add a new observable.
-			s.observables[o] = struct{}{}
+		case os := <-s.addC:
+			// Add new observables.
+			for _, o := range os {
+				s.observables[o] = struct{}{}
+				o.attachSentinel(s)
+				logger.Infof("started observing %q", o.Description())
+			}
+		case os := <-s.removeC:
+			// Remove observables.
+			for _, o := range os {
+				delete(s.observables, o)
+				logger.Infof("stopped observing %q", o.Description())
+			}
 		case o := <-s.notifyC:
 			// Recive notification about observable
 			// with error.
-			err := s.handlerF(s, o)
+			_, err := o.Error()
+			if s.handlerF != nil {
+				// Try to handle the notification.
+				err = s.handlerF(s, o)
+			}
 			if err != nil {
+				// Still an error, so kill all.
+				logger.Errorf("sentinel %q kills all observables after error: %v", s.Description(), err)
 				s.ObservablesDo(func(o Observable) error {
 					o.Kill(err)
 					return nil
 				})
 				return errors.Annotate(err, ErrHandlingFailed, errorMessages, o.Description())
 			}
-		case o := <-s.removeC:
-			// Remove an observable.
-			delete(s.observables, o)
 		}
 	}
 }

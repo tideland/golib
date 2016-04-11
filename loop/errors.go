@@ -26,7 +26,7 @@ const (
 
 var errorMessages = errors.Messages{
 	ErrLoopPanicked:   "loop panicked: %v",
-	ErrHandlingFailed: "nadling of error notification for %q failed",
+	ErrHandlingFailed: "error handling for %q failed",
 }
 
 // EOF
