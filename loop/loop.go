@@ -243,6 +243,11 @@ func (l *loop) Wait() error {
 
 // Restart implements the Observable interface.
 func (l *loop) Restart() error {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+	if l.status != Stopped {
+		return errors.New(ErrRestartNonStopped, errorMessages, l.Description())
+	}
 	l.err = nil
 	l.recoverings = nil
 	l.status = Running

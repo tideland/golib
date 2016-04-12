@@ -22,11 +22,13 @@ import (
 const (
 	ErrLoopPanicked = iota + 1
 	ErrHandlingFailed
+	ErrRestartNonStopped
 )
 
 var errorMessages = errors.Messages{
-	ErrLoopPanicked:   "loop panicked: %v",
-	ErrHandlingFailed: "error handling for %q failed",
+	ErrLoopPanicked:      "loop panicked: %v",
+	ErrHandlingFailed:    "error handling for %q failed",
+	ErrRestartNonStopped: "cannot restart unstopped %q",
 }
 
 // EOF

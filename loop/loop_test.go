@@ -46,6 +46,35 @@ func TestSimpleStop(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
+// TestSimpleRestart tests restarting when not stopped and
+// when stopped.
+func TestSimpleRestart(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	donec := audit.MakeSigChan()
+	l := loop.Go(makeSimpleLF(donec), "simple-restart")
+
+	assert.ErrorMatch(l.Restart(), ".*cannot restart unstopped.*")
+
+	status, _ := l.Error()
+
+	assert.Equal(loop.Running, status)
+
+	assert.Nil(l.Stop())
+	assert.Wait(donec, true, shortTimeout)
+
+	status, _ = l.Error()
+
+	assert.Equal(loop.Stopped, status)
+
+	assert.Nil(l.Restart())
+
+	status, _ = l.Error()
+
+	assert.Equal(loop.Running, status)
+	assert.Nil(l.Stop())
+	assert.Wait(donec, true, shortTimeout)
+}
+
 // TestSimpleKill tests the simple backend returning an error
 // after a kill.
 func TestSimpleKill(t *testing.T) {
@@ -255,10 +284,10 @@ func TestSentinelKillingLoopNoHandler(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
-// TestSentinelKillingLoopWithHandler tests the killing
+// TestSentinelKillingLoopHandlerRestarts tests the killing
 // of a loop before sentinel stops. The sentinel has
 // a handler and restarts the loop.
-func TestSentinelKillingLoopWithHandler(t *testing.T) {
+func TestSentinelKillingLoopHandlerRestarts(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
@@ -270,7 +299,7 @@ func TestSentinelKillingLoopWithHandler(t *testing.T) {
 		return nil
 	}
 
-	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-with-handler")
+	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-handler-restarts")
 	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
 	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
 	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
@@ -284,6 +313,47 @@ func TestSentinelKillingLoopWithHandler(t *testing.T) {
 	assert.Wait(doneBC, true, shortTimeout)
 	assert.Wait(doneAC, true, shortTimeout)
 	assert.Wait(doneCC, true, shortTimeout)
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSentinelKillingLoopHandlerStops tests the killing
+// of a loop before sentinel stops. The sentinel has
+// a handler which stops the processing.
+func TestSentinelKillingLoopHandlerStops(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	infoAC := audit.MakeSigChan()
+	infoBC := audit.MakeSigChan()
+	infoCC := audit.MakeSigChan()
+	handlerC := audit.MakeSigChan()
+	handlerF := func(s loop.Sentinel, o loop.Observable) error {
+		handlerC <- true
+		return errors.New("oh no!")
+	}
+
+	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-with-stops")
+	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
+	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
+	lC := loop.Go(makeStartStopLF(infoCC), "loop", "c")
+
+	s.Observe(lA, lB, lC)
+
+	assert.Wait(infoAC, "started", shortTimeout)
+	assert.Wait(infoBC, "started", shortTimeout)
+	assert.Wait(infoCC, "started", shortTimeout)
+
+	time.Sleep(longTimeout)
+
+	lB.Kill(errors.New("bang!"))
+
+	assert.Wait(handlerC, true, shortTimeout)
+	assert.Wait(infoBC, "stopped", shortTimeout)
+	assert.Wait(infoAC, "stopped", shortTimeout)
+	assert.Wait(infoCC, "stopped", shortTimeout)
+
+	assert.ErrorMatch(s.Stop(), ".*oh no!.*")
 
 	status, _ := s.Error()
 
@@ -347,6 +417,19 @@ func ExampleRecoverFunc() {
 func makeSimpleLF(donec chan interface{}) loop.LoopFunc {
 	return func(l loop.Loop) error {
 		defer func() { donec <- true }()
+		for {
+			select {
+			case <-l.ShallStop():
+				return nil
+			}
+		}
+	}
+}
+
+func makeStartStopLF(infoc chan interface{}) loop.LoopFunc {
+	return func(l loop.Loop) error {
+		defer func() { infoc <- "stopped" }()
+		infoc <- "started"
 		for {
 			select {
 			case <-l.ShallStop():
