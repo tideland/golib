@@ -24,7 +24,7 @@ var (
 	shortTimeout    time.Duration = 25 * time.Millisecond
 	longTimeout     time.Duration = 100 * time.Millisecond
 	longerTimeout   time.Duration = 150 * time.Millisecond
-	veryLongTimeout time.Duration = 5 * time.Second
+	stayCalm time.Duration = 5 * time.Second
 )
 
 //--------------------
@@ -340,20 +340,63 @@ func TestSentinelKillingLoopHandlerStops(t *testing.T) {
 
 	s.Observe(lA, lB, lC)
 
-	assert.Wait(infoAC, "started", shortTimeout)
-	assert.Wait(infoBC, "started", shortTimeout)
-	assert.Wait(infoCC, "started", shortTimeout)
+	assert.Wait(infoAC, "started", stayCalm)
+	assert.Wait(infoBC, "started", stayCalm)
+	assert.Wait(infoCC, "started", stayCalm)
 
-	time.Sleep(longTimeout)
-
+	time.Sleep(shortTimeout)
 	lB.Kill(errors.New("bang!"))
 
-	assert.Wait(handlerC, true, shortTimeout)
-	assert.Wait(infoBC, "stopped", shortTimeout)
-	assert.Wait(infoAC, "stopped", shortTimeout)
-	assert.Wait(infoCC, "stopped", shortTimeout)
+	assert.Wait(infoBC, "stopped", stayCalm)
+	assert.Wait(infoAC, "stopped", stayCalm)
+	assert.Wait(infoCC, "stopped", stayCalm)
+	assert.Wait(handlerC, true, stayCalm)
 
 	assert.ErrorMatch(s.Stop(), ".*oh no!.*")
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSentinelKillingLoopHandlerRestartAll tests the killing
+// of a loop before sentinel stops. The sentinel has
+// a handler which restarts all observables.
+func TestSentinelKillingLoopHandlerRestartAll(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	infoAC := audit.MakeSigChan()
+	infoBC := audit.MakeSigChan()
+	infoCC := audit.MakeSigChan()
+	handlerC := audit.MakeSigChan()
+	handlerF := func(s loop.Sentinel, _ loop.Observable) error {
+		s.ObservablesDo(func(o loop.Observable) error {
+			o.Restart()
+			return nil
+		})
+		handlerC <- true
+		return nil
+	}
+
+	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-restarting-all")
+	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
+	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
+	lC := loop.Go(makeStartStopLF(infoCC), "loop", "c")
+
+	s.Observe(lA, lB, lC)
+
+	assert.Wait(infoAC, "started", stayCalm)
+	assert.Wait(infoBC, "started", stayCalm)
+	assert.Wait(infoCC, "started", stayCalm)
+
+	time.Sleep(shortTimeout)
+	lB.Kill(errors.New("bang!"))
+
+	assert.Wait(handlerC, true, stayCalm)
+
+	assert.Nil(s.Stop())
+	assert.Wait(infoBC, "stopped", stayCalm)
+	assert.Wait(infoAC, "stopped", stayCalm)
+	assert.Wait(infoCC, "stopped", stayCalm)
 
 	status, _ := s.Error()
 
