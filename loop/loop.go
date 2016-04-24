@@ -12,6 +12,7 @@ package loop
 //--------------------
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 // returns the error.
 func Go(lf LoopFunc, dps ...string) Loop {
 	descr := identifier.JoinedIdentifier(dps...)
-	return goLoop(lf, nil, nil, descr)
+	return goLoop(lf, nil, nil, nil, descr)
 }
 
 // GoRecoverable starts the loop function in the background. The
@@ -46,7 +47,7 @@ func Go(lf LoopFunc, dps ...string) Loop {
 // with that error.
 func GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...string) Loop {
 	descr := identifier.JoinedIdentifier(dps...)
-	return goLoop(lf, rf, nil, descr)
+	return goLoop(lf, rf, nil, nil, descr)
 }
 
 // GoSentinel starts a new sentinel. It can start simple and
@@ -124,27 +125,18 @@ type RecoverFunc func(rs Recoverings) (Recoverings, error)
 // Observable is a common base interface for those objects
 // that a sentinel can monitor.
 type Observable interface {
-	// Description returns a describing string. It is
-	// no (!) identifier, but it may be.
-	Description() string
+	fmt.Stringer
 
-	// Stop tells the observable to stop working without a passed
-	// error and waits until it is done.
+	// Stop tells the observable to stop working and waits until it is done.
 	Stop() error
 
-	// Kill tells the observable to stop working due to the passed error.
-	// Here only the first error will be stored for later evaluation.
+	// Kill kills the observable with the passed error.
 	Kill(err error)
 
-	// Wait blocks the caller until the observable ended and returns
-	// a possible error.
-	Wait() error
-
-	// Restart stops the observable w/o an error and
-	// restarts it afterwards.
+	// Restart stops the observable and restarts it afterwards.
 	Restart() error
 
-	// Error returns the current status and error of the observable.
+	// Error returns information about the current status and error.
 	Error() (status int, err error)
 
 	// attachSentinel attaches the observable to a sentinel.
@@ -183,19 +175,20 @@ type Loop interface {
 type loop struct {
 	mux         sync.Mutex
 	descr       string
+	status      int
+	err         error
 	loopF       LoopFunc
 	recoverF    RecoverFunc
 	recoverings Recoverings
-	err         error
-	status      int
 	startedC    chan struct{}
 	stopC       chan struct{}
 	doneC       chan struct{}
+	owner       Observable
 	sentinel    *sentinel
 }
 
 // goLoop starts a loop in the background.
-func goLoop(lf LoopFunc, rf RecoverFunc, s *sentinel, d string) *loop {
+func goLoop(lf LoopFunc, rf RecoverFunc, o Observable, s *sentinel, d string) *loop {
 	l := &loop{
 		descr:    d,
 		loopF:    lf,
@@ -203,21 +196,27 @@ func goLoop(lf LoopFunc, rf RecoverFunc, s *sentinel, d string) *loop {
 		startedC: make(chan struct{}),
 		stopC:    make(chan struct{}),
 		doneC:    make(chan struct{}),
+		owner:    o,
 		sentinel: s,
 	}
 	// Check description.
 	if l.descr == "" {
 		l.descr = identifier.NewUUID().String()
 	}
+	// Check owner, at least we should own ourself.
+	if l.owner == nil {
+		l.owner = l
+	}
 	// Start the loop.
-	logger.Infof("loop %q starts", l.Description())
+	logger.Infof("loop %q starts", l)
 	go l.run()
 	<-l.startedC
 	return l
 }
 
-// Description implements the Observable interface.
-func (l *loop) Description() string {
+// String implements the Stringer interface. It returns
+// the description of the loop.
+func (l *loop) String() string {
 	return l.descr
 }
 
@@ -246,7 +245,7 @@ func (l *loop) Restart() error {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 	if l.status != Stopped {
-		return errors.New(ErrRestartNonStopped, errorMessages, l.Description())
+		return errors.New(ErrRestartNonStopped, errorMessages, l)
 	}
 	l.err = nil
 	l.recoverings = nil
@@ -254,7 +253,7 @@ func (l *loop) Restart() error {
 	l.stopC = make(chan struct{})
 	l.doneC = make(chan struct{})
 	// Restart the goroutine.
-	logger.Infof("loop %q restarts", l.Description())
+	logger.Infof("loop %q restarts", l)
 	go l.run()
 	<-l.startedC
 	return nil
@@ -344,13 +343,13 @@ func (l *loop) checkTermination(reason interface{}) {
 		}
 	default:
 		// Try to recover.
-		logger.Errorf("loop %q tries to recover", l.Description())
+		logger.Errorf("loop %q tries to recover", l)
 		l.recoverings = append(l.recoverings, &Recovering{time.Now(), reason})
 		l.recoverings, l.err = l.recoverF(l.recoverings)
 		if l.err != nil {
 			l.status = Stopping
 		} else {
-			logger.Infof("loop %q recovered", l.Description())
+			logger.Infof("loop %q recovered", l)
 		}
 	}
 }
@@ -367,16 +366,16 @@ func (l *loop) finalizeTermination() {
 	if l.sentinel != nil {
 		if l.err != nil {
 			// Notify sentinel about error termination.
-			l.sentinel.notifyC <- l
+			l.sentinel.notifyC <- l.owner
 		} else {
 			// Tell sentinel to remove loop.
-			l.sentinel.removeC <- []Observable{l}
+			l.sentinel.Forget(l)
 		}
 	}
 	if l.err != nil {
-		logger.Errorf("loop %q stopped with error: %v", l.Description(), l.err)
+		logger.Errorf("loop %q stopped with error: %v", l, l.err)
 	} else {
-		logger.Infof("loop %q stopped", l.Description())
+		logger.Infof("loop %q stopped", l)
 	}
 }
 
@@ -403,17 +402,21 @@ type Sentinel interface {
 	ObservablesDo(f func(o Observable) error) error
 }
 
+type observableChange struct {
+	observables []Observable
+	doneC       chan struct{}
+}
+
 // sentinel implements the Sentinel interface.
 type sentinel struct {
 	mux         sync.Mutex
 	descr       string
+	loop        *loop
 	handlerF    NotificationHandlerFunc
 	observables map[Observable]struct{}
-	addC        chan []Observable
-	removeC     chan []Observable
+	addC        chan *observableChange
+	removeC     chan *observableChange
 	notifyC     chan Observable
-	loop        *loop
-	sentinel    *sentinel
 }
 
 // goSentinel starts a new sentinel.
@@ -422,17 +425,17 @@ func goSentinel(nhf NotificationHandlerFunc, ps *sentinel, d string) *sentinel {
 		descr:       d,
 		handlerF:    nhf,
 		observables: make(map[Observable]struct{}),
-		addC:        make(chan []Observable),
-		removeC:     make(chan []Observable),
+		addC:        make(chan *observableChange),
+		removeC:     make(chan *observableChange),
 		notifyC:     make(chan Observable),
-		sentinel:    ps,
 	}
-	s.loop = goLoop(s.backendLoop, nil, s.sentinel, d)
+	s.loop = goLoop(s.backendLoop, nil, s, ps, d)
 	return s
 }
 
-// Description implements the Observable interface.
-func (s *sentinel) Description() string {
+// String implements the Stringer interface. It returns
+// the description of the sentinel.
+func (s *sentinel) String() string {
 	return s.descr
 }
 
@@ -446,19 +449,20 @@ func (s *sentinel) Kill(err error) {
 	s.loop.Kill(err)
 }
 
-// Wait implements the Observable interface.
-func (s *sentinel) Wait() error {
-	return s.loop.Wait()
+// Error implements the Observable interface.
+func (s *sentinel) Error() (int, error) {
+	return s.loop.Error()
 }
 
 // Restart implements the Observable interface.
 func (s *sentinel) Restart() error {
-	return nil
-}
-
-// Error implements the Observable interface.
-func (s *sentinel) Error() (int, error) {
-	return s.loop.Error()
+	logger.Infof("sentinel %q restarts", s)
+	// Start backendLoop again.
+	s.loop.Restart()
+	// Now restart children.
+	return s.ObservablesDo(func(o Observable) error {
+		return o.Restart()
+	})
 }
 
 // attachSentinel implements the Observable interface.
@@ -468,12 +472,22 @@ func (s *sentinel) attachSentinel(ps *sentinel) {
 
 // Observe implements the Sentinel interface.
 func (s *sentinel) Observe(os ...Observable) {
-	s.addC <- os
+	change := &observableChange{
+		observables: os,
+		doneC:       make(chan struct{}),
+	}
+	s.addC <- change
+	<-change.doneC
 }
 
 // Forget implements the Sentinel interface.
 func (s *sentinel) Forget(os ...Observable) {
-	s.removeC <- os
+	change := &observableChange{
+		observables: os,
+		doneC:       make(chan struct{}),
+	}
+	s.removeC <- change
+	<-change.doneC
 }
 
 // ObservablesDo implements the Sentinel interface.
@@ -497,39 +511,46 @@ func (s *sentinel) backendLoop(l Loop) error {
 	for {
 		select {
 		case <-l.ShallStop():
-			// Stop all observed children.
+			// We're done.
 			return s.ObservablesDo(func(o Observable) error {
-				return o.Stop()
+				o.Stop()
+				return nil
 			})
-		case os := <-s.addC:
+		case change := <-s.addC:
 			// Add new observables.
-			for _, o := range os {
+			for _, o := range change.observables {
 				s.observables[o] = struct{}{}
 				o.attachSentinel(s)
-				logger.Infof("started observing %q", o.Description())
+				logger.Infof("started observing %q", o)
 			}
-		case os := <-s.removeC:
-			// Remove observables.
-			for _, o := range os {
+			close(change.doneC)
+		case change := <-s.removeC:
+			// Remove observable.
+			for _, o := range change.observables {
 				delete(s.observables, o)
-				logger.Infof("stopped observing %q", o.Description())
+				logger.Infof("stopped observing %q", o)
 			}
+			close(change.doneC)
 		case o := <-s.notifyC:
-			// Recive notification about observable
-			// with error.
 			_, err := o.Error()
+			// First check if my own loop has troubles.
+			if o == s {
+				return err
+			}
+			// Recieve notification about observable
+			// with error.
 			if s.handlerF != nil {
 				// Try to handle the notification.
 				err = s.handlerF(s, o)
 			}
 			if err != nil {
 				// Still an error, so kill all.
-				logger.Errorf("sentinel %q kills all observables after error: %v", s.Description(), err)
+				logger.Errorf("sentinel %q stops all observables after error: %v", s, err)
 				s.ObservablesDo(func(o Observable) error {
-					o.Kill(err)
-					return nil
+					logger.Errorf("stopping %q", o)
+					return o.Stop()
 				})
-				return errors.Annotate(err, ErrHandlingFailed, errorMessages, o.Description())
+				return errors.Annotate(err, ErrHandlingFailed, errorMessages, o)
 			}
 		}
 	}

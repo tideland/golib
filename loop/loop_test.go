@@ -21,10 +21,10 @@ import (
 )
 
 var (
-	shortTimeout    time.Duration = 25 * time.Millisecond
-	longTimeout     time.Duration = 100 * time.Millisecond
-	longerTimeout   time.Duration = 150 * time.Millisecond
-	stayCalm time.Duration = 5 * time.Second
+	shortTimeout  time.Duration = 25 * time.Millisecond
+	longTimeout   time.Duration = 100 * time.Millisecond
+	longerTimeout time.Duration = 150 * time.Millisecond
+	stayCalm      time.Duration = 5 * time.Second
 )
 
 //--------------------
@@ -100,7 +100,7 @@ func TestError(t *testing.T) {
 
 	time.Sleep(longTimeout)
 
-	assert.ErrorMatch(l.Stop(), "timed out", "error has to be 'time out'")
+	assert.ErrorMatch(l.Stop(), "timed out", "error has to be 'timed out'")
 	assert.Wait(donec, true, shortTimeout)
 
 	status, _ := l.Error()
@@ -116,7 +116,6 @@ func TestDeferredError(t *testing.T) {
 
 	assert.ErrorMatch(l.Stop(), "deferred error", "error has to be 'deferred error'")
 	assert.Wait(donec, true, shortTimeout)
-
 	status, _ := l.Error()
 
 	assert.Equal(loop.Stopped, status, "loop is stopped")
@@ -197,9 +196,9 @@ func TestDescription(t *testing.T) {
 
 	s.Observe(lA, lB)
 
-	assert.Equal(s.Description(), "one")
-	assert.Equal(lA.Description(), "two:three:four")
-	assert.Match(lB.Description(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+	assert.Equal(s.String(), "one")
+	assert.Equal(lA.String(), "two:three:four")
+	assert.Match(lB.String(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	assert.Nil(s.Stop())
 }
@@ -233,23 +232,46 @@ func TestSimpleSentinel(t *testing.T) {
 // of a loop before sentinel stops.
 func TestSentinelStoppingLoop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
-	doneCC := audit.MakeSigChan()
+	doneC := audit.MakeSigChan()
 
 	s := loop.GoSentinel(nil, "sentinel-stopping-loop")
-	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
+	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
 
 	s.Observe(lA, lB, lC)
 
 	assert.Nil(lB.Stop())
-	assert.Wait(doneBC, true, shortTimeout)
+	assert.Wait(doneC, true, shortTimeout)
 
 	assert.Nil(s.Stop())
-	assert.Wait(doneAC, true, shortTimeout)
-	assert.Wait(doneCC, true, shortTimeout)
+	assert.Wait(doneC, true, shortTimeout)
+	assert.Wait(doneC, true, shortTimeout)
+
+	status, _ := s.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
+// TestSentinelForget tests the forgetting of loops
+// by a sentinel.
+func TestSentineForget(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	doneC := audit.MakeSigChan()
+
+	s := loop.GoSentinel(nil, "sentinel-forget")
+	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
+	lD := loop.Go(makeSimpleLF(doneC), "loop", "d")
+
+	s.Observe(lA, lB, lC, lD)
+	time.Sleep(longTimeout)
+	s.Forget(lB, lC)
+
+	assert.Nil(s.Stop())
+	assert.Wait(doneC, true, shortTimeout)
+	assert.Wait(doneC, true, shortTimeout)
 
 	status, _ := s.Error()
 
@@ -261,23 +283,21 @@ func TestSentinelStoppingLoop(t *testing.T) {
 // no handler and so ignores the error.
 func TestSentinelKillingLoopNoHandler(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
-	doneCC := audit.MakeSigChan()
+	doneC := audit.MakeSigChan()
 
 	s := loop.GoSentinel(nil, "sentinel-killing-loop-no-handler")
-	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
+	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
+	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
+	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
 
 	s.Observe(lA, lB, lC)
 
 	lB.Kill(errors.New("bang!"))
-	assert.Wait(doneBC, true, shortTimeout)
+	assert.Wait(doneC, true, stayCalm)
+	assert.Wait(doneC, true, stayCalm)
+	assert.Wait(doneC, true, stayCalm)
 
 	assert.ErrorMatch(s.Stop(), ".*bang!.*")
-	assert.Wait(doneAC, true, shortTimeout)
-	assert.Wait(doneCC, true, shortTimeout)
 
 	status, _ := s.Error()
 
@@ -306,6 +326,7 @@ func TestSentinelKillingLoopHandlerRestarts(t *testing.T) {
 
 	s.Observe(lA, lB, lC)
 
+	time.Sleep(shortTimeout)
 	lB.Kill(errors.New("bang!"))
 	assert.Wait(handlerC, true, shortTimeout)
 
@@ -403,18 +424,60 @@ func TestSentinelKillingLoopHandlerRestartAll(t *testing.T) {
 	assert.Equal(loop.Stopped, status)
 }
 
+// TestNestedSentinelKill tests the killing and restarting of a
+// nested sentinel.
+func TestNestedSentinelKill(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	infoAC := audit.MakeSigChan()
+	infoBC := audit.MakeSigChan()
+	handlerC := audit.MakeSigChan()
+	handlerF := func(s loop.Sentinel, o loop.Observable) error {
+		o.Restart()
+		handlerC <- true
+		return nil
+	}
+
+	sT := loop.GoSentinel(handlerF, "nested-sentinel-kill-top")
+	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
+	sN := loop.GoSentinel(handlerF, "nested-sentinel-kill-nested")
+	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
+
+	sT.Observe(lA, sN)
+	sN.Observe(lB)
+
+	assert.Wait(infoAC, "started", stayCalm)
+	assert.Wait(infoBC, "started", stayCalm)
+
+	time.Sleep(shortTimeout)
+	sN.Kill(errors.New("bang!"))
+	time.Sleep(longerTimeout)
+
+	assert.Nil(sT.Stop())
+	assert.Wait(infoBC, "stopped", stayCalm)
+	assert.Wait(infoAC, "stopped", stayCalm)
+
+	status, _ := sT.Error()
+
+	assert.Equal(loop.Stopped, status)
+}
+
 //--------------------
 // EXAMPLES
 //--------------------
 
+// ExampleLoopFunc shows the usage of loop.Go with one
+// loop function and no recovery. The inner loop contains
+// a select listening to the channel returned by ShallStop.
+// Other channels are for the standard communication
+// with the loop.
 func ExampleLoopFunc() {
-	printc := make(chan string)
-	loopf := func(l loop.Loop) error {
+	printC := make(chan string)
+	loopF := func(l loop.Loop) error {
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case str := <-printc:
+			case str := <-printC:
 				if str == "panic" {
 					return errors.New("panic")
 				}
@@ -422,35 +485,75 @@ func ExampleLoopFunc() {
 			}
 		}
 	}
-	l := loop.Go(loopf)
+	l := loop.Go(loopF, "simple loop demo")
 
-	printc <- "Hello"
-	printc <- "World"
+	printC <- "Hello"
+	printC <- "World"
 
 	if err := l.Stop(); err != nil {
 		panic(err)
 	}
 }
 
+// ExampleRecoverFunc demonstrates the usage of a recovery
+// function when using loop.GoRecoverable. Here the frequency
+// of the recoverings (more than five in 10 milliseconds)
+// or the total number is checked. If the total number is
+// not interesting the recoverings could be trimmed by
+// e.g. rs.Trim(5). The fields Time and Reason per
+// recovering allow even more diagnosis.
 func ExampleRecoverFunc() {
-	printChan := make(chan string)
-	loopFunc := func(l loop.Loop) error {
+	printC := make(chan string)
+	loopF := func(l loop.Loop) error {
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case str := <-printChan:
+			case str := <-printC:
 				println(str)
 			}
 		}
 	}
-	recoverFunc := func(rs loop.Recoverings) (loop.Recoverings, error) {
-		if len(rs) >= 5 {
-			return nil, errors.New("too many panics")
+	recoverF := func(rs loop.Recoverings) (loop.Recoverings, error) {
+		if rs.Frequency(5, 10 * time.Millisecond) {
+			return nil, errors.New("too high error frequency")
+		}
+		if rs.Len() >= 10 {
+			return nil, errors.New("too many errors")
 		}
 		return rs, nil
 	}
-	loop.GoRecoverable(loopFunc, recoverFunc)
+	loop.GoRecoverable(loopF, recoverF, "recoverable loop demo")
+}
+
+// ExampleSentinel demonstrates the monitoring of loops and sentinel
+// with a handler function trying to restart the faulty observable.
+// The nested sentinel has no handler function. An error of a monitored
+// observable would lead to the stop of all observables.
+func ExampleSentinel() {
+	loopF := func(l loop.Loop) error {
+		for {
+			select {
+			case <-l.ShallStop():
+				return nil
+			}
+		}
+	}
+	handleF := func(s loop.Sentinel, o loop.Observable) error {
+		return o.Restart()
+	}
+	loopA := loop.Go(loopF, "loop", "a")
+	loopB := loop.Go(loopF, "loop", "b")
+	loopC := loop.Go(loopF, "loop", "c")
+	sentinel := loop.GoSentinel(handleF, "sentinel demo")
+
+	sentinel.Observe(loopA, loopB)
+
+	// Hierarchies are possible.
+	observedSentinel := loop.GoSentinel(nil, "nested sentinel w/o handler")
+
+	sentinel.Observe(observedSentinel)
+	observedSentinel.Observe(loopC)
 }
 
 //--------------------
