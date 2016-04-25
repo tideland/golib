@@ -31,9 +31,9 @@ const (
 var errorMessages = errors.Messages{
 	ErrSceneEnded:       "scene already ended",
 	ErrTimeout:          "scene %s timeout reached at %v",
-	ErrPropAlreadyExist: "prop %q already exist",
-	ErrPropNotFound:     "prop %q does not exist",
-	ErrCleanupFailed:    "cleanup of prop %q failed",
+	ErrPropAlreadyExist: "property %q already exist",
+	ErrPropNotFound:     "property %q does not exist",
+	ErrCleanupFailed:    "cleanup of property %q failed",
 	ErrWaitedTooLong:    "waiting for signal %q timed out",
 }
 

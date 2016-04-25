@@ -27,8 +27,8 @@ import (
 
 // Go starts the loop function in the background. The loop can be
 // stopped or killed. This leads to a signal out of the channel
-// Loop.ShallStop(). The loop then has to end working returning
-// a possible error. Wait() then waits until the loop ended and
+// Loop.ShallStop. The loop then has to end working returning
+// a possible error. Wait then waits until the loop ended and
 // returns the error.
 func Go(lf LoopFunc, dps ...string) Loop {
 	descr := identifier.JoinedIdentifier(dps...)
@@ -37,8 +37,8 @@ func Go(lf LoopFunc, dps ...string) Loop {
 
 // GoRecoverable starts the loop function in the background. The
 // loop can be stopped or killed. This leads to a signal out of the
-// channel Loop.ShallStop(). The loop then has to end working returning
-// a possible error. Wait() then waits until the loop ended and returns
+// channel Loop.ShallStop. The loop then has to end working returning
+// a possible error. Wait then waits until the loop ended and returns
 // the error.
 //
 // If the loop panics a Recovering is created and passed with all
@@ -132,6 +132,10 @@ type Observable interface {
 
 	// Kill kills the observable with the passed error.
 	Kill(err error)
+
+	// Wait blocks the caller until the observable ended and returns
+	// a possible error.
+	Wait() error
 
 	// Restart stops the observable and restarts it afterwards.
 	Restart() error
@@ -336,6 +340,9 @@ func (l *loop) checkTermination(reason interface{}) {
 	case l.recoverF == nil:
 		// Error but no recover function.
 		l.status = Stopping
+		if l.err != nil {
+			break
+		}
 		if err, ok := reason.(error); ok {
 			l.err = err
 		} else {
@@ -358,11 +365,20 @@ func (l *loop) checkTermination(reason interface{}) {
 // working and a potential sentinal about its status.
 func (l *loop) finalizeTermination() {
 	l.status = Stopped
+	// Close stopC in case  the termination is due to an
+	// error or internal.
+	select {
+	case <-l.stopC:
+	default:
+		close(l.stopC)
+	}
+	// Communicate that it' done.
 	select {
 	case <-l.doneC:
 	default:
 		close(l.doneC)
 	}
+	// If a sentinel monitors us then till him.
 	if l.sentinel != nil {
 		if l.err != nil {
 			// Notify sentinel about error termination.
@@ -447,6 +463,11 @@ func (s *sentinel) Stop() error {
 // Kill implements the Observable interface.
 func (s *sentinel) Kill(err error) {
 	s.loop.Kill(err)
+}
+
+// Wait implements the Observable interface.
+func (s *sentinel) Wait() error {
+	return s.loop.Wait()
 }
 
 // Error implements the Observable interface.

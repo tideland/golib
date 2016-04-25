@@ -352,19 +352,18 @@ func TestEarlyFlag(t *testing.T) {
 // a timeout.
 func TestFlagTimeout(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, false)
+	doneC := audit.MakeSigChan()
 	scn := scene.Start()
 
 	go func() {
 		err := scn.WaitFlag("foo")
 		assert.Nil(err)
-		err = scn.Store("foo-a", true)
-		assert.Nil(err)
+		doneC <- true
 	}()
 	go func() {
 		err := scn.WaitFlagLimited("foo", 50*time.Millisecond)
 		assert.True(scene.IsWaitedTooLongError(err))
-		err = scn.Store("foo-b", true)
-		assert.Nil(err)
+		doneC <- true
 	}()
 
 	time.Sleep(100 * time.Millisecond)
@@ -372,12 +371,8 @@ func TestFlagTimeout(t *testing.T) {
 	err := scn.Flag("foo")
 	assert.Nil(err)
 
-	fooA, err := scn.Fetch("foo-a")
-	assert.Nil(err)
-	assert.Equal(fooA, true)
-	fooB, err := scn.Fetch("foo-b")
-	assert.Nil(err)
-	assert.Equal(fooB, true)
+	assert.Wait(doneC, true, time.Second)
+	assert.Wait(doneC, true, time.Second)
 
 	err = scn.Stop()
 	assert.Nil(err)

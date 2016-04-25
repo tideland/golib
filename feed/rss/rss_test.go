@@ -29,18 +29,13 @@ import (
 func TestParseComposeTime(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	nowOne := time.Now()
-	nowStr := rss.ComposeTime(nowOne)
+	strOne := rss.ComposeTime(nowOne)
 
-	assert.Logf("now as string: %s", nowStr)
+	nowTwo, err := rss.ParseTime(strOne)
+	strTwo := rss.ComposeTime(nowTwo)
 
-	year, month, day := nowOne.Date()
-	hour, min, _ := nowOne.Clock()
-	loc := nowOne.Location()
-	nowCmp := time.Date(year, month, day, hour, min, 0, 0, loc)
-	nowTwo, err := rss.ParseTime(nowStr)
-
-	assert.Nil(err, "No error during time parsing.")
-	assert.Equal(nowCmp, nowTwo, "Both times have to be equal.")
+	assert.Nil(err)
+	assert.Equal(strOne, strTwo)
 
 	// Now some tests with different date formats.
 	_, err = rss.ParseTime("21 Jun 2012 23:00 CEST")
@@ -120,16 +115,6 @@ func TestValidate(t *testing.T) {
 	}
 	err = r.Validate()
 	assert.ErrorMatch(err, `.* channel link must not be empty`)
-	r = &rss.RSS{
-		Version: rss.Version,
-		Channel: rss.Channel{
-			Title:       "Test Title",
-			Description: "Test Description",
-			Link:        "p://%FF/foo#bar",
-		},
-	}
-	err = r.Validate()
-	assert.ErrorMatch(err, `.* cannot parse channel link: parse p://%FF/foo: hexadecimal escape in host`)
 }
 
 // Test getting a doc.
