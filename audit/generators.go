@@ -69,6 +69,19 @@ func BuildEMail(first, last, domain string) string {
 	return name(first) + "." + name(last) + "@" + domain
 }
 
+// BuildTime returns the current time plus or minus the passed
+// offset formatted as string and as Time. The returned time is
+// the parsed formatted one to avoid parsing troubles in tests.
+func BuildTime(layout string, offset time.Duration) (string, time.Time) {
+	t := time.Now().Add(offset)
+	ts := t.Format(layout)
+	tp, err := time.Parse(layout, ts)
+	if err != nil {
+		panic("cannot build time: " + err.Error())
+	}
+	return ts, tp
+}
+
 //--------------------
 // GENERATOR
 //--------------------
