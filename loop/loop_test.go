@@ -197,7 +197,7 @@ func TestDescription(t *testing.T) {
 	s.Observe(lA, lB)
 
 	assert.Equal(s.String(), "one")
-	assert.Equal(lA.String(), "two:three:four")
+	assert.Equal(lA.String(), "two•three•four")
 	assert.Match(lB.String(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	assert.Nil(s.Stop())

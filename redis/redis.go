@@ -1,6 +1,6 @@
 // Tideland Go Library - Redis Client
 //
-// Copyright (C) 2009-2015 Frank Mueller / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -12,6 +12,7 @@ package redis
 //--------------------
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -102,6 +103,12 @@ func (db *Database) Close() error {
 	db.mux.Lock()
 	defer db.mux.Unlock()
 	return db.pool.close()
+}
+
+// String implements the Stringer interface and returns address
+// plus index.
+func (db *Database) String() string {
+	return fmt.Sprintf("%s:%d", db.address, db.index)
 }
 
 // EOF
