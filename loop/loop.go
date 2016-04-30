@@ -31,7 +31,7 @@ import (
 // a possible error. Wait then waits until the loop ended and
 // returns the error.
 func Go(lf LoopFunc, dps ...interface{}) Loop {
-	descr := identifier.SepIdentifier("•", dps...)
+	descr := identifier.SepIdentifier("::", dps...)
 	return goLoop(lf, nil, nil, nil, descr)
 }
 
@@ -46,7 +46,7 @@ func Go(lf LoopFunc, dps ...interface{}) Loop {
 // loop will be started again. Otherwise the loop will be killed
 // with that error.
 func GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...interface{}) Loop {
-	descr := identifier.SepIdentifier("•", dps...)
+	descr := identifier.SepIdentifier("::", dps...)
 	return goLoop(lf, rf, nil, nil, descr)
 }
 
@@ -54,7 +54,7 @@ func GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...interface{}) Loop {
 // recoverable loops as well as nested sentinels. This way a
 // managing tree can be setup.
 func GoSentinel(nhf NotificationHandlerFunc, dps ...interface{}) Sentinel {
-	descr := identifier.SepIdentifier("•", dps...)
+	descr := identifier.SepIdentifier("::", dps...)
 	return goSentinel(nhf, nil, descr)
 }
 

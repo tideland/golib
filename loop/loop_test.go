@@ -197,7 +197,7 @@ func TestDescription(t *testing.T) {
 	s.Observe(lA, lB)
 
 	assert.Equal(s.String(), "one")
-	assert.Equal(lA.String(), "two•three•four")
+	assert.Equal(lA.String(), "two::three::four")
 	assert.Match(lB.String(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	assert.Nil(s.Stop())
@@ -472,10 +472,12 @@ func TestNestedSentinelKill(t *testing.T) {
 // with the loop.
 func ExampleLoopFunc() {
 	printC := make(chan string)
+	// Sample loop function.
 	loopF := func(l loop.Loop) error {
 		for {
 			select {
 			case <-l.ShallStop():
+				// We shall stop.
 				return nil
 			case str := <-printC:
 				if str == "panic" {
@@ -514,6 +516,7 @@ func ExampleRecoverFunc() {
 			}
 		}
 	}
+	// Recovery function checking frequency and total number.
 	recoverF := func(rs loop.Recoverings) (loop.Recoverings, error) {
 		if rs.Frequency(5, 10 * time.Millisecond) {
 			return nil, errors.New("too high error frequency")
@@ -545,6 +548,7 @@ func ExampleSentinel() {
 	loopA := loop.Go(loopF, "loop", "a")
 	loopB := loop.Go(loopF, "loop", "b")
 	loopC := loop.Go(loopF, "loop", "c")
+	loopD := loop.Go(loopF, "loop", "d")
 	sentinel := loop.GoSentinel(handleF, "sentinel demo")
 
 	sentinel.Observe(loopA, loopB)
@@ -554,6 +558,7 @@ func ExampleSentinel() {
 
 	sentinel.Observe(observedSentinel)
 	observedSentinel.Observe(loopC)
+	observedSentinel.Observe(loopD)
 }
 
 //--------------------
