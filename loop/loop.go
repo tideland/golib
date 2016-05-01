@@ -276,6 +276,9 @@ func (l *loop) Error() (status int, err error) {
 func (l *loop) attachSentinel(s *sentinel) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
+	if l.sentinel != nil {
+		l.sentinel.Forget(l)
+	}
 	l.sentinel = s
 }
 

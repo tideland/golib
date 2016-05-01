@@ -437,9 +437,9 @@ func TestNestedSentinelKill(t *testing.T) {
 		return nil
 	}
 
-	sT := loop.GoSentinel(handlerF, "nested-sentinel-kill-top")
+	sT := loop.GoSentinel(handlerF, "nested-sentinel-kill", "top")
 	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
-	sN := loop.GoSentinel(handlerF, "nested-sentinel-kill-nested")
+	sN := loop.GoSentinel(handlerF, "nested-sentinel-kill", "nested")
 	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
 
 	sT.Observe(lA, sN)
@@ -459,6 +459,31 @@ func TestNestedSentinelKill(t *testing.T) {
 	status, _ := sT.Error()
 
 	assert.Equal(loop.Stopped, status)
+}
+
+// TestSentinelSwitch tests if the change of the assignment
+// of a sentinel is handled correctly.
+func TestSentinelSwitch(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	infoC := audit.MakeSigChan()
+
+	sA := loop.GoSentinel(nil, "sentinel-switch", "a")
+	sB := loop.GoSentinel(nil, "sentinel-switch", "b")
+
+	lA := loop.Go(makeStartStopLF(infoC), "loop", "a")
+
+	sA.Observe(lA)
+
+	assert.Wait(infoC, "started", stayCalm)
+
+	sB.Observe(lA)
+
+	assert.Nil(sA.Stop())
+	time.Sleep(longTimeout)
+	assert.Length(infoC, 0)
+
+	assert.Nil(sB.Stop())
+	assert.Wait(infoC, "stopped", stayCalm)
 }
 
 //--------------------
