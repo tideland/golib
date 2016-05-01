@@ -1,6 +1,6 @@
 // Tideland Go Library - String Extensions - Defaulter
 //
-// Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -267,9 +267,9 @@ func (d *defaulter) logError(format string, err error) {
 	}
 	format += ": %v"
 	if len(d.id) > 0 {
-		logger.Infof("(%s) "+format, d.id, err)
+		logger.Errorf("(%s) "+format, d.id, err)
 	} else {
-		logger.Infof(format, err)
+		logger.Errorf(format, err)
 	}
 }
 

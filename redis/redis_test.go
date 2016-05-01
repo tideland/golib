@@ -1,6 +1,6 @@
 // Tideland Go Library - Redis Client - Unit Tests
 //
-// Copyright (C) 2009-2015 Frank Mueller / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -157,7 +157,7 @@ func init() {
 
 // testDatabaseIndex defines the database index for the tests to not
 // get in conflict with existing databases.
-const testDatabaseIndex = 99
+const testDatabaseIndex = 0
 
 // connectDatabase connects to a Redis database with the given options
 // and returns a connection and a function for closing. This function

@@ -270,7 +270,7 @@ func NewStandardBackend() Backend {
 		retrieverRegistrationC: make(chan *stdRetrieverRegistration, 16),
 		commandC:               make(chan *command),
 	}
-	m.backend = loop.GoRecoverable(m.backendLoop, m.checkRecovering)
+	m.backend = loop.GoRecoverable(m.backendLoop, m.checkRecovering, "monitoring backend")
 	return m
 }
 

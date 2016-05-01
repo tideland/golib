@@ -24,6 +24,45 @@ import (
 // TESTS
 //--------------------
 
+// TestBuildDate tests the generation of dates.
+func TestBuildDate(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	layouts := []string{
+		time.ANSIC,
+		time.UnixDate,
+		time.RubyDate,
+		time.RFC822,
+		time.RFC822Z,
+		time.RFC850,
+		time.RFC1123,
+		time.RFC1123Z,
+		time.RFC3339,
+		time.RFC3339Nano,
+		time.Kitchen,
+		time.Stamp,
+		time.StampMilli,
+		time.StampMicro,
+		time.StampNano,
+	}
+
+	for _, layout := range layouts {
+		ts, t := audit.BuildTime(layout, 0)
+		tsp, err := time.Parse(layout, ts)
+		assert.Nil(err)
+		assert.Equal(t, tsp)
+
+		ts, t = audit.BuildTime(layout, -30*time.Minute)
+		tsp, err = time.Parse(layout, ts)
+		assert.Nil(err)
+		assert.Equal(t, tsp)
+
+		ts, t = audit.BuildTime(layout, time.Hour)
+		tsp, err = time.Parse(layout, ts)
+		assert.Nil(err)
+		assert.Equal(t, tsp)
+	}
+}
+
 // TestInts tests the generation of ints.
 func TestInts(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)

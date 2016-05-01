@@ -1,6 +1,6 @@
 // Tideland Go Library - Redis Client - resp Pool
 //
-// Copyright (C) 2009-2015 Frank Mueller / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -63,7 +63,7 @@ func newPool(db *Database) *pool {
 		inUse:       make(map[*resp]*resp),
 		requestChan: make(chan *poolRequest),
 	}
-	p.backend = loop.Go(p.backendLoop)
+	p.backend = loop.Go(p.backendLoop, "redis", db.address, db.index)
 	return p
 }
 

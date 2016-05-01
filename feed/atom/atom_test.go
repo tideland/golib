@@ -29,18 +29,13 @@ import (
 func TestParseComposeTime(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	nowOne := time.Now()
-	nowStr := atom.ComposeTime(nowOne)
+	strOne := atom.ComposeTime(nowOne)
 
-	assert.Logf("now as string: %s", nowStr)
+	nowTwo, err := atom.ParseTime(strOne)
+	strTwo := atom.ComposeTime(nowTwo)
 
-	year, month, day := nowOne.Date()
-	hour, min, sec := nowOne.Clock()
-	loc := nowOne.Location()
-	nowCmp := time.Date(year, month, day, hour, min, sec, 0, loc)
-	nowTwo, err := atom.ParseTime(nowStr)
-
-	assert.Nil(err, "No error during time parsing.")
-	assert.Equal(nowCmp, nowTwo, "Both times have to be equal.")
+	assert.Nil(err)
+	assert.Equal(strOne, strTwo)
 }
 
 // Test encoding and decoding a doc.

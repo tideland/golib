@@ -1,6 +1,6 @@
 // Tideland Go Library - Time Extensions
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -57,7 +57,7 @@ func NewCrontab(freq time.Duration) *Crontab {
 		commandChan: make(chan *command),
 		ticker:      time.NewTicker(freq),
 	}
-	c.loop = loop.GoRecoverable(c.backendLoop, c.checkRecovering)
+	c.loop = loop.GoRecoverable(c.backendLoop, c.checkRecovering, "crontab", freq.String())
 	return c
 }
 

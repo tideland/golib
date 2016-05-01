@@ -133,7 +133,7 @@ func NewScroller(source io.ReadSeeker, target io.Writer, options ...Option) (*Sc
 	}
 	s.reader = bufio.NewReaderSize(s.source, s.bufferSize)
 	s.writer = bufio.NewWriter(s.target)
-	s.loop = loop.Go(s.backendLoop)
+	s.loop = loop.Go(s.backendLoop, "scroller")
 	return s, nil
 }
 

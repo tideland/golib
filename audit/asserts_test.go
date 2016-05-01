@@ -67,7 +67,13 @@ func TestAssertEqual(t *testing.T) {
 	failingAssert := failingAssertion(t)
 
 	m := map[string]int{"one": 1, "two": 2, "three": 3}
+	now := time.Now()
+	nowStr := now.Format(time.RFC3339Nano)
+	nowParsedA, err := time.Parse(time.RFC3339Nano, nowStr)
+	nowParsedB, err := time.Parse(time.RFC3339Nano, nowStr)
 
+	successfulAssert.Nil(err, "should not fail")
+	successfulAssert.Equal(nowParsedA, nowParsedB, "should not fail")
 	successfulAssert.Equal(nil, nil, "should not fail")
 	successfulAssert.Equal(true, true, "should not fail")
 	successfulAssert.Equal(1, 1, "should not fail")

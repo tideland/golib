@@ -289,7 +289,8 @@ func TestAsTime(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	y2k := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-	now := time.Now()
+	nowStr, now := audit.BuildTime(time.RFC3339Nano, 0)
+
 	d := stringex.NewDefaulter("AsTime", true)
 	tests := []struct {
 		v        valuer
@@ -297,9 +298,9 @@ func TestAsTime(t *testing.T) {
 		dv       time.Time
 		expected time.Time
 	}{
-		{valuer{now.Format(time.RFC3339Nano), false}, time.RFC3339Nano, y2k, now},
-		{valuer{now.Format(time.RFC3339Nano), true}, time.RFC3339Nano, y2k, y2k},
-		{valuer{now.Format(time.RFC3339Nano), false}, "any false layout", y2k, y2k},
+		{valuer{nowStr, false}, time.RFC3339Nano, y2k, now},
+		{valuer{nowStr, true}, time.RFC3339Nano, y2k, y2k},
+		{valuer{nowStr, false}, "any false layout", y2k, y2k},
 		{valuer{"", false}, time.RFC3339Nano, y2k, y2k},
 	}
 	for i, test := range tests {

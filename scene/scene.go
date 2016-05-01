@@ -158,7 +158,7 @@ func StartLimited(inactivity, absolute time.Duration) Scene {
 		absolute:    absolute,
 		commandChan: make(chan *envelope, 1),
 	}
-	s.backend = loop.Go(s.backendLoop)
+	s.backend = loop.Go(s.backendLoop, "scene", s.id.String())
 	return s
 }
 
