@@ -42,9 +42,9 @@ import (
 // VERSION
 //--------------------
 
-// PackageVersion returns the version of the version package.
+// PackageVersion returns the version of the loop package.
 func PackageVersion() version.Version {
-	return version.New(4, 0, 0, "beta", "2016-04-25")
+	return version.New(4, 0, 0)
 }
 
 // EOF
