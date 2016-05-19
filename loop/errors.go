@@ -23,12 +23,25 @@ const (
 	ErrLoopPanicked = iota + 1
 	ErrHandlingFailed
 	ErrRestartNonStopped
+	ErrKilledBySentinel
 )
 
 var errorMessages = errors.Messages{
 	ErrLoopPanicked:      "loop panicked: %v",
 	ErrHandlingFailed:    "error handling for %q failed",
 	ErrRestartNonStopped: "cannot restart unstopped %q",
+	ErrKilledBySentinel:  "%q killed by sentinel",
+}
+
+//--------------------
+// TESTING
+//--------------------
+
+// IsKilledBySentinelError allows to check, if a loop or
+// sentinel has been stopped due to internal reasons or
+// after the error of another loop or sentinel.
+func IsKilledBySentinelError(err error) bool {
+	return errors.IsError(err, ErrKilledBySentinel)
 }
 
 // EOF

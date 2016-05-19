@@ -390,50 +390,60 @@ func TestTransactionPipeline(t *testing.T) {
 
 	err := ppl.Do("multi")
 	assert.Nil(err)
-	ppl.Do("set", "tx:a", 1)
-	ppl.Do("set", "tx:b", 2)
-	ppl.Do("set", "tx:c", 3)
+	ppl.Do("set", "pipeline:a", 1)
+	ppl.Do("set", "pipeline:b", 2)
+	ppl.Do("set", "pipeline:c", 3)
 	ppl.Do("exec")
 	results, err := ppl.Collect()
 	assert.Nil(err)
 	assert.Length(results, 5)
-	valueB, err := conn.DoInt("get", "tx:b")
+	valueB, err := conn.DoInt("get", "pipeline:b")
 	assert.Nil(err)
 	assert.Equal(valueB, 2)
 
 	err = ppl.Do("multi")
 	assert.Nil(err)
-	ppl.Do("set", "tx:d", 4)
-	ppl.Do("set", "tx:e", 5)
-	ppl.Do("set", "tx:f", 6)
+	ppl.Do("set", "pipeline:d", 4)
+	ppl.Do("set", "pipeline:e", 5)
+	ppl.Do("set", "pipeline:f", 6)
 	ppl.Do("discard")
 	results, err = ppl.Collect()
 	assert.Nil(err)
 	assert.Length(results, 5)
-	valueE, err := conn.DoValue("get", "tx:e")
+	valueE, err := conn.DoValue("get", "pipeline:e")
 	assert.Nil(err)
 	assert.True(valueE.IsNil())
+}
 
-	sig := make(chan struct{})
+func TestTransactionPipelineWatch(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	sigC := audit.MakeSigChan()
+	// Background tasks.
+	bgConn, bgConnRestore := connectDatabase(assert)
+	defer bgConnRestore()
 	go func() {
-		<-sig
-		conn.Do("set", "tx:h", 99)
-		sig <- struct{}{}
+		<-sigC
+		bgConn.Do("set", "watch:b", 99)
+		sigC <- struct{}{}
 	}()
-	ppl.Do("watch", "tx:h")
-	err = ppl.Do("multi")
+	// Foreground tasks.
+	fgConn, fgConnRestore := pipelineDatabase(assert)
+	defer fgConnRestore()
+	fgConn.Do("set", "watch:b", 0)
+	fgConn.Do("watch", "watch:b")
+	err := fgConn.Do("multi")
 	assert.Nil(err)
-	ppl.Do("set", "tx:g", 4)
-	ppl.Do("set", "tx:h", 5)
-	sig <- struct{}{}
-	ppl.Do("set", "tx:i", 6)
-	<-sig
-	ppl.Do("exec")
-	results, err = ppl.Collect()
+	fgConn.Do("set", "watch:a", 1)
+	fgConn.Do("set", "watch:b", 2)
+	sigC <- struct{}{}
+	fgConn.Do("set", "watch:c", 3)
+	<-sigC
+	fgConn.Do("exec")
+	_, err = fgConn.Collect()
 	assert.True(errors.IsError(err, redis.ErrTimeout))
-	valueH, err := conn.DoInt("get", "tx:h")
+	valueB, err := bgConn.DoInt("get", "watch:b")
 	assert.Nil(err)
-	assert.Equal(valueH, 99)
+	assert.Equal(valueB, 99)
 }
 
 func TestScripting(t *testing.T) {

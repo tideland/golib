@@ -50,10 +50,17 @@ func GoRecoverable(lf LoopFunc, rf RecoverFunc, dps ...interface{}) Loop {
 	return goLoop(lf, rf, nil, nil, descr)
 }
 
-// GoSentinel starts a new sentinel. It can start simple and
-// recoverable loops as well as nested sentinels. This way a
-// managing tree can be setup.
-func GoSentinel(nhf NotificationHandlerFunc, dps ...interface{}) Sentinel {
+// GoSentinel starts a new sentinel. It can manage loops and other sentinels
+// and will stop them in case of errors.
+func GoSentinel(dps ...interface{}) Sentinel {
+	descr := identifier.SepIdentifier("::", dps...)
+	return goSentinel(nil, nil, descr)
+}
+
+// GoNotifiedSentinel starts a new sentinel with a notification handler
+// function. It can manage loops and other sentinels and restart them in
+// case of errors, based on the notification handler function.
+func GoNotifiedSentinel(nhf NotificationHandlerFunc, dps ...interface{}) Sentinel {
 	descr := identifier.SepIdentifier("::", dps...)
 	return goSentinel(nhf, nil, descr)
 }
@@ -404,7 +411,7 @@ func (l *loop) finalizeTermination() {
 
 // NotificationHandlerFunc allows a sentinel to react on
 // an observers error notification.
-type NotificationHandlerFunc func(s Sentinel, o Observable) error
+type NotificationHandlerFunc func(s Sentinel, o Observable, rs Recoverings) (Recoverings, error)
 
 // Sentinel manages a number of loops or other sentinels.
 type Sentinel interface {
@@ -532,6 +539,7 @@ func (s *sentinel) ObservablesDo(f func(o Observable) error) error {
 
 // backendLoop listens to ending managed loops.
 func (s *sentinel) backendLoop(l Loop) error {
+	var recoverings Recoverings
 	for {
 		select {
 		case <-l.ShallStop():
@@ -565,14 +573,16 @@ func (s *sentinel) backendLoop(l Loop) error {
 			// with error.
 			if s.handlerF != nil {
 				// Try to handle the notification.
-				err = s.handlerF(s, o)
+				recoverings = append(recoverings, &Recovering{time.Now(), err})
+				recoverings, err = s.handlerF(s, o, recoverings)
 			}
 			if err != nil {
 				// Still an error, so kill all.
-				logger.Errorf("sentinel %q stops all observables after error: %v", s, err)
+				logger.Errorf("sentinel %q kills all observables after error: %v", s, err)
 				s.ObservablesDo(func(o Observable) error {
-					logger.Errorf("stopping %q", o)
-					return o.Stop()
+					logger.Errorf("killing %q", o)
+					o.Kill(errors.Annotate(err, ErrKilledBySentinel, errorMessages, o))
+					return o.Wait()
 				})
 				return errors.Annotate(err, ErrHandlingFailed, errorMessages, o)
 			}

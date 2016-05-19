@@ -190,7 +190,7 @@ func TestDescription(t *testing.T) {
 	doneAC := audit.MakeSigChan()
 	doneBC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(nil, "one")
+	s := loop.GoSentinel("one")
 	lA := loop.Go(makeSimpleLF(doneAC), "two", "three", "four")
 	lB := loop.Go(makeSimpleLF(doneBC))
 
@@ -211,7 +211,7 @@ func TestSimpleSentinel(t *testing.T) {
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(nil, "simple-sentinel")
+	s := loop.GoSentinel("simple-sentinel")
 	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
 	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
 	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
@@ -234,7 +234,7 @@ func TestSentinelStoppingLoop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	doneC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(nil, "sentinel-stopping-loop")
+	s := loop.GoSentinel("sentinel-stopping-loop")
 	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
 	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
 	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
@@ -259,7 +259,7 @@ func TestSentineForget(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	doneC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(nil, "sentinel-forget")
+	s := loop.GoSentinel("sentinel-forget")
 	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
 	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
 	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
@@ -285,7 +285,7 @@ func TestSentinelKillingLoopNoHandler(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	doneC := audit.MakeSigChan()
 
-	s := loop.GoSentinel(nil, "sentinel-killing-loop-no-handler")
+	s := loop.GoSentinel("sentinel-killing-loop-no-handler")
 	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
 	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
 	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
@@ -313,13 +313,13 @@ func TestSentinelKillingLoopHandlerRestarts(t *testing.T) {
 	doneBC := audit.MakeSigChan()
 	doneCC := audit.MakeSigChan()
 	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, o loop.Observable) error {
+	handlerF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
 		o.Restart()
 		handlerC <- true
-		return nil
+		return nil, nil
 	}
 
-	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-handler-restarts")
+	s := loop.GoNotifiedSentinel(handlerF, "sentinel-killing-loop-handler-restarts")
 	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
 	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
 	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
@@ -349,12 +349,12 @@ func TestSentinelKillingLoopHandlerStops(t *testing.T) {
 	infoBC := audit.MakeSigChan()
 	infoCC := audit.MakeSigChan()
 	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, o loop.Observable) error {
+	handlerF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
 		handlerC <- true
-		return errors.New("oh no!")
+		return nil, errors.New("oh no!")
 	}
 
-	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-with-stops")
+	s := loop.GoNotifiedSentinel(handlerF, "sentinel-killing-loop-with-stops")
 	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
 	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
 	lC := loop.Go(makeStartStopLF(infoCC), "loop", "c")
@@ -389,16 +389,16 @@ func TestSentinelKillingLoopHandlerRestartAll(t *testing.T) {
 	infoBC := audit.MakeSigChan()
 	infoCC := audit.MakeSigChan()
 	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, _ loop.Observable) error {
+	handlerF := func(s loop.Sentinel, _ loop.Observable, _ loop.Recoverings) (loop.Recoverings, error) {
 		s.ObservablesDo(func(o loop.Observable) error {
 			o.Restart()
 			return nil
 		})
 		handlerC <- true
-		return nil
+		return nil, nil
 	}
 
-	s := loop.GoSentinel(handlerF, "sentinel-killing-loop-restarting-all")
+	s := loop.GoNotifiedSentinel(handlerF, "sentinel-killing-loop-restarting-all")
 	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
 	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
 	lC := loop.Go(makeStartStopLF(infoCC), "loop", "c")
@@ -431,15 +431,15 @@ func TestNestedSentinelKill(t *testing.T) {
 	infoAC := audit.MakeSigChan()
 	infoBC := audit.MakeSigChan()
 	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, o loop.Observable) error {
+	handlerF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
 		o.Restart()
 		handlerC <- true
-		return nil
+		return nil, nil
 	}
 
-	sT := loop.GoSentinel(handlerF, "nested-sentinel-kill", "top")
+	sT := loop.GoNotifiedSentinel(handlerF, "nested-sentinel-kill", "top")
 	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
-	sN := loop.GoSentinel(handlerF, "nested-sentinel-kill", "nested")
+	sN := loop.GoNotifiedSentinel(handlerF, "nested-sentinel-kill", "nested")
 	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
 
 	sT.Observe(lA, sN)
@@ -467,8 +467,8 @@ func TestSentinelSwitch(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	infoC := audit.MakeSigChan()
 
-	sA := loop.GoSentinel(nil, "sentinel-switch", "a")
-	sB := loop.GoSentinel(nil, "sentinel-switch", "b")
+	sA := loop.GoSentinel("sentinel-switch", "a")
+	sB := loop.GoSentinel("sentinel-switch", "b")
 
 	lA := loop.Go(makeStartStopLF(infoC), "loop", "a")
 
@@ -543,7 +543,7 @@ func ExampleRecoverFunc() {
 	}
 	// Recovery function checking frequency and total number.
 	recoverF := func(rs loop.Recoverings) (loop.Recoverings, error) {
-		if rs.Frequency(5, 10 * time.Millisecond) {
+		if rs.Frequency(5, 10*time.Millisecond) {
 			return nil, errors.New("too high error frequency")
 		}
 		if rs.Len() >= 10 {
@@ -567,19 +567,22 @@ func ExampleSentinel() {
 			}
 		}
 	}
-	handleF := func(s loop.Sentinel, o loop.Observable) error {
-		return o.Restart()
+	handleF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
+		if rs.Frequency(5, 10*time.Millisecond) {
+			return nil, errors.New("too high error frequency")
+		}
+		return nil, o.Restart()
 	}
 	loopA := loop.Go(loopF, "loop", "a")
 	loopB := loop.Go(loopF, "loop", "b")
 	loopC := loop.Go(loopF, "loop", "c")
 	loopD := loop.Go(loopF, "loop", "d")
-	sentinel := loop.GoSentinel(handleF, "sentinel demo")
+	sentinel := loop.GoNotifiedSentinel(handleF, "sentinel demo")
 
 	sentinel.Observe(loopA, loopB)
 
 	// Hierarchies are possible.
-	observedSentinel := loop.GoSentinel(nil, "nested sentinel w/o handler")
+	observedSentinel := loop.GoSentinel("nested sentinel w/o handler")
 
 	sentinel.Observe(observedSentinel)
 	observedSentinel.Observe(loopC)

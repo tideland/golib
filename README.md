@@ -93,7 +93,7 @@ Control of goroutines and their possible errors. Additional option of recovering
 in case of an error or a panic. Sentinels can monitor multiple loops and restart
 them all in case of an abnormal end of one of them.
 
-Version 4.0.0
+Version 4.1.0
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/loop?status.svg)](https://godoc.org/github.com/tideland/golib/loop)
 
@@ -125,7 +125,7 @@ Version 3.0.0
 
 Client for the Redis database.
 
-Version 4.0.0
+Version 4.0.2
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/redis?status.svg)](https://godoc.org/github.com/tideland/golib/redis)
 
