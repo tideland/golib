@@ -16,6 +16,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/tideland/golib/collections"
 	"github.com/tideland/golib/errors"
@@ -35,12 +36,10 @@ type value struct {
 
 // Value retrieves the value or an error.
 func (v *value) Value() (string, error) {
-	fmt.Printf("Value %+v\n", v)
 	sv, err := v.changer.Value()
 	if err != nil {
 		return "", errors.New(ErrInvalidPath, errorMessages, pathToString(v.path))
 	}
-	fmt.Printf("Contained Value %+v\n", sv)
 	return sv, nil
 }
 
@@ -65,9 +64,18 @@ type Etc interface {
 	// doesn't exist the default value dv is returned.
 	ValueAsInt(path string, dv int) int
 
-	// ValueAsFloat64 retrieves the flat64 value at a given path. If it
+	// ValueAsFloat64 retrieves the float64 value at a given path. If it
 	// doesn't exist the default value dv is returned.
 	ValueAsFloat64(path string, dv float64) float64
+
+	// ValueAsTime retrieves the string value at a given path and
+	// interprets it as time with the passed format. If it
+	// doesn't exist the default value dv is returned.
+	ValueAsTime(path, layout string, dv time.Time) time.Time
+
+	// ValueAsDuration retrieves the duration value at a given path.
+	// If it doesn't exist the default value dv is returned.
+	ValueAsDuration(path string, dv time.Duration) time.Duration
 
 	// Apply creates a new configuration by adding of overwriting
 	// the passed values. The keys of the map have to be slash
@@ -144,20 +152,38 @@ func (e *etc) ValueAsFloat64(path string, dv float64) float64 {
 	return e.defaulter.AsFloat64(value, dv)
 }
 
+// ValueAsTime implements the Etc interface.
+func (e *etc) ValueAsTime(path, format string, dv time.Time) time.Time {
+	value := e.valueAt(path)
+	return e.defaulter.AsTime(value, format, dv)
+}
+
+// ValueAsDuration implements the Etc interface.
+func (e *etc) ValueAsDuration(path string, dv time.Duration) time.Duration {
+	value := e.valueAt(path)
+	return e.defaulter.AsDuration(value, dv)
+}
+
 // Apply implements the Etc interface.
 func (e *etc) Apply(kvs map[string]string) (Etc, error) {
 	ec := &etc{
-		values: e.values.Copy(),
+		root:      e.root,
+		values:    e.values.Copy(),
+		defaulter: e.defaulter,
 	}
 	for key, value := range kvs {
 		path := append(e.root, strings.Split(key, "/")...)
-		fmt.Printf("Path: %q / Value: %q\n", path, value)
 		_, err := ec.values.Create(path...).SetValue(value)
 		if err != nil {
 			return nil, errors.Annotate(err, ErrCannotApply, errorMessages)
 		}
 	}
 	return ec, nil
+}
+
+// Apply implements the Stringer interface.
+func (e *etc) String() string {
+	return fmt.Sprintf("%v", e.values)
 }
 
 // valueAt retrieves and encapsulates the value

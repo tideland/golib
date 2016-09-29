@@ -21,7 +21,7 @@ import (
 )
 
 //--------------------
-// CONFIG
+// cfg
 //--------------------
 
 // TestRead tests reading a configuration out of a reader.
@@ -29,27 +29,27 @@ func TestRead(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	source := "{etc {foo 42}{bar 24}}"
-	config, err := etc.Read(strings.NewReader(source))
+	cfg, err := etc.Read(strings.NewReader(source))
 	assert.Nil(err)
 
 	source = "{something {gnagnagna}}"
-	config, err = etc.Read(strings.NewReader(source))
-	assert.Nil(config)
+	cfg, err = etc.Read(strings.NewReader(source))
+	assert.Nil(cfg)
 	assert.ErrorMatch(err, `*. illegal source format: .* node not found`)
 
 	source = "{etc {gna 1}{gna 2}}"
-	config, err = etc.Read(strings.NewReader(source))
-	assert.Nil(config)
+	cfg, err = etc.Read(strings.NewReader(source))
+	assert.Nil(cfg)
 	assert.ErrorMatch(err, `*. illegal source format: .* cannot build node structure: node has multiple values`)
 
 	source = "{etc {gna 1 {foo x} 2}}"
-	config, err = etc.Read(strings.NewReader(source))
-	assert.Nil(config)
+	cfg, err = etc.Read(strings.NewReader(source))
+	assert.Nil(cfg)
 	assert.ErrorMatch(err, `*. illegal source format: .* cannot build node structure: node has multiple values`)
 
 	source = "{etc {foo/bar 1}{bar/foo 2}}"
-	config, err = etc.Read(strings.NewReader(source))
-	assert.Nil(config)
+	cfg, err = etc.Read(strings.NewReader(source))
+	assert.Nil(cfg)
 	assert.ErrorMatch(err, `*. illegal source format: .*`)
 }
 
@@ -65,11 +65,11 @@ func TestReadFile(t *testing.T) {
 	assert.Nil(err)
 	etcFile.Close()
 
-	config, err := etc.ReadFile(etcFilename)
+	cfg, err := etc.ReadFile(etcFilename)
 	assert.Nil(err)
-	v := config.ValueAsString("foo", "X")
+	v := cfg.ValueAsString("foo", "X")
 	assert.Equal(v, "42")
-	v = config.ValueAsString("bar", "Y")
+	v = cfg.ValueAsString("bar", "Y")
 	assert.Equal(v, "24")
 
 	_, err = etc.ReadFile("some-not-existing-configuration-file-due-to-wierd-name")
@@ -90,20 +90,20 @@ func TestValueSuccess(t *testing.T) {
 			World}
 		{b
 			42}}}`
-	config, err := etc.Read(strings.NewReader(source))
+	cfg, err := etc.Read(strings.NewReader(source))
 	assert.Nil(err)
 
-	vs := config.ValueAsString("a", "foo")
+	vs := cfg.ValueAsString("a", "foo")
 	assert.Equal(vs, "Hello")
-	vb := config.ValueAsBool("b", false)
+	vb := cfg.ValueAsBool("b", false)
 	assert.Equal(vb, true)
-	vi := config.ValueAsInt("c", 1)
+	vi := cfg.ValueAsInt("c", 1)
 	assert.Equal(vi, -1)
-	vf := config.ValueAsFloat64("d", 1.0)
+	vf := cfg.ValueAsFloat64("d", 1.0)
 	assert.Equal(vf, 47.11)
-	vs = config.ValueAsString("sub/a", "bar")
+	vs = cfg.ValueAsString("sub/a", "bar")
 	assert.Equal(vs, "World")
-	vi = config.ValueAsInt("sub/b", 12345)
+	vi = cfg.ValueAsInt("sub/b", 12345)
 	assert.Equal(vi, 42)
 }
 
@@ -112,20 +112,20 @@ func TestGetFail(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	source := "{etc {a Hello}{sub {a World}}}"
-	config, err := etc.Read(strings.NewReader(source))
+	cfg, err := etc.Read(strings.NewReader(source))
 	assert.Nil(err)
 
-	vs := config.ValueAsString("b", "foo")
+	vs := cfg.ValueAsString("b", "foo")
 	assert.Equal(vs, "foo")
-	vb := config.ValueAsBool("b", false)
+	vb := cfg.ValueAsBool("b", false)
 	assert.Equal(vb, false)
-	vi := config.ValueAsInt("c", 1)
+	vi := cfg.ValueAsInt("c", 1)
 	assert.Equal(vi, 1)
-	vf := config.ValueAsFloat64("d", 1.0)
+	vf := cfg.ValueAsFloat64("d", 1.0)
 	assert.Equal(vf, 1.0)
-	vb = config.ValueAsBool("sub/a", false)
+	vb = cfg.ValueAsBool("sub/a", false)
 	assert.Equal(vb, false)
-	vi = config.ValueAsInt("sub/b", 12345)
+	vi = cfg.ValueAsInt("sub/b", 12345)
 	assert.Equal(vi, 12345)
 }
 
@@ -134,10 +134,10 @@ func TestApply(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	source := "{etc {a Hello}{sub {a World}}}"
-	config, err := etc.ReadString(source)
+	cfg, err := etc.ReadString(source)
 	assert.Nil(err)
 
-	applied, err := config.Apply(map[string]string{
+	applied, err := cfg.Apply(map[string]string{
 		"sub/a": "Tester",
 		"b":     "42",
 	})
@@ -148,7 +148,6 @@ func TestApply(t *testing.T) {
 	assert.Equal(vs, "Tester")
 	vi := applied.ValueAsInt("b", -1)
 	assert.Equal(vi, 42)
-
 }
 
 // EOF
