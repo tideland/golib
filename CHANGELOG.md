@@ -1,5 +1,11 @@
 # Tideland Go Library
 
+## 2016-09-29
+
+- Added *etc* based on former *configuration* package
+- Marked *configuration* as deprecated
+- Marked *web* as deprecated after migration to https://github.com/tideland/gorest
+
 ## 2016-02-16
 
 - Removal of the *cells* package after migration to https://github.com/tideland/gocells

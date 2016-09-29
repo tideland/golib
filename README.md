@@ -5,14 +5,17 @@
 The *Tideland Go Library* contains a larger set of useful Google Go packages
 for different purposes.
 
-**Attention:** The `cells` package has been migrated into an own repository
+**ATTENTION:** The `cells` package has been migrated into an own repository
 at https://github.com/tideland/gocells.
+
+**ATTENTION:** The `web` package is now deprecated. It has been migrated
+and extended into the repository https://github.com/tideland/gorest.
 
 I hope you like them. ;)
 
 ## Version
 
-Version 4.2.0
+Version 4.3.0
 
 ## Packages
 
@@ -39,6 +42,8 @@ Different additional collection types like ring buffer, stack, tree, and more.
 
 Reading and parsing of SML-formatted configurations.
 
+""DEPRECATED""
+
 [![GoDoc](https://godoc.org/github.com/tideland/golib/configuration?status.svg)](https://godoc.org/github.com/tideland/golib/configuration)
 
 #### Errors
@@ -46,6 +51,12 @@ Reading and parsing of SML-formatted configurations.
 Detailed error values.
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/errors?status.svg)](https://godoc.org/github.com/tideland/golib/errors)
+
+#### Etc
+
+Reading and parsing of SML-formatted configurations.
+
+[![GoDoc](https://godoc.org/github.com/tideland/golib/etc?status.svg)](https://godoc.org/github.com/tideland/golib/etc)
 
 #### Feed (Atom)
 
@@ -148,6 +159,8 @@ Documentation of semantic versions.
 #### Web
 
 RESTful web request handling.
+
+**DEPRECATED**
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)
 
