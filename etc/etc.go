@@ -34,7 +34,8 @@ type value struct {
 	changer collections.KeyStringValueChanger
 }
 
-// Value retrieves the value or an error.
+// Value retrieves the value or an error. It implements
+// the Valuer interface.
 func (v *value) Value() (string, error) {
 	sv, err := v.changer.Value()
 	if err != nil {
@@ -52,6 +53,8 @@ func (v *value) Value() (string, error) {
 // The node name have to consist out of 'a' to 'z', '0' to '9', and
 // '-'. The nodes of a path are separated by '/'.
 type Etc interface {
+	fmt.Stringer
+
 	// ValueAsString retrieves the string value at a given path. If it
 	// doesn't exist the default value dv is returned.
 	ValueAsString(path, dv string) string
