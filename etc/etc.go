@@ -167,6 +167,21 @@ func (e *etc) ValueAsDuration(path string, dv time.Duration) time.Duration {
 	return e.defaulter.AsDuration(value, dv)
 }
 
+// Split implements the Etc interface.
+func (e *etc) Split(path string) (Etc, error) {
+	fullPath := append(e.root, strings.Split(path, "/")...)
+	values, err := e.values.CopyAt(fullPath...)
+	if err != nil {
+		return nil, errors.Annotate(err, ErrCannotSplit, errorMessages)
+	}
+	es := &etc{
+		root: e.root,
+		values: values,
+		defaulter: e.defaulter,
+	}
+	return es, nil
+}
+
 // Apply implements the Etc interface.
 func (e *etc) Apply(kvs map[string]string) (Etc, error) {
 	ec := &etc{
@@ -195,68 +210,6 @@ func (e *etc) valueAt(path string) *value {
 	fullPath := append(e.root, strings.Split(path, "/")...)
 	changer := e.values.At(fullPath...)
 	return &value{fullPath, changer}
-}
-
-//--------------------
-// ETC BUILDER
-//--------------------
-
-// etcBuilder implements sml.Builder to parse the
-// etc configuration source and create the tree
-// containing the values.
-type etcBuilder struct {
-	stack  collections.StringStack
-	values collections.KeyStringValueTree
-}
-
-// BeginTagNode implements the sml.Builder interface.
-func (b *etcBuilder) BeginTagNode(tag string) error {
-	switch {
-	case b.values == nil && tag != "etc":
-		return errors.New(ErrIllegalConfigSource, errorMessages, `does not start with "etc" node`)
-	case b.values == nil:
-		b.stack = collections.NewStringStack(tag)
-		b.values = collections.NewKeyStringValueTree(tag, "", false)
-	default:
-		b.stack.Push(tag)
-		changer := b.values.Create(b.stack.All()...)
-		if changer.Error() != nil {
-			return errors.New(ErrIllegalConfigSource, errorMessages, changer.Error())
-		}
-	}
-	return nil
-}
-
-// EndTagNode implements the sml.Builder interface.
-func (b *etcBuilder) EndTagNode() error {
-	_, err := b.stack.Pop()
-	return err
-}
-
-// TextNode implements the sml.Builder interface.
-func (b *etcBuilder) TextNode(text string) error {
-	value, err := b.values.At(b.stack.All()...).Value()
-	if err != nil {
-		return err
-	}
-	if value != "" {
-		return errors.New(ErrIllegalConfigSource, errorMessages, `node has multiple values`)
-	}
-	text = strings.TrimSpace(text)
-	if text != "" {
-		_, err = b.values.At(b.stack.All()...).SetValue(text)
-	}
-	return err
-}
-
-// RawNode implements the sml.Builder interface.
-func (b *etcBuilder) RawNode(raw string) error {
-	return b.TextNode(raw)
-}
-
-// Comment implements the sml.Builder interface.
-func (b *etcBuilder) CommentNode(comment string) error {
-	return nil
 }
 
 //--------------------

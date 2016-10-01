@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections
 //
-// Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -26,7 +26,7 @@ import (
 
 // PackageVersion returns the version of the version package.
 func PackageVersion() version.Version {
-	return version.New(2, 2, 0)
+	return version.New(2, 3, 0, "alpha", "2016-10-01")
 }
 
 // EOF

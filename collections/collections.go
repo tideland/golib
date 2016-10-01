@@ -429,6 +429,9 @@ type KeyStringValueTree interface {
 	// Copy creates a copy of the tree.
 	Copy() KeyStringValueTree
 
+	// CopyAt creates a copy of a subtree.
+	CopyAt(keys ...string) (KeyStringValueTree, error)
+
 	// Deflate cleans the tree with a new root value.
 	Deflate(key, value string)
 }
