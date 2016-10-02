@@ -233,6 +233,13 @@ type StringChanger interface {
 // key/value tree node. It is returned by the addressing operations
 // like At() and Create() of the KeyValueTree.
 type KeyValueChanger interface {
+	// Key returns the changer node key.
+	Key() (string, error)
+
+	// SetKey sets the changer node key. Its checks if duplicate
+	// keys are allowed and returns the previous key.
+	SetKey(key string) (string, error)
+
 	// Value returns the changer node value.
 	Value() (interface{}, error)
 
@@ -258,6 +265,13 @@ type KeyValueChanger interface {
 // on a key/string value tree node. It is returned by the addressing
 // operations like At() and Create() of the KeyStringValueTree.
 type KeyStringValueChanger interface {
+	// Key returns the changer node key.
+	Key() (string, error)
+
+	// SetKey sets the changer node key. Its checks if duplicate
+	// keys are allowed and returns the previous key.
+	SetKey(key string) (string, error)
+
 	// Value returns the changer node value.
 	Value() (string, error)
 
@@ -390,6 +404,9 @@ type KeyValueTree interface {
 
 	// Copy creates a copy of the tree.
 	Copy() KeyValueTree
+
+	// CopyAt creates a copy of a subtree.
+	CopyAt(keys ...string) (KeyValueTree, error)
 
 	// Deflate cleans the tree with a new root value.
 	Deflate(key string, value interface{})

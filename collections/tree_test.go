@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections - Tree - Unit Tests
 //
-// Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -432,6 +432,35 @@ func TestKeyValueTreeRemove(t *testing.T) {
 	assert.Length(tree, 6)
 }
 
+// TestKeyValueTreeSetKey tests the setting of a key/value tree nodes key.
+func TestKeyValueTreeSetKey(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tree := createKeyValueTree(assert)
+
+	// Tree with duplicates.
+	initialKey, err := tree.At("root", "alpha").Key()
+	assert.Nil(err)
+	assert.Equal(initialKey, "alpha")
+	initialValue, err := tree.At("root", "alpha").Value()
+	assert.Nil(err)
+	currentKey, err := tree.At("root", "alpha").SetKey("beta")
+	assert.Nil(err)
+	assert.Equal(initialKey, currentKey)
+	currentValue, err := tree.At("root", "beta").Value()
+	assert.Nil(err)
+	assert.Equal(currentValue, initialValue)
+
+	// Tree without duplicates.
+	tree = collections.NewKeyValueTree("root", 1, false)
+	err = tree.At("root").Add("alpha", 2)
+	assert.Nil(err)
+	err = tree.At("root").Add("bravo", 3)
+	assert.Nil(err)
+	initialKey, err = tree.At("root", "alpha").SetKey("bravo")
+	assert.Empty(initialKey)
+	assert.ErrorMatch(err, ".* duplicates .*")
+}
+
 // TestKeyValueTreeSetValue tests the setting of a key/value tree nodes value.
 func TestKeyValueTreeSetValue(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
@@ -539,6 +568,12 @@ func TestKeyValueTreeCopy(t *testing.T) {
 	value, err = ctree.At("root", "gamma", "two", "2").Value()
 	assert.Nil(err)
 	assert.Equal(value, "3.2")
+
+	catree, err := ctree.CopyAt("root", "gamma")
+	assert.Nil(err)
+	value, err = catree.At("gamma", "two", "2").Value()
+	assert.Nil(err)
+	assert.Equal(value, "3.2")
 }
 
 //--------------------
@@ -597,6 +632,36 @@ func TestKeyStringValueTreeRemove(t *testing.T) {
 	err = tree.At("root", "delta").Remove()
 	assert.Nil(err)
 	assert.Length(tree, 6)
+}
+
+// TestKeyStringValueTreeSetKey tests the setting of a
+// key/string value tree nodes key.
+func TestKeyStringValueTreeSetKey(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tree := createKeyStringValueTree(assert)
+
+	// Tree with duplicates.
+	initialKey, err := tree.At("root", "alpha").Key()
+	assert.Nil(err)
+	assert.Equal(initialKey, "alpha")
+	initialValue, err := tree.At("root", "alpha").Value()
+	assert.Nil(err)
+	currentKey, err := tree.At("root", "alpha").SetKey("beta")
+	assert.Nil(err)
+	assert.Equal(initialKey, currentKey)
+	currentValue, err := tree.At("root", "beta").Value()
+	assert.Nil(err)
+	assert.Equal(currentValue, initialValue)
+
+	// Tree without duplicates.
+	tree = collections.NewKeyStringValueTree("root", "one", false)
+	err = tree.At("root").Add("alpha", "two")
+	assert.Nil(err)
+	err = tree.At("root").Add("bravo", "three")
+	assert.Nil(err)
+	initialKey, err = tree.At("root", "alpha").SetKey("bravo")
+	assert.Empty(initialKey)
+	assert.ErrorMatch(err, ".* duplicates .*")
 }
 
 // TestKeyStringValueTreeSetValue tests the setting of a
@@ -707,6 +772,13 @@ func TestKeyStringValueTreeCopy(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(value, "1")
 	value, err = ctree.At("root", "gamma", "two", "2").Value()
+	assert.Nil(err)
+	assert.Equal(value, "3.2")
+
+	catree, err := ctree.CopyAt("root", "gamma")
+	assert.Nil(err)
+	assert.Logf("CATREE = %q", catree)
+	value, err = catree.At("gamma", "two", "2").Value()
 	assert.Nil(err)
 	assert.Equal(value, "3.2")
 }

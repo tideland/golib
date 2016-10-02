@@ -168,6 +168,29 @@ type keyValueChanger struct {
 	err  error
 }
 
+// Key implements the KeyValueChanger interface.
+func (c *keyValueChanger) Key() (string, error) {
+	if c.err != nil {
+		return "", c.err
+	}
+	return c.node.content.key().(string), nil
+}
+
+// SetKey implements the KeyValueChanger interface.
+func (c *keyValueChanger) SetKey(key string) (string, error) {
+	if c.err != nil {
+		return "", c.err
+	}
+	if !c.node.container.duplicates {
+		if c.node.hasDuplicateSibling(key) {
+			return "", errors.New(ErrDuplicate, errorMessages)
+		}
+	}
+	current := c.node.content.key().(string)
+	c.node.content = keyValue{key, c.node.content.value()}
+	return current, nil
+}
+
 // Value implements the KeyValueChanger interface.
 func (c *keyValueChanger) Value() (interface{}, error) {
 	if c.err != nil {
@@ -177,13 +200,13 @@ func (c *keyValueChanger) Value() (interface{}, error) {
 }
 
 // SetValue implements the KeyValueChanger interface.
-func (c *keyValueChanger) SetValue(v interface{}) (interface{}, error) {
+func (c *keyValueChanger) SetValue(value interface{}) (interface{}, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
-	oldValue := c.node.content.value()
-	c.node.content = keyValue{c.node.content.key(), v}
-	return oldValue, nil
+	current := c.node.content.value()
+	c.node.content = keyValue{c.node.content.key(), value}
+	return current, nil
 }
 
 // Add implements the KeyValueChanger interface.
@@ -234,6 +257,29 @@ type keyStringValueChanger struct {
 	err  error
 }
 
+// Key implements the KeyStringValueChanger interface.
+func (c *keyStringValueChanger) Key() (string, error) {
+	if c.err != nil {
+		return "", c.err
+	}
+	return c.node.content.key().(string), nil
+}
+
+// SetKey implements the KeyStringValueChanger interface.
+func (c *keyStringValueChanger) SetKey(key string) (string, error) {
+	if c.err != nil {
+		return "", c.err
+	}
+	if !c.node.container.duplicates {
+		if c.node.hasDuplicateSibling(key) {
+			return "", errors.New(ErrDuplicate, errorMessages)
+		}
+	}
+	current := c.node.content.key().(string)
+	c.node.content = keyValue{key, c.node.content.value()}
+	return current, nil
+}
+
 // Value implements the KeyStringValueChanger interface.
 func (c *keyStringValueChanger) Value() (string, error) {
 	if c.err != nil {
@@ -246,13 +292,13 @@ func (c *keyStringValueChanger) Value() (string, error) {
 }
 
 // SetValue implements the KeyStringValueChanger interface.
-func (c *keyStringValueChanger) SetValue(v string) (string, error) {
+func (c *keyStringValueChanger) SetValue(value string) (string, error) {
 	if c.err != nil {
 		return "", c.err
 	}
-	oldValue := c.node.content.value().(string)
-	c.node.content = keyValue{c.node.content.key(), v}
-	return oldValue, nil
+	current := c.node.content.value().(string)
+	c.node.content = keyValue{c.node.content.key(), value}
+	return current, nil
 }
 
 // Add implements the KeyStringValueChanger interface.

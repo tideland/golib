@@ -175,8 +175,8 @@ func (e *etc) Split(path string) (Etc, error) {
 		return nil, errors.Annotate(err, ErrCannotSplit, errorMessages)
 	}
 	es := &etc{
-		root: e.root,
-		values: values,
+		root:      e.root,
+		values:    values,
 		defaulter: e.defaulter,
 	}
 	return es, nil

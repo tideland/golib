@@ -148,6 +148,22 @@ func (n *node) isAllowed(c nodeContent, here bool) bool {
 	return true
 }
 
+// hasDuplicateSibling checks if the node has a sibling with the same key.
+func (n *node) hasDuplicateSibling(key interface{}) bool {
+	if n.parent == nil {
+		return false
+	}
+	for _, sibling := range n.parent.children {
+		if sibling == n {
+			continue
+		}
+		if sibling.content.key() == key {
+			return true
+		}
+	}
+	return false
+}
+
 // addChild adds a child node depending on allowed duplicates.
 func (n *node) addChild(c nodeContent) (*node, error) {
 	if !n.isAllowed(c, false) {
@@ -589,6 +605,23 @@ func (t *keyValueTree) Copy() KeyValueTree {
 	}
 }
 
+// CopyAt implements the KeyValueTree interface.
+func (t *keyValueTree) CopyAt(keys ...string) (KeyValueTree, error) {
+	var path []nodeContent
+	for _, key := range keys {
+		path = append(path, keyValue{key, ""})
+	}
+	n, err := t.container.root.at(path...)
+	if err != nil {
+		return nil, err
+	}
+	nc := &nodeContainer{
+		duplicates: t.container.duplicates,
+	}
+	nc.root = n.deepCopy(nc, nil)
+	return &keyValueTree{nc}, nil
+}
+
 // Deflate implements the KeyValueTree interface.
 func (t *keyValueTree) Deflate(k string, v interface{}) {
 	t.container.root = &node{
@@ -690,10 +723,11 @@ func (t *keyStringValueTree) CopyAt(keys ...string) (KeyStringValueTree, error) 
 	if err != nil {
 		return nil, err
 	}
-	ncc := n.content.deepCopy()
-	return &keyStringValueTree{
-		container: newNodeContainer(ncc, t.container.duplicates),
-	}, nil
+	nc := &nodeContainer{
+		duplicates: t.container.duplicates,
+	}
+	nc.root = n.deepCopy(nc, nil)
+	return &keyStringValueTree{nc}, nil
 }
 
 // Deflate implements the KeyStringValueTree interface.
