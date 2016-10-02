@@ -15,7 +15,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.4.0 alpha 2016-10-02
+Version 4.4.0
 
 ## Packages
 
