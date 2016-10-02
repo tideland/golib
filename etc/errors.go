@@ -24,6 +24,7 @@ const (
 	ErrIllegalConfigSource
 	ErrCannotReadFile
 	ErrInvalidPath
+	ErrCannotSplit
 	ErrCannotApply
 )
 
@@ -32,6 +33,7 @@ var errorMessages = errors.Messages{
 	ErrIllegalConfigSource: "illegal source for configuration: %v",
 	ErrCannotReadFile:      "cannot read configuration file %q",
 	ErrInvalidPath:         "invalid configuration path %q",
+	ErrCannotSplit:         "cannot split configuration",
 	ErrCannotApply:         "cannot apply values to configuration",
 }
 

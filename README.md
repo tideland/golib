@@ -15,7 +15,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.3.0
+Version 4.4.0
 
 ## Packages
 
@@ -42,7 +42,7 @@ Different additional collection types like ring buffer, stack, tree, and more.
 
 Reading and parsing of SML-formatted configurations.
 
-""DEPRECATED""
+**DEPRECATED**
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/configuration?status.svg)](https://godoc.org/github.com/tideland/golib/configuration)
 
