@@ -4,6 +4,7 @@
 
 - *KeyValueTree* and *KeyStringValueTree* in *collection* now can copy subtrees
 - Both now also support the retrieval and setting of keys
+- Added *Split()* to *Etc*
 
 ## 2016-09-29
 
