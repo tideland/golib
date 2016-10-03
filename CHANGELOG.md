@@ -1,8 +1,12 @@
 # Tideland Go Library
 
+## 2016-10-03
+
+- Added *Root()* to the trees in *collections*
+
 ## 2016-10-02
 
-- *KeyValueTree* and *KeyStringValueTree* in *collection* now can copy subtrees
+- *KeyValueTree* and *KeyStringValueTree* in *collections* now can copy subtrees
 - Both now also support the retrieval and setting of keys
 - Added *Split()* to *Etc*
 

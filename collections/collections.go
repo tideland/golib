@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections
 //
-// Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -306,8 +306,11 @@ type Tree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	// err := tree.At("path", 1, "to", "use").Set(12345)
+	//     err := tree.At("path", 1, "to", "use").Set(12345)
 	At(values ...interface{}) Changer
+
+	// Root returns the top level changer.
+	Root() Changer
 
 	// Create returns the changer of the path defined by the
 	// given keys. If it does not exist it will be created,
@@ -343,8 +346,11 @@ type StringTree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	// err := tree.At("path", "one", "to", "use").Set("12345")
+	//     err := tree.At("path", "one", "to", "use").Set("12345")
 	At(values ...string) StringChanger
+
+	// Root returns the top level changer.
+	Root() StringChanger
 
 	// Create returns the changer of the path defined by the
 	// given keys. If it does not exist it will be created,
@@ -380,8 +386,11 @@ type KeyValueTree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	// err := tree.At("path", "one", "to", "use").Set(12345)
+	//     err := tree.At("path", "one", "to", "use").Set(12345)
 	At(keys ...string) KeyValueChanger
+
+	// Root returns the top level changer.
+	Root() KeyValueChanger
 
 	// Create returns the changer of the path defined by the
 	// given keys. If it does not exist it will be created,
@@ -421,8 +430,11 @@ type KeyStringValueTree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	// err := tree.At("path", "one", "to", "use").Set(12345)
+	//     err := tree.At("path", "one", "to", "use").Set(12345)
 	At(keys ...string) KeyStringValueChanger
+
+	// Root returns the top level changer.
+	Root() KeyStringValueChanger
 
 	// Create returns the changer of the path defined by the
 	// given keys. If it does not exist it will be created,
