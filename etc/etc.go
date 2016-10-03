@@ -25,6 +25,15 @@ import (
 )
 
 //--------------------
+// GLOBAL
+//--------------------
+
+var (
+	etcRoot   = []string{"etc"}
+	defaulter = stringex.NewDefaulter("etc", true)
+)
+
+//--------------------
 // VALUE
 //--------------------
 
@@ -48,8 +57,11 @@ func (v *value) Value() (string, error) {
 // ETC
 //--------------------
 
+// Application is used to apply values to a configurtation.
+type Application map[string]string
+
 // Etc contains the read etc configuration and provides access to
-// it. The root node "etc" is automatically preceded to the path.
+// it. ThetcRoot node "etc" is automatically preceded to the path.
 // The node name have to consist out of 'a' to 'z', '0' to '9', and
 // '-'. The nodes of a path are separated by '/'.
 type Etc interface {
@@ -80,17 +92,20 @@ type Etc interface {
 	// If it doesn't exist the default value dv is returned.
 	ValueAsDuration(path string, dv time.Duration) time.Duration
 
+	// Spit produces a subconfiguration below the passed path.
+	// The last path part will be the new root, all values below
+	// that configuration node will be below the created root.
+	Split(path string) (Etc, error)
+
 	// Apply creates a new configuration by adding of overwriting
 	// the passed values. The keys of the map have to be slash
 	// separated configuration paths without the leading "etc".
-	Apply(kvs map[string]string) (Etc, error)
+	Apply(appl Application) (Etc, error)
 }
 
 // etc implements the Etc interface.
 type etc struct {
-	root      []string
-	values    collections.KeyStringValueTree
-	defaulter stringex.Defaulter
+	values collections.KeyStringValueTree
 }
 
 // Read reads the SML source of the configuration from a
@@ -109,9 +124,7 @@ func Read(source io.Reader) (Etc, error) {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
 	return &etc{
-		root:      []string{"etc"},
-		values:    tree,
-		defaulter: stringex.NewDefaulter("etc", true),
+		values: tree,
 	}, nil
 }
 
@@ -134,64 +147,61 @@ func ReadFile(filename string) (Etc, error) {
 // ValueAsString implements the Etc interface.
 func (e *etc) ValueAsString(path, dv string) string {
 	value := e.valueAt(path)
-	return e.defaulter.AsString(value, dv)
+	return defaulter.AsString(value, dv)
 }
 
 // ValueAsBool implements the Etc interface.
 func (e *etc) ValueAsBool(path string, dv bool) bool {
 	value := e.valueAt(path)
-	return e.defaulter.AsBool(value, dv)
+	return defaulter.AsBool(value, dv)
 }
 
 // ValueAsInt implements the Etc interface.
 func (e *etc) ValueAsInt(path string, dv int) int {
 	value := e.valueAt(path)
-	return e.defaulter.AsInt(value, dv)
+	return defaulter.AsInt(value, dv)
 }
 
 // ValueAsFloat64 implements the Etc interface.
 func (e *etc) ValueAsFloat64(path string, dv float64) float64 {
 	value := e.valueAt(path)
-	return e.defaulter.AsFloat64(value, dv)
+	return defaulter.AsFloat64(value, dv)
 }
 
 // ValueAsTime implements the Etc interface.
 func (e *etc) ValueAsTime(path, format string, dv time.Time) time.Time {
 	value := e.valueAt(path)
-	return e.defaulter.AsTime(value, format, dv)
+	return defaulter.AsTime(value, format, dv)
 }
 
 // ValueAsDuration implements the Etc interface.
 func (e *etc) ValueAsDuration(path string, dv time.Duration) time.Duration {
 	value := e.valueAt(path)
-	return e.defaulter.AsDuration(value, dv)
+	return defaulter.AsDuration(value, dv)
 }
 
 // Split implements the Etc interface.
 func (e *etc) Split(path string) (Etc, error) {
-	fullPath := append(e.root, strings.Split(path, "/")...)
+	fullPath := makeFullPath(path)
 	values, err := e.values.CopyAt(fullPath...)
 	if err != nil {
 		return nil, errors.Annotate(err, ErrCannotSplit, errorMessages)
 	}
+	values.At(fullPath[len(fullPath)-1:]...).SetKey("etc")
 	es := &etc{
-		root:      e.root,
-		values:    values,
-		defaulter: e.defaulter,
+		values: values,
 	}
 	return es, nil
 }
 
 // Apply implements the Etc interface.
-func (e *etc) Apply(kvs map[string]string) (Etc, error) {
+func (e *etc) Apply(appl Application) (Etc, error) {
 	ec := &etc{
-		root:      e.root,
-		values:    e.values.Copy(),
-		defaulter: e.defaulter,
+		values: e.values.Copy(),
 	}
-	for key, value := range kvs {
-		path := append(e.root, strings.Split(key, "/")...)
-		_, err := ec.values.Create(path...).SetValue(value)
+	for path, value := range appl {
+		fullPath := makeFullPath(path)
+		_, err := ec.values.Create(fullPath...).SetValue(value)
 		if err != nil {
 			return nil, errors.Annotate(err, ErrCannotApply, errorMessages)
 		}
@@ -207,7 +217,7 @@ func (e *etc) String() string {
 // valueAt retrieves and encapsulates the value
 // at a given path.
 func (e *etc) valueAt(path string) *value {
-	fullPath := append(e.root, strings.Split(path, "/")...)
+	fullPath := makeFullPath(path)
 	changer := e.values.At(fullPath...)
 	return &value{fullPath, changer}
 }
@@ -215,6 +225,11 @@ func (e *etc) valueAt(path string) *value {
 //--------------------
 // HELPERS
 //--------------------
+
+// makeFullPath creates the full path out of a string.
+func makeFullPath(path string) []string {
+	return append(etcRoot, strings.Split(path, "/")...)
+}
 
 // pathToString returns the path in a filesystem like notation.
 func pathToString(path []string) string {

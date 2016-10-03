@@ -299,9 +299,9 @@ func (n *node) doAll(f func(dn *node) error) error {
 }
 
 // doChildren performs the passed function for all children.
-func (n *node) doChildren(f func(c nodeContent) error) error {
+func (n *node) doChildren(f func(cn *node) error) error {
 	for _, child := range n.children {
-		if err := f(child.content); err != nil {
+		if err := f(child); err != nil {
 			return errors.Annotate(err, ErrNodeDoChildren, errorMessages)
 		}
 	}
@@ -369,6 +369,11 @@ func (t *tree) At(values ...interface{}) Changer {
 	}
 	n, err := t.container.root.at(path...)
 	return &changer{n, err}
+}
+
+// Root implements the Tree interface.
+func (t *tree) Root() Changer {
+	return &changer{t.container.root, nil}
 }
 
 // Create implements the Tree interface.
@@ -462,6 +467,11 @@ func (t *stringTree) At(values ...string) StringChanger {
 	return &stringChanger{n, err}
 }
 
+// Root implements the StringTree interface.
+func (t *stringTree) Root() StringChanger {
+	return &stringChanger{t.container.root, nil}
+}
+
 // Create implements the StringTree interface.
 func (t *stringTree) Create(values ...string) StringChanger {
 	var path []nodeContent
@@ -551,6 +561,11 @@ func (t *keyValueTree) At(keys ...string) KeyValueChanger {
 	}
 	n, err := t.container.root.at(path...)
 	return &keyValueChanger{n, err}
+}
+
+// Root implements the KeyValueTree interface.
+func (t *keyValueTree) Root() KeyValueChanger {
+	return &keyValueChanger{t.container.root, nil}
 }
 
 // Create implements the KeyValueTree interface.
@@ -659,6 +674,11 @@ func (t *keyStringValueTree) At(keys ...string) KeyStringValueChanger {
 	}
 	n, err := t.container.root.at(path...)
 	return &keyStringValueChanger{n, err}
+}
+
+// Root implements the KeyStringValueTree interface.
+func (t *keyStringValueTree) Root() KeyStringValueChanger {
+	return &keyStringValueChanger{t.container.root, nil}
 }
 
 // Create implements the KeyStringValueTree interface.

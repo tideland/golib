@@ -87,6 +87,9 @@ func TestTreeSetValue(t *testing.T) {
 	act, err := tree.At("root", "beta").Value()
 	assert.Nil(err)
 	assert.Equal(act, "beta")
+	root, err := tree.Root().Value()
+	assert.Nil(err)
+	assert.Equal(root, "root")
 
 	// Tree without duplicates.
 	tree = collections.NewTree("root", false)

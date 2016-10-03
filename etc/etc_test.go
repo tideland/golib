@@ -129,6 +129,35 @@ func TestGetFail(t *testing.T) {
 	assert.Equal(vi, 12345)
 }
 
+// TestSplit tests the splitting of configurations.
+func TestSplit(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}{b Friend}}}"
+	cfg, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	// Test the splitting.
+	subcfg, err := cfg.Split("sub")
+	assert.Nil(err)
+	va := subcfg.ValueAsString("a", "Foo")
+	assert.Equal(va, "World")
+	vb := subcfg.ValueAsString("b", "Bar")
+	assert.Equal(vb, "Friend")
+
+	// Changing the sub configuration must not
+	// change the original configuration.
+	applied, err := subcfg.Apply(etc.Application{
+		"c": "Darling",
+	})
+	ac := applied.ValueAsString("c", "A1")
+	assert.Equal(ac, "Darling")
+	ac = subcfg.ValueAsString("c", "A2")
+	assert.Equal(ac, "A2")
+	ac = cfg.ValueAsString("c", "A3")
+	assert.Equal(ac, "A3")
+}
+
 // TestApply tests the applying of values.
 func TestApply(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
@@ -137,7 +166,7 @@ func TestApply(t *testing.T) {
 	cfg, err := etc.ReadString(source)
 	assert.Nil(err)
 
-	applied, err := cfg.Apply(map[string]string{
+	applied, err := cfg.Apply(etc.Application{
 		"sub/a": "Tester",
 		"b":     "42",
 	})

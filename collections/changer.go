@@ -70,8 +70,8 @@ func (c *changer) List() ([]interface{}, error) {
 		return nil, c.err
 	}
 	var list []interface{}
-	err := c.node.doChildren(func(c nodeContent) error {
-		list = append(list, c.value())
+	err := c.node.doChildren(func(cn *node) error {
+		list = append(list, cn.content.value())
 		return nil
 	})
 	if err != nil {
@@ -143,8 +143,8 @@ func (c *stringChanger) List() ([]string, error) {
 		return nil, c.err
 	}
 	var list []string
-	err := c.node.doChildren(func(c nodeContent) error {
-		list = append(list, c.value().(string))
+	err := c.node.doChildren(func(cn *node) error {
+		list = append(list, cn.content.value().(string))
 		return nil
 	})
 	if err != nil {
@@ -232,8 +232,8 @@ func (c *keyValueChanger) List() ([]KeyValue, error) {
 		return nil, c.err
 	}
 	var list []KeyValue
-	err := c.node.doChildren(func(c nodeContent) error {
-		list = append(list, KeyValue{c.key().(string), c.value()})
+	err := c.node.doChildren(func(cn *node) error {
+		list = append(list, KeyValue{cn.content.key().(string), cn.content.value()})
 		return nil
 	})
 	if err != nil {
@@ -324,8 +324,8 @@ func (c *keyStringValueChanger) List() ([]KeyStringValue, error) {
 		return nil, c.err
 	}
 	var list []KeyStringValue
-	err := c.node.doChildren(func(c nodeContent) error {
-		list = append(list, KeyStringValue{c.key().(string), c.value().(string)})
+	err := c.node.doChildren(func(cn *node) error {
+		list = append(list, KeyStringValue{cn.content.key().(string), cn.content.value().(string)})
 		return nil
 	})
 	if err != nil {
