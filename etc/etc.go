@@ -228,7 +228,13 @@ func (e *etc) valueAt(path string) *value {
 
 // makeFullPath creates the full path out of a string.
 func makeFullPath(path string) []string {
-	return append(etcRoot, strings.Split(path, "/")...)
+	parts := stringex.SplitMap(path, "/", func(p string) (string, bool) {
+		if p == "" {
+			return "", false
+		}
+		return strings.ToLower(p), true
+	})
+	return append(etcRoot, parts...)
 }
 
 // pathToString returns the path in a filesystem like notation.
