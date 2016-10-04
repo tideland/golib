@@ -168,7 +168,7 @@ func TestApply(t *testing.T) {
 
 	applied, err := cfg.Apply(etc.Application{
 		"sub/a": "Tester",
-		"b":     "42",
+		"B":     "42",
 	})
 	assert.Nil(err)
 	vs := applied.ValueAsString("a", "foo")
