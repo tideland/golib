@@ -1,5 +1,11 @@
 # Tideland Go Library
 
+## 2016-10-04
+
+- Added *SplitFilter()* and *SplitMap()* to *stringex* for convenient splitting
+  operations
+- *Etc.Apply()* is now more robust by using *SplitMap()*
+
 ## 2016-10-03
 
 - Added *Root()* to the trees in *collections*
