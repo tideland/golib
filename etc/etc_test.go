@@ -158,6 +158,32 @@ func TestSplit(t *testing.T) {
 	assert.Equal(ac, "A3")
 }
 
+// TestDump tests the dumping of a configuration.
+func TestDump(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}}}"
+	cfg, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	dump, err := cfg.Dump()
+	assert.Nil(err)
+	assert.Length(dump, 3)
+
+	source = "{etc}"
+	cfg, err = etc.ReadString(source)
+	assert.Nil(err)
+
+	applied, err := cfg.Apply(dump)
+	assert.Nil(err)
+	vs := applied.ValueAsString("a", "foo")
+	assert.Equal(vs, "Hello")
+	vs = applied.ValueAsString("sub", "bar")
+	assert.Equal(vs, "")
+	vs = applied.ValueAsString("sub/a", "baz")
+	assert.Equal(vs, "World")
+}
+
 // TestApply tests the applying of values.
 func TestApply(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)

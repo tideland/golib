@@ -97,6 +97,10 @@ type Etc interface {
 	// that configuration node will be below the created root.
 	Split(path string) (Etc, error)
 
+	// Dunp creates a map of paths and their values to apply
+	// them into other configurations.
+	Dump() (Application, error)
+
 	// Apply creates a new configuration by adding of overwriting
 	// the passed values. The keys of the map have to be slash
 	// separated configuration paths without the leading "etc".
@@ -192,6 +196,24 @@ func (e *etc) Split(path string) (Etc, error) {
 		values: values,
 	}
 	return es, nil
+}
+
+// Dump implements the Etc interface.
+func (e *etc) Dump() (Application, error) {
+	appl := Application{}
+	err := e.values.DoAllDeep(func(ks []string, v string) error {
+		if len(ks) == 1 {
+			// Continue on root element.
+			return nil
+		}
+		path := strings.Join(ks[1:], "/")
+		appl[path] = v
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return appl, nil
 }
 
 // Apply implements the Etc interface.
