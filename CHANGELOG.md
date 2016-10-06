@@ -1,5 +1,11 @@
 # Tideland Go Library
 
+## 2016-10-06
+
+- Added *DoAllDeep()* to *KeyStringValueTree* in *configuration* package
+- Other tree types will follow later
+- Added *Dump()* to *Etc*
+
 ## 2016-10-04
 
 - Added *SplitFilter()* and *SplitMap()* to *stringex* for convenient splitting

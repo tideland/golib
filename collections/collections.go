@@ -452,6 +452,10 @@ type KeyStringValueTree interface {
 	// DoAll executes the passed function on all nodes.
 	DoAll(f func(key, value string) error) error
 
+	// DoAllDeep executes the passed function on all nodes
+	// passing a deep list of keys ordered top-down.
+	DoAllDeep(f func(keys []string, value string) error) error
+
 	// Len returns the number of nodes of the tree.
 	Len() int
 

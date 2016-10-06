@@ -721,6 +721,19 @@ func (t *keyStringValueTree) DoAll(f func(k, v string) error) error {
 	})
 }
 
+// DoAllDeep implements the KeyStringValueTree interface.
+func (t *keyStringValueTree) DoAllDeep(f func(ks []string, v string) error) error {
+	return t.container.root.doAll(func(dn *node) error {
+		keys := []string{}
+		cn := dn
+		for cn != nil {
+			keys = append([]string{cn.content.key().(string)}, keys...)
+			cn = cn.parent
+		}
+		return f(keys, dn.content.value().(string))
+	})
+}
+
 // Len implements the KeyStringValueTree interface.
 func (t *keyStringValueTree) Len() int {
 	return t.container.root.size()
