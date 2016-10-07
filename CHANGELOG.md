@@ -3,6 +3,8 @@
 ## 2016-10-07
 
 - Added context handling to *etc* package
+- Added *HasPath()* to *Etc*
+- Added *DoAllDeep()* to the missing tree packages
 
 ## 2016-10-06
 

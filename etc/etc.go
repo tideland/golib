@@ -72,6 +72,10 @@ type Application map[string]string
 type Etc interface {
 	fmt.Stringer
 
+	// HasPath checks if the configurations has the defined path
+	// regardles of the value or possible subconfigurations.
+	HasPath(path string) bool
+
 	// ValueAsString retrieves the string value at a given path. If it
 	// doesn't exist the default value dv is returned.
 	ValueAsString(path, dv string) string
@@ -151,6 +155,13 @@ func ReadFile(filename string) (Etc, error) {
 		return nil, errors.Annotate(err, ErrCannotReadFile, errorMessages, filename)
 	}
 	return ReadString(string(source))
+}
+
+// HasPath implements the Etc interface.
+func (e *etc) HasPath(path string) bool {
+	fullPath := makeFullPath(path)
+	changer := e.values.At(fullPath...)
+	return changer.Error() == nil
 }
 
 // ValueAsString implements the Etc interface.
