@@ -12,6 +12,7 @@ package etc_test
 //--------------------
 
 import (
+	"context"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -203,6 +204,29 @@ func TestApply(t *testing.T) {
 	assert.Equal(vs, "Tester")
 	vi := applied.ValueAsInt("b", -1)
 	assert.Equal(vi, 42)
+}
+
+// TestContext tests adding a configuration to a context
+// an retrieve it again.
+func TestContext(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}}}"
+	cfg, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	ctx := context.Background()
+	noCfg, ok := etc.FromContext(ctx)
+	assert.False(ok)
+	assert.Nil(noCfg)
+
+	cfgCtx := etc.NewContext(ctx, cfg)
+	yesCfg, ok := etc.FromContext(cfgCtx)
+	assert.True(ok)
+	vs := yesCfg.ValueAsString("a", "foo")
+	assert.Equal(vs, "Hello")
+	vs = yesCfg.ValueAsString("sub/a", "bar")
+	assert.Equal(vs, "World")
 }
 
 // EOF
