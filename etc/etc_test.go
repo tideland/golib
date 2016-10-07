@@ -77,6 +77,22 @@ func TestReadFile(t *testing.T) {
 	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
 }
 
+// TestHasPath tests the checking of paths.
+func TestHasPath(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}}}"
+	cfg, err := etc.Read(strings.NewReader(source))
+	assert.Nil(err)
+
+	assert.True(cfg.HasPath("a"))
+	assert.True(cfg.HasPath("sub"))
+	assert.True(cfg.HasPath("sub/a"))
+
+	assert.False(cfg.HasPath("b"))
+	assert.False(cfg.HasPath("sub/b"))
+}
+
 // TestValueSuccess tests the successful retrieval of values.
 func TestValueSuccess(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
