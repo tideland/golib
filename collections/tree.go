@@ -416,6 +416,19 @@ func (t *tree) DoAll(f func(v interface{}) error) error {
 	})
 }
 
+// DoAllDeep implements the Tree interface.
+func (t *tree) DoAllDeep(f func(vs []interface{}) error) error {
+	return t.container.root.doAll(func(dn *node) error {
+		values := []interface{}{}
+		cn := dn
+		for cn != nil {
+			values = append([]interface{}{cn.content.value()}, values...)
+			cn = cn.parent
+		}
+		return f(values)
+	})
+}
+
 // Len implements the Tree interface.
 func (t *tree) Len() int {
 	return t.container.root.size()
@@ -512,6 +525,19 @@ func (t *stringTree) DoAll(f func(v string) error) error {
 	})
 }
 
+// DoAllDeep implements the StringTree interface.
+func (t *stringTree) DoAllDeep(f func(vs []string) error) error {
+	return t.container.root.doAll(func(dn *node) error {
+		values := []string{}
+		cn := dn
+		for cn != nil {
+			values = append([]string{cn.content.value().(string)}, values...)
+			cn = cn.parent
+		}
+		return f(values)
+	})
+}
+
 // Len implements the StringTree interface.
 func (t *stringTree) Len() int {
 	return t.container.root.size()
@@ -605,6 +631,19 @@ func (t *keyValueTree) FindAll(f func(k string, v interface{}) (bool, error)) []
 func (t *keyValueTree) DoAll(f func(k string, v interface{}) error) error {
 	return t.container.root.doAll(func(dn *node) error {
 		return f(dn.content.key().(string), dn.content.value())
+	})
+}
+
+// DoAllDeep implements the KeyValueTree interface.
+func (t *keyValueTree) DoAllDeep(f func(ks []string, v interface{}) error) error {
+	return t.container.root.doAll(func(dn *node) error {
+		keys := []string{}
+		cn := dn
+		for cn != nil {
+			keys = append([]string{cn.content.key().(string)}, keys...)
+			cn = cn.parent
+		}
+		return f(keys, dn.content.value())
 	})
 }
 
