@@ -1,8 +1,12 @@
 # Tideland Go Library
 
+## 2016-10-07
+
+- Added context handling to *etc* package
+
 ## 2016-10-06
 
-- Added *DoAllDeep()* to *KeyStringValueTree* in *configuration* package
+- Added *DoAllDeep()* to *KeyStringValueTree* in *collections* package
 - Other tree types will follow later
 - Added *Dump()* to *Etc*
 

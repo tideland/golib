@@ -12,6 +12,7 @@ package etc
 //--------------------
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,9 +29,13 @@ import (
 // GLOBAL
 //--------------------
 
+// key is to address a configuration inside a context.
+type key int
+
 var (
-	etcRoot   = []string{"etc"}
-	defaulter = stringex.NewDefaulter("etc", true)
+	etcKey    key = 0
+	etcRoot       = []string{"etc"}
+	defaulter     = stringex.NewDefaulter("etc", true)
 )
 
 //--------------------
@@ -242,6 +247,21 @@ func (e *etc) valueAt(path string) *value {
 	fullPath := makeFullPath(path)
 	changer := e.values.At(fullPath...)
 	return &value{fullPath, changer}
+}
+
+//--------------------
+// CONTEXT
+//--------------------
+
+// NewContext returns a new context that carries a configuration.
+func NewContext(ctx context.Context, cfg Etc) context.Context {
+	return context.WithValue(ctx, etcKey, cfg)
+}
+
+// FromContext returns the configuration stored in ctx, if any.
+func FromContext(ctx context.Context) (Etc, bool) {
+	cfg, ok := ctx.Value(etcKey).(Etc)
+	return cfg, ok
 }
 
 //--------------------
