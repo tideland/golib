@@ -12,6 +12,7 @@ package etc_test
 //--------------------
 
 import (
+	"context"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -74,6 +75,22 @@ func TestReadFile(t *testing.T) {
 
 	_, err = etc.ReadFile("some-not-existing-configuration-file-due-to-wierd-name")
 	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
+}
+
+// TestHasPath tests the checking of paths.
+func TestHasPath(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}}}"
+	cfg, err := etc.Read(strings.NewReader(source))
+	assert.Nil(err)
+
+	assert.True(cfg.HasPath("a"))
+	assert.True(cfg.HasPath("sub"))
+	assert.True(cfg.HasPath("sub/a"))
+
+	assert.False(cfg.HasPath("b"))
+	assert.False(cfg.HasPath("sub/b"))
 }
 
 // TestValueSuccess tests the successful retrieval of values.
@@ -158,6 +175,32 @@ func TestSplit(t *testing.T) {
 	assert.Equal(ac, "A3")
 }
 
+// TestDump tests the dumping of a configuration.
+func TestDump(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}}}"
+	cfg, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	dump, err := cfg.Dump()
+	assert.Nil(err)
+	assert.Length(dump, 3)
+
+	source = "{etc}"
+	cfg, err = etc.ReadString(source)
+	assert.Nil(err)
+
+	applied, err := cfg.Apply(dump)
+	assert.Nil(err)
+	vs := applied.ValueAsString("a", "foo")
+	assert.Equal(vs, "Hello")
+	vs = applied.ValueAsString("sub", "bar")
+	assert.Equal(vs, "")
+	vs = applied.ValueAsString("sub/a", "baz")
+	assert.Equal(vs, "World")
+}
+
 // TestApply tests the applying of values.
 func TestApply(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
@@ -168,7 +211,7 @@ func TestApply(t *testing.T) {
 
 	applied, err := cfg.Apply(etc.Application{
 		"sub/a": "Tester",
-		"b":     "42",
+		"B":     "42",
 	})
 	assert.Nil(err)
 	vs := applied.ValueAsString("a", "foo")
@@ -177,6 +220,29 @@ func TestApply(t *testing.T) {
 	assert.Equal(vs, "Tester")
 	vi := applied.ValueAsInt("b", -1)
 	assert.Equal(vi, 42)
+}
+
+// TestContext tests adding a configuration to a context
+// an retrieve it again.
+func TestContext(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {a World}}}"
+	cfg, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	ctx := context.Background()
+	noCfg, ok := etc.FromContext(ctx)
+	assert.False(ok)
+	assert.Nil(noCfg)
+
+	cfgCtx := etc.NewContext(ctx, cfg)
+	yesCfg, ok := etc.FromContext(cfgCtx)
+	assert.True(ok)
+	vs := yesCfg.ValueAsString("a", "foo")
+	assert.Equal(vs, "Hello")
+	vs = yesCfg.ValueAsString("sub/a", "bar")
+	assert.Equal(vs, "World")
 }
 
 // EOF

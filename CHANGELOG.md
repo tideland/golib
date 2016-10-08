@@ -1,5 +1,23 @@
 # Tideland Go Library
 
+## 2016-10-07
+
+- Added context handling to *etc* package
+- Added *HasPath()* to *Etc*
+- Added *DoAllDeep()* to the missing tree packages
+
+## 2016-10-06
+
+- Added *DoAllDeep()* to *KeyStringValueTree* in *collections* package
+- Other tree types will follow later
+- Added *Dump()* to *Etc*
+
+## 2016-10-04
+
+- Added *SplitFilter()* and *SplitMap()* to *stringex* for convenient splitting
+  operations
+- *Etc.Apply()* is now more robust by using *SplitMap()*
+
 ## 2016-10-03
 
 - Added *Root()* to the trees in *collections*

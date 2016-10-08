@@ -13,6 +13,8 @@ package collections_test
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/tideland/golib/audit"
@@ -184,6 +186,19 @@ func TestTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(values, 12)
+
+	var all [][]interface{}
+	err = tree.DoAllDeep(func(vs []interface{}) error {
+		all = append(all, vs)
+		return nil
+	})
+	assert.Nil(err)
+	assert.Length(all, 12)
+	for _, vs := range all {
+		assert.True(len(vs) >= 1 && len(vs) <= 4)
+	}
+
+	// Test errors.
 	err = tree.DoAll(func(v interface{}) error {
 		return errors.New("ouch")
 	})
@@ -349,6 +364,19 @@ func TestStringTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(values, 12)
+
+	var all [][]string
+	err = tree.DoAllDeep(func(vs []string) error {
+		all = append(all, vs)
+		return nil
+	})
+	assert.Nil(err)
+	assert.Length(all, 12)
+	for _, vs := range all {
+		assert.True(len(vs) >= 1 && len(vs) <= 4)
+	}
+
+	// Test errors.
 	err = tree.DoAll(func(v string) error {
 		return errors.New("ouch")
 	})
@@ -543,6 +571,23 @@ func TestKeyValueTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(values, 12)
+
+	keyValues := map[string]interface{}{}
+	err = tree.DoAllDeep(func(ks []string, v interface{}) error {
+		k := strings.Join(ks, "/") + " = " + fmt.Sprintf("%v", v)
+		keyValues[k] = v
+		return nil
+	})
+	assert.Nil(err)
+	assert.Length(keyValues, 12)
+	for k, _ := range keyValues {
+		ksv := strings.Split(k, " = ")
+		assert.Length(ksv, 2)
+		ks := strings.Split(ksv[0], "/")
+		assert.True(len(ks) >= 1 && len(ks) <= 4)
+	}
+
+	// Test errors.
 	err = tree.DoAll(func(k string, v interface{}) error {
 		return errors.New("ouch")
 	})
@@ -741,14 +786,31 @@ func TestKeyStringValueTreeDo(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	tree := createKeyStringValueTree(assert)
 
-	// Test iteration.
-	var values []interface{}
+	// Test iterations.
+	values := []string{}
 	err := tree.DoAll(func(k, v string) error {
 		values = append(values, v)
 		return nil
 	})
 	assert.Nil(err)
 	assert.Length(values, 12)
+
+	keyValues := map[string]string{}
+	err = tree.DoAllDeep(func(ks []string, v string) error {
+		k := strings.Join(ks, "/") + " = " + v
+		keyValues[k] = v
+		return nil
+	})
+	assert.Nil(err)
+	assert.Length(keyValues, 12)
+	for k, _ := range keyValues {
+		ksv := strings.Split(k, " = ")
+		assert.Length(ksv, 2)
+		ks := strings.Split(ksv[0], "/")
+		assert.True(len(ks) >= 1 && len(ks) <= 4)
+	}
+
+	// Test errors.
 	err = tree.DoAll(func(k, v string) error {
 		return errors.New("ouch")
 	})
@@ -780,7 +842,6 @@ func TestKeyStringValueTreeCopy(t *testing.T) {
 
 	catree, err := ctree.CopyAt("root", "gamma")
 	assert.Nil(err)
-	assert.Logf("CATREE = %q", catree)
 	value, err = catree.At("gamma", "two", "2").Value()
 	assert.Nil(err)
 	assert.Equal(value, "3.2")

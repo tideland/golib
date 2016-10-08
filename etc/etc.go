@@ -12,6 +12,7 @@ package etc
 //--------------------
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,9 +29,13 @@ import (
 // GLOBAL
 //--------------------
 
+// key is to address a configuration inside a context.
+type key int
+
 var (
-	etcRoot   = []string{"etc"}
-	defaulter = stringex.NewDefaulter("etc", true)
+	etcKey    key = 0
+	etcRoot       = []string{"etc"}
+	defaulter     = stringex.NewDefaulter("etc", true)
 )
 
 //--------------------
@@ -67,6 +72,10 @@ type Application map[string]string
 type Etc interface {
 	fmt.Stringer
 
+	// HasPath checks if the configurations has the defined path
+	// regardles of the value or possible subconfigurations.
+	HasPath(path string) bool
+
 	// ValueAsString retrieves the string value at a given path. If it
 	// doesn't exist the default value dv is returned.
 	ValueAsString(path, dv string) string
@@ -96,6 +105,10 @@ type Etc interface {
 	// The last path part will be the new root, all values below
 	// that configuration node will be below the created root.
 	Split(path string) (Etc, error)
+
+	// Dunp creates a map of paths and their values to apply
+	// them into other configurations.
+	Dump() (Application, error)
 
 	// Apply creates a new configuration by adding of overwriting
 	// the passed values. The keys of the map have to be slash
@@ -142,6 +155,13 @@ func ReadFile(filename string) (Etc, error) {
 		return nil, errors.Annotate(err, ErrCannotReadFile, errorMessages, filename)
 	}
 	return ReadString(string(source))
+}
+
+// HasPath implements the Etc interface.
+func (e *etc) HasPath(path string) bool {
+	fullPath := makeFullPath(path)
+	changer := e.values.At(fullPath...)
+	return changer.Error() == nil
 }
 
 // ValueAsString implements the Etc interface.
@@ -194,6 +214,24 @@ func (e *etc) Split(path string) (Etc, error) {
 	return es, nil
 }
 
+// Dump implements the Etc interface.
+func (e *etc) Dump() (Application, error) {
+	appl := Application{}
+	err := e.values.DoAllDeep(func(ks []string, v string) error {
+		if len(ks) == 1 {
+			// Continue on root element.
+			return nil
+		}
+		path := strings.Join(ks[1:], "/")
+		appl[path] = v
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return appl, nil
+}
+
 // Apply implements the Etc interface.
 func (e *etc) Apply(appl Application) (Etc, error) {
 	ec := &etc{
@@ -223,12 +261,33 @@ func (e *etc) valueAt(path string) *value {
 }
 
 //--------------------
+// CONTEXT
+//--------------------
+
+// NewContext returns a new context that carries a configuration.
+func NewContext(ctx context.Context, cfg Etc) context.Context {
+	return context.WithValue(ctx, etcKey, cfg)
+}
+
+// FromContext returns the configuration stored in ctx, if any.
+func FromContext(ctx context.Context) (Etc, bool) {
+	cfg, ok := ctx.Value(etcKey).(Etc)
+	return cfg, ok
+}
+
+//--------------------
 // HELPERS
 //--------------------
 
 // makeFullPath creates the full path out of a string.
 func makeFullPath(path string) []string {
-	return append(etcRoot, strings.Split(path, "/")...)
+	parts := stringex.SplitMap(path, "/", func(p string) (string, bool) {
+		if p == "" {
+			return "", false
+		}
+		return strings.ToLower(p), true
+	})
+	return append(etcRoot, parts...)
 }
 
 // pathToString returns the path in a filesystem like notation.
