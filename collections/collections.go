@@ -306,7 +306,7 @@ type Tree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	//     err := tree.At("path", 1, "to", "use").Set(12345)
+	// err := tree.At("path", 1, "to", "use").Set(12345)
 	At(values ...interface{}) Changer
 
 	// Root returns the top level changer.
@@ -346,7 +346,7 @@ type StringTree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	//     err := tree.At("path", "one", "to", "use").Set("12345")
+	// err := tree.At("path", "one", "to", "use").Set("12345")
 	At(values ...string) StringChanger
 
 	// Root returns the top level changer.
@@ -386,7 +386,7 @@ type KeyValueTree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	//     err := tree.At("path", "one", "to", "use").Set(12345)
+	// err := tree.At("path", "one", "to", "use").Set(12345)
 	At(keys ...string) KeyValueChanger
 
 	// Root returns the top level changer.
@@ -430,7 +430,7 @@ type KeyStringValueTree interface {
 	// values. If it does not exist it will not be created. Use
 	// Create() here. So to set a child at a given node path do
 	//
-	//     err := tree.At("path", "one", "to", "use").Set(12345)
+	// err := tree.At("path", "one", "to", "use").Set(12345)
 	At(keys ...string) KeyStringValueChanger
 
 	// Root returns the top level changer.
