@@ -22,9 +22,9 @@ import (
 // VERSION
 //--------------------
 
-// PackageVersion returns the version of the version package.
+// Version returns the version of the SML package.
 func PackageVersion() version.Version {
-	return version.New(1, 4, 0)
+	return version.New(1, 5, 0)
 }
 
 // EOF
