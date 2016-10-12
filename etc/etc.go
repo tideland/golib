@@ -134,13 +134,16 @@ func Read(source io.Reader) (Etc, error) {
 	if err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	if err := values.At("etc").Error(); err != nil {
+	if err = values.At("etc").Error(); err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	values = substituteTemplates(values)
-	return &etc{
+	cfg := &etc{
 		values: values,
-	}, nil
+	}
+	if err = cfg.postProcess(); err != nil {
+		return nil, errors.Annotate(err, ErrCannotPostProcess, errorMessages)
+	}
+	return cfg, nil
 }
 
 // ReadString reads the SML source of the configuration from a
@@ -262,6 +265,36 @@ func (e *etc) valueAt(path string) *value {
 	return &value{fullPath, changer}
 }
 
+// postProcess replaces templates formated [path||default]
+// with values found at that path or the default. 
+func (e *etc) postProcess() error {
+	re := regexp.MustCompile("\\[.+(||.+)\\]")
+	// Find all entries with template.
+	changers := e.values.FindAll(func(k, v string) (bool, error) {
+		return re.MatchString(v), nil
+	})
+	// Change the template.
+	for _, changer := range changers {
+		value, err := changer.Value()
+		if err != nil {
+			return err
+		}
+		found := re.FindString(value)
+		pathDefault := strings.SplitN(found[1:len(found)-1], "||", 2)
+		dv := ""
+		if len(pathDefault) > 1 {
+			dv = pathDefault[1]
+		}
+		substitute := e.ValueAsString(pathDefault[0], dv)
+		replaced := string.Replace(value, found, substitute, -1)
+		_, err =changer.SetValue(replaced)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 //--------------------
 // CONTEXT
 //--------------------
@@ -295,31 +328,6 @@ func makeFullPath(path string) []string {
 // pathToString returns the path in a filesystem like notation.
 func pathToString(path []string) string {
 	return "/" + strings.Join(path, "/")
-}
-
-// substituteTemplates replaces templates formated [path||default]
-// with values found at that path or the default.
-func substituteTemplates(tree collections.KeyStringValueTree) collections.KeyStringValueTree {
-	re := regexp.MustCompile("\\[.+(||.+)\\]")
-	// Find all entries with template.
-	changers := tree.FindAll(func(k, v string) (bool, error) {
-		return re.MatchString(v), nil
-	})
-	// Change the template.
-	for _, changer := range changers {
-		value, err := changer.Value()
-		if err != nil {
-			// Must not happen.
-			panic("unexpected error in template substitution: " + err.Error())
-		}
-		found := re.FindString(value)
-		pathDefault := strings.Split(found[1:len(found)-1], "||")
-		// Try to find the path and set a new value after
-		// inserting found path value or the default into
-		// the current value.
-
-	}
-	return tree
 }
 
 // EOF
