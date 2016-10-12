@@ -266,7 +266,7 @@ func (e *etc) valueAt(path string) *value {
 }
 
 // postProcess replaces templates formated [path||default]
-// with values found at that path or the default. 
+// with values found at that path or the default.
 func (e *etc) postProcess() error {
 	re := regexp.MustCompile("\\[.+(||.+)\\]")
 	// Find all entries with template.
@@ -286,7 +286,7 @@ func (e *etc) postProcess() error {
 			dv = pathDefault[1]
 		}
 		substitute := e.ValueAsString(pathDefault[0], dv)
-		replaced := string.Replace(value, found, substitute, -1)
+		replaced := strings.Replace(value, found, substitute, -1)
 		_, err =changer.SetValue(replaced)
 		if err != nil {
 			return err
