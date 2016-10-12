@@ -1,6 +1,6 @@
 // Tideland Go Library - Simple Markup Language - Builder
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -22,8 +22,7 @@ import (
 // NODE BUILDER
 //--------------------
 
-// NodeBuilder creates a node structure when a SML
-// document is read.
+// NodeBuilder creates a node structure.
 type NodeBuilder struct {
 	stack []*tagNode
 	done  bool
