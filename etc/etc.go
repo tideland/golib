@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"strings"
 	"time"
 
@@ -129,15 +130,16 @@ func Read(source io.Reader) (Etc, error) {
 	if err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	tree, err := builder.Tree()
+	values, err := builder.Tree()
 	if err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	if err := tree.At("etc").Error(); err != nil {
+	if err := values.At("etc").Error(); err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
+	values = substituteTemplates(values)
 	return &etc{
-		values: tree,
+		values: values,
 	}, nil
 }
 
@@ -293,6 +295,31 @@ func makeFullPath(path string) []string {
 // pathToString returns the path in a filesystem like notation.
 func pathToString(path []string) string {
 	return "/" + strings.Join(path, "/")
+}
+
+// substituteTemplates replaces templates formated [path||default]
+// with values found at that path or the default.
+func substituteTemplates(tree collections.KeyStringValueTree) collections.KeyStringValueTree {
+	re := regexp.MustCompile("\\[.+(||.+)\\]")
+	// Find all entries with template.
+	changers := tree.FindAll(func(k, v string) (bool, error) {
+		return re.MatchString(v), nil
+	})
+	// Change the template.
+	for _, changer := range changers {
+		value, err := changer.Value()
+		if err != nil {
+			// Must not happen.
+			panic("unexpected error in template substitution: " + err.Error())
+		}
+		found := re.FindString(value)
+		pathDefault := strings.Split(found[1:len(found)-1], "||")
+		// Try to find the path and set a new value after
+		// inserting found path value or the default into
+		// the current value.
+
+	}
+	return tree
 }
 
 // EOF
