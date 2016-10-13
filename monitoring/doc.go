@@ -1,6 +1,6 @@
 // Tideland Go Library - Monitoring
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -28,9 +28,9 @@ import (
 // VERSION
 //--------------------
 
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(4, 0, 1)
+// Version returns the version of the monitoring package.
+func Version() version.Version {
+	return version.New(4, 0, 2)
 }
 
 // EOF

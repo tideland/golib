@@ -1,6 +1,6 @@
 // Tideland Go Library - Monitoring
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -205,23 +205,38 @@ type Backend interface {
 // MONITORING API
 //--------------------
 
-// monitor is the global monitor.
-var monitor struct {
+// monitoring manages the global monitor.
+type monitoring struct {
 	sync.RWMutex
-	backend Backend
+	b Backend
 }
 
-// init initializes the global monitor.
-func init() {
-	monitor.backend = NewStandardBackend()
+// backend ensures, that a backend is set. By default
+// it's the standard one.
+func (m *monitoring) backend() Backend {
+	if m.b == nil {
+		m.b = NewStandardBackend()
+	}
+	return m.b
 }
+
+// setBackend sets the current backend. If one
+// is already set it will be stopped.
+func (m *monitoring) setBackend(mb Backend) {
+	if m.b != nil {
+		m.b.Stop()
+	}
+	m.b = mb
+}
+
+// monitor is the global monitor.
+var monitor = &monitoring{}
 
 // SetBackend allows to switch the monitoring backend.
 func SetBackend(mb Backend) {
 	monitor.Lock()
 	defer monitor.Unlock()
-	monitor.backend.Stop()
-	monitor.backend = mb
+	monitor.setBackend(mb)
 }
 
 // BeginMeasuring starts a new measuring with a given id.
@@ -229,7 +244,7 @@ func SetBackend(mb Backend) {
 func BeginMeasuring(id string) Measuring {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.BeginMeasuring(id)
+	return monitor.backend().BeginMeasuring(id)
 }
 
 // Measure the execution of a function.
@@ -243,7 +258,7 @@ func Measure(id string, f func()) time.Duration {
 func ReadMeasuringPoint(id string) (MeasuringPoint, error) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.ReadMeasuringPoint(id)
+	return monitor.backend().ReadMeasuringPoint(id)
 }
 
 // MeasuringPointsDo performs the function f for
@@ -251,7 +266,7 @@ func ReadMeasuringPoint(id string) (MeasuringPoint, error) {
 func MeasuringPointsDo(f func(MeasuringPoint)) error {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.MeasuringPointsDo(f)
+	return monitor.backend().MeasuringPointsDo(f)
 }
 
 // MeasuringPointsWrite prints the measuring points for which
@@ -281,28 +296,28 @@ func MeasuringPointsPrintAll() error {
 func SetVariable(id string, v int64) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	monitor.backend.SetVariable(id, v)
+	monitor.backend().SetVariable(id, v)
 }
 
 // IncrVariable increases a stay-set variable.
 func IncrVariable(id string) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	monitor.backend.IncrVariable(id)
+	monitor.backend().IncrVariable(id)
 }
 
 // DecrVariable decreases a stay-set variable.
 func DecrVariable(id string) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	monitor.backend.DecrVariable(id)
+	monitor.backend().DecrVariable(id)
 }
 
 // ReadVariable returns the stay-set variable for an id.
 func ReadVariable(id string) (StaySetVariable, error) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.ReadVariable(id)
+	return monitor.backend().ReadVariable(id)
 }
 
 // StaySetVariablesDo performs the function f for all
@@ -310,7 +325,7 @@ func ReadVariable(id string) (StaySetVariable, error) {
 func StaySetVariablesDo(f func(StaySetVariable)) error {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.StaySetVariablesDo(f)
+	return monitor.backend().StaySetVariablesDo(f)
 }
 
 // StaySetVariablesWrite prints the stay-set variables for which
@@ -340,14 +355,14 @@ func StaySetVariablesPrintAll() error {
 func Register(id string, rf DynamicStatusRetriever) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	monitor.backend.Register(id, rf)
+	monitor.backend().Register(id, rf)
 }
 
 // ReadStatus returns the dynamic status for an id.
 func ReadStatus(id string) (string, error) {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.ReadStatus(id)
+	return monitor.backend().ReadStatus(id)
 }
 
 // DynamicStatusValuesDo performs the function f for all
@@ -355,7 +370,7 @@ func ReadStatus(id string) (string, error) {
 func DynamicStatusValuesDo(f func(DynamicStatusValue)) error {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.DynamicStatusValuesDo(f)
+	return monitor.backend().DynamicStatusValuesDo(f)
 }
 
 // DynamicStatusValuesWrite prints the status values for which
@@ -385,7 +400,7 @@ func DynamicStatusValuesPrintAll() error {
 func SetMeasuringsFilter(f IDFilter) IDFilter {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.SetMeasuringsFilter(f)
+	return monitor.backend().SetMeasuringsFilter(f)
 }
 
 // SetMeasuringFilter sets the new filter for variables
@@ -393,7 +408,7 @@ func SetMeasuringsFilter(f IDFilter) IDFilter {
 func SetVariablesFilter(f IDFilter) IDFilter {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.SetVariablesFilter(f)
+	return monitor.backend().SetVariablesFilter(f)
 }
 
 // SetRetrieversFilter sets the new filter for status retrievers
@@ -401,14 +416,14 @@ func SetVariablesFilter(f IDFilter) IDFilter {
 func SetRetrieversFilter(f IDFilter) IDFilter {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.SetRetrieversFilter(f)
+	return monitor.backend().SetRetrieversFilter(f)
 }
 
 // Reset clears all monitored values.
 func Reset() error {
 	monitor.RLock()
 	defer monitor.RUnlock()
-	return monitor.backend.Reset()
+	return monitor.backend().Reset()
 }
 
 // EOF
