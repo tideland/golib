@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"strings"
 	"time"
 
@@ -35,7 +36,7 @@ type key int
 var (
 	etcKey    key = 0
 	etcRoot       = []string{"etc"}
-	defaulter     = stringex.NewDefaulter("etc", true)
+	defaulter     = stringex.NewDefaulter("etc", false)
 )
 
 //--------------------
@@ -129,16 +130,20 @@ func Read(source io.Reader) (Etc, error) {
 	if err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	tree, err := builder.Tree()
+	values, err := builder.Tree()
 	if err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	if err := tree.At("etc").Error(); err != nil {
+	if err = values.At("etc").Error(); err != nil {
 		return nil, errors.Annotate(err, ErrIllegalSourceFormat, errorMessages)
 	}
-	return &etc{
-		values: tree,
-	}, nil
+	cfg := &etc{
+		values: values,
+	}
+	if err = cfg.postProcess(); err != nil {
+		return nil, errors.Annotate(err, ErrCannotPostProcess, errorMessages)
+	}
+	return cfg, nil
 }
 
 // ReadString reads the SML source of the configuration from a
@@ -258,6 +263,36 @@ func (e *etc) valueAt(path string) *value {
 	fullPath := makeFullPath(path)
 	changer := e.values.At(fullPath...)
 	return &value{fullPath, changer}
+}
+
+// postProcess replaces templates formated [path||default]
+// with values found at that path or the default.
+func (e *etc) postProcess() error {
+	re := regexp.MustCompile("\\[.+(||.+)\\]")
+	// Find all entries with template.
+	changers := e.values.FindAll(func(k, v string) (bool, error) {
+		return re.MatchString(v), nil
+	})
+	// Change the template.
+	for _, changer := range changers {
+		value, err := changer.Value()
+		if err != nil {
+			return err
+		}
+		found := re.FindString(value)
+		pathDefault := strings.SplitN(found[1:len(found)-1], "||", 2)
+		dv := found
+		if len(pathDefault) > 1 {
+			dv = pathDefault[1]
+		}
+		substitute := e.ValueAsString(pathDefault[0], dv)
+		replaced := strings.Replace(value, found, substitute, -1)
+		_, err = changer.SetValue(replaced)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 //--------------------

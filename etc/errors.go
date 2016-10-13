@@ -23,6 +23,7 @@ const (
 	ErrIllegalSourceFormat = iota + 1
 	ErrIllegalConfigSource
 	ErrCannotReadFile
+	ErrCannotPostProcess
 	ErrInvalidPath
 	ErrCannotSplit
 	ErrCannotApply
@@ -32,6 +33,7 @@ var errorMessages = errors.Messages{
 	ErrIllegalSourceFormat: "illegal source format",
 	ErrIllegalConfigSource: "illegal source for configuration: %v",
 	ErrCannotReadFile:      "cannot read configuration file %q",
+	ErrCannotPostProcess:   "cannot post-process configuration: %q",
 	ErrInvalidPath:         "invalid configuration path %q",
 	ErrCannotSplit:         "cannot split configuration",
 	ErrCannotApply:         "cannot apply values to configuration",

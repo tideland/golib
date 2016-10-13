@@ -15,7 +15,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.9.0
+Version 4.10.0
 
 ## Packages
 
@@ -54,7 +54,8 @@ Detailed error values.
 
 #### Etc
 
-Reading and parsing of SML-formatted configurations.
+Reading and parsing of SML-formatted configurations including substituion
+of templates.
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/etc?status.svg)](https://godoc.org/github.com/tideland/golib/etc)
 
