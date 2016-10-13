@@ -1,6 +1,6 @@
 // Tideland Go Library - Etc - Unit Tests
 //
-// Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -22,7 +22,7 @@ import (
 )
 
 //--------------------
-// cfg
+// TESTS
 //--------------------
 
 // TestRead tests reading a configuration out of a reader.
@@ -77,6 +77,48 @@ func TestReadFile(t *testing.T) {
 	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
 }
 
+// TestTemplates tests the substitution of templates.
+func TestTemplates(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := `{etc
+	{a foo}
+	{tests
+		{valid-a x[a]x}
+		{valid-b x[sub/b]x}
+		{invalid-c x[c||123]x}
+		{invalid-d x[sub/d||456]x}
+		{invalid-e x[unknown]x}
+		{invalid-f x[]x}
+		{invalid-g x[||]x}
+	}
+	{sub {b bar}}
+	}`
+	cfg, err := etc.Read(strings.NewReader(source))
+	assert.Nil(err)
+
+	// First test regular ones, then those with templates.
+	vs := cfg.ValueAsString("a", "xxx")
+	assert.Equal(vs, "foo")
+	vs = cfg.ValueAsString("sub/b", "xxx")
+	assert.Equal(vs, "bar")
+
+	vs = cfg.ValueAsString("tests/valid-a", "xxx")
+	assert.Equal(vs, "xfoox")
+	vs = cfg.ValueAsString("tests/valid-b", "xxx")
+	assert.Equal(vs, "xbarx")
+	vs = cfg.ValueAsString("tests/invalid-c", "xxx")
+	assert.Equal(vs, "x123x")
+	vs = cfg.ValueAsString("tests/invalid-d", "xxx")
+	assert.Equal(vs, "x456x")
+	vs = cfg.ValueAsString("tests/invalid-e", "xxx")
+	assert.Equal(vs, "x[unknown]x")
+	vs = cfg.ValueAsString("tests/invalid-f", "xxx")
+	assert.Equal(vs, "x[]x")
+	vs = cfg.ValueAsString("tests/invalid-g", "xxx")
+	assert.Equal(vs, "xx")
+}
+
 // TestHasPath tests the checking of paths.
 func TestHasPath(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
@@ -106,7 +148,8 @@ func TestValueSuccess(t *testing.T) {
 		{a
 			World}
 		{b
-			42}}}`
+			42}
+	}}`
 	cfg, err := etc.Read(strings.NewReader(source))
 	assert.Nil(err)
 

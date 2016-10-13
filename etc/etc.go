@@ -36,7 +36,7 @@ type key int
 var (
 	etcKey    key = 0
 	etcRoot       = []string{"etc"}
-	defaulter     = stringex.NewDefaulter("etc", true)
+	defaulter     = stringex.NewDefaulter("etc", false)
 )
 
 //--------------------
@@ -281,13 +281,13 @@ func (e *etc) postProcess() error {
 		}
 		found := re.FindString(value)
 		pathDefault := strings.SplitN(found[1:len(found)-1], "||", 2)
-		dv := ""
+		dv := found
 		if len(pathDefault) > 1 {
 			dv = pathDefault[1]
 		}
 		substitute := e.ValueAsString(pathDefault[0], dv)
 		replaced := strings.Replace(value, found, substitute, -1)
-		_, err =changer.SetValue(replaced)
+		_, err = changer.SetValue(replaced)
 		if err != nil {
 			return err
 		}

@@ -1,10 +1,15 @@
 # Tideland Go Library
 
+## 2016-10-13
+
+- *Etc* now can handle templates substituted with values from other
+  configuration variables or defaults
+
 ## 2016-10-07
 
 - Added context handling to *etc* package
 - Added *HasPath()* to *Etc*
-- Added *DoAllDeep()* to the missing tree packages
+- Added *DoAllDeep()* to the missing tree types in *collections*
 
 ## 2016-10-06
 
