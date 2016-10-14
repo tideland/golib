@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2016-10-14
+
+- Backend in *monitoring* is now lazy loading
+- Fixed splitting bug in *etc*
+
 ## 2016-10-13
 
 - *Etc* now can handle templates substituted with values from other
