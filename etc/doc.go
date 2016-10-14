@@ -54,7 +54,7 @@ import (
 
 // Version returns the version of the SML package.
 func Version() version.Version {
-	return version.New(1, 6, 0)
+	return version.New(1, 6, 1)
 }
 
 // EOF

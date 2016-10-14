@@ -216,6 +216,14 @@ func TestSplit(t *testing.T) {
 	assert.Equal(ac, "A2")
 	ac = cfg.ValueAsString("c", "A3")
 	assert.Equal(ac, "A3")
+
+	// Try an illegal splitting.
+	subcfg, err = cfg.Split("some/invalid/path")
+	assert.Nil(err)
+	va = subcfg.ValueAsString("a", "Foo")
+	assert.Equal(va, "Foo")
+	vb = subcfg.ValueAsString("b", "Bar")
+	assert.Equal(vb, "Bar")
 }
 
 // TestDump tests the dumping of a configuration.
