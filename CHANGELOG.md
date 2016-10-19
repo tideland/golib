@@ -1,8 +1,10 @@
 # Tideland Go Library
 
-## 2016-10-xx
+## 2016-10-19
 
 - Backend in *monitoring* is now lazy loading
+- *stringex* package now nows a simple *StringValuer*
+- *configuration* and *web* are now removed
 
 ## 2016-10-13
 

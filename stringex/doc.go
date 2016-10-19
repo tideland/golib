@@ -20,9 +20,9 @@ import (
 // VERSION
 //--------------------
 
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(1, 1, 0)
+// Version returns the version of the stringex package.
+func Version() version.Version {
+	return version.New(1, 2, 0)
 }
 
 // EOF
