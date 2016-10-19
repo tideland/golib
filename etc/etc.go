@@ -105,6 +105,8 @@ type Etc interface {
 	// Spit produces a subconfiguration below the passed path.
 	// The last path part will be the new root, all values below
 	// that configuration node will be below the created root.
+	// In case of an invalid path an empty configuration will
+	// be returned as default.
 	Split(path string) (Etc, error)
 
 	// Dunp creates a map of paths and their values to apply
@@ -207,6 +209,10 @@ func (e *etc) ValueAsDuration(path string, dv time.Duration) time.Duration {
 
 // Split implements the Etc interface.
 func (e *etc) Split(path string) (Etc, error) {
+	if !e.HasPath(path) {
+		// Path not found, return empty configuration.
+		return ReadString("{etc}")
+	}
 	fullPath := makeFullPath(path)
 	values, err := e.values.CopyAt(fullPath...)
 	if err != nil {
