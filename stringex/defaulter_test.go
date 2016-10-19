@@ -343,6 +343,22 @@ func TestDefaulterString(t *testing.T) {
 	assert.Equal(s, "Defaulter{my-id}")
 }
 
+// TestStringValuer checks the simple valuer for plain strings.
+func StringValuer(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	d := stringex.NewDefaulter("StringValuer", false)
+	sv := stringex.StringValuer("4711")
+
+	assert.Equal(d.AsString(sv, "12345"), "4711")
+	assert.Equal(d.AsInt(sv, 12345), 4711)
+
+	sv = stringex.StringValuer("")
+
+	assert.Equal(d.AsString(sv, "12345"), "12345")
+	assert.Equal(d.AsInt(sv, 12345), 12345)
+}
+
 //--------------------
 // HELPER
 //--------------------

@@ -15,7 +15,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.10.1
+Version 4.11.0
 
 ## Packages
 
@@ -37,14 +37,6 @@ Lazy Loading and Caching of Values.
 Different additional collection types like ring buffer, stack, tree, and more.
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/collections?status.svg)](https://godoc.org/github.com/tideland/golib/collections)
-
-#### Configuration
-
-Reading and parsing of SML-formatted configurations.
-
-**DEPRECATED**
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/configuration?status.svg)](https://godoc.org/github.com/tideland/golib/configuration)
 
 #### Errors
 
@@ -156,14 +148,6 @@ Helpful functions around dates and times.
 Documentation of semantic versions.
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/version?status.svg)](https://godoc.org/github.com/tideland/golib/version)
-
-#### Web
-
-RESTful web request handling.
-
-**DEPRECATED**
-
-[![GoDoc](https://godoc.org/github.com/tideland/golib/web?status.svg)](https://godoc.org/github.com/tideland/golib/web)
 
 ## Contributors
 

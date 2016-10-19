@@ -12,6 +12,7 @@ package stringex
 //--------------------
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -271,6 +272,22 @@ func (d *defaulter) logError(format string, err error) {
 	} else {
 		logger.Errorf(format, err)
 	}
+}
+
+//--------------------
+// STRING VALUER
+//--------------------
+
+// StringValuer implements the Valuer interface for simple strings.
+type StringValuer string
+
+// Value implements the Valuer interface.
+func (sv StringValuer) Value() (string, error) {
+	v := string(sv)
+	if len(v) == 0 {
+		return "", errors.New("[-empty-]")
+	}
+	return v, nil
 }
 
 // EOF
