@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2016-11-01
+
+- Added *SetLevelString()* to *logger* for setting the level
+  out of readable configuration data
+- Fixed a build problem on Windows for *logger*
 
 ## 2016-10-19
 

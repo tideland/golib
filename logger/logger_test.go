@@ -1,6 +1,6 @@
 // Tideland Go Library - Logger - Unit Tests
 //
-// Copyright (C) 2012-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -27,6 +27,8 @@ import (
 // TestGetSetLevel tests the setting of the logging level.
 func TestGetSetLevel(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	level := logger.Level()
+	defer logger.SetLevel(level)
 
 	ownLogger := &testLogger{}
 	logger.SetLogger(ownLogger)
@@ -49,9 +51,49 @@ func TestGetSetLevel(t *testing.T) {
 	assert.Length(ownLogger.logs, 2)
 }
 
+// TestGetSetLevelString tests the setting of the
+// logging level with a string.
+func TestGetSetLevelString(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	level := logger.Level()
+	defer logger.SetLevel(level)
+
+	ownLogger := &testLogger{}
+	logger.SetLogger(ownLogger)
+	logger.SetLevelString("dEbUg")
+	logger.Debugf("Debug.")
+	logger.Infof("Info.")
+	logger.Warningf("Warning.")
+	logger.Errorf("Error.")
+	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 5)
+
+	ownLogger = &testLogger{}
+	logger.SetLogger(ownLogger)
+	logger.SetLevelString("error")
+	logger.Debugf("Debug.")
+	logger.Infof("Info.")
+	logger.Warningf("Warning.")
+	logger.Errorf("Error.")
+	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 2)
+
+	ownLogger = &testLogger{}
+	logger.SetLogger(ownLogger)
+	logger.SetLevelString("dont-know-what-you-mean")
+	logger.Debugf("Debug.")
+	logger.Infof("Info.")
+	logger.Warningf("Warning.")
+	logger.Errorf("Error.")
+	logger.Criticalf("Critical.")
+	assert.Length(ownLogger.logs, 2)
+}
+
 // TestFiltering tests the filtering of the logging.
 func TestFiltering(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	level := logger.Level()
+	defer logger.SetLevel(level)
 
 	ownLogger := &testLogger{}
 	logger.SetLogger(ownLogger)
@@ -81,6 +123,9 @@ func TestFiltering(t *testing.T) {
 
 // TestGoLogger tests logging with the go logger.
 func TestGoLogger(t *testing.T) {
+	level := logger.Level()
+	defer logger.SetLevel(level)
+
 	log.SetOutput(os.Stdout)
 
 	logger.SetLevel(logger.LevelDebug)
@@ -96,6 +141,8 @@ func TestGoLogger(t *testing.T) {
 // TestSysLogger tests logging with the syslogger.
 func TestSysLogger(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	level := logger.Level()
+	defer logger.SetLevel(level)
 
 	logger.SetLevel(logger.LevelDebug)
 
@@ -114,6 +161,8 @@ func TestSysLogger(t *testing.T) {
 func TestOwnLogger(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	ownLogger := &testLogger{}
+	level := logger.Level()
+	defer logger.SetLevel(level)
 
 	logger.SetLevel(logger.LevelDebug)
 	logger.SetLogger(ownLogger)
@@ -132,6 +181,9 @@ func TestOwnLogger(t *testing.T) {
 func TestFatalExit(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	ownLogger := &testLogger{}
+	level := logger.Level()
+	defer logger.SetLevel(level)
+
 	exited := false
 	fatalExiter := func() {
 		exited = true

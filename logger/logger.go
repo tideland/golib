@@ -1,6 +1,6 @@
 // Tideland Go Library - Logger
 //
-// Copyright (C) 2012-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -93,6 +93,32 @@ func SetLevel(level LogLevel) LogLevel {
 		logLevel = LevelFatal
 	default:
 		logLevel = level
+	}
+	return current
+}
+
+// SetLevelString switches to a new log level passed as
+// string. Accepted are the values "debug", "info", "warning"
+// "error", "critical", and "fatal". The passed string will
+// be set to lower-case. The function is intended to be used
+// when then log level is read out of a configuration.
+func SetLevelString(levelstr string) LogLevel {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+	current := logLevel
+	switch strings.ToLower(levelstr) {
+	case "debug":
+		logLevel = LevelDebug
+	case "info":
+		logLevel = LevelInfo
+	case "warning":
+		logLevel = LevelWarning
+	case "error":
+		logLevel = LevelError
+	case "critical":
+		logLevel = LevelCritical
+	case "fatal":
+		logLevel = LevelFatal
 	}
 	return current
 }
