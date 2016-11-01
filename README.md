@@ -151,7 +151,7 @@ Documentation of semantic versions.
 
 ## Contributors
 
-- Frank Mueller (https://github.com/TheMue / https://github.com/tideland)
+- Frank Mueller (https://github.com/themue / https://github.com/tideland)
 - Alex Browne (https://github.com/albrow)
 - Tim Heckman (https://github.com/theckman)
 - Benedikt Lang (https://github.com/blang)
