@@ -5,7 +5,7 @@
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// +build windows,plan9
+// +build windows plan9 nacl
 
 package logger
 
@@ -33,7 +33,7 @@ func NewSysLogger(tag string) (Logger, error) {
 	if len(tag) > 0 {
 		tag = "(" + tag + ")"
 	}
-	return &SysLogger{tag}
+	return &SysLogger{tag}, nil
 }
 
 // Debug is specified on the Logger interface.

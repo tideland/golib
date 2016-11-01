@@ -1,11 +1,11 @@
 // Tideland Go Library - Logger - SysLogger
 //
-// Copyright (C) 2012-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// +build !windows,!plan9
+// +build !windows,!nacl,!plan9
 
 package logger
 
