@@ -94,6 +94,32 @@ func New(major, minor, patch int, prmds ...string) Version {
 	return v
 }
 
+// Parse retrieves a version out of a string.
+func Parse(v string) (Version, error) {
+	// Split version, pre-release, and metadata.
+	vparts := strings.SplitN(v, "-", 2)
+	vsnstr := ""
+	prmdstr := ""
+	switch len(vparts) {
+	case 0:
+		// TODO Mue 2016-11-13 Error.
+		return nil, errors.New()
+	case 1:
+		vsnstr = parts[0]
+	case 2:
+		vsnstr = parts[0]
+		prmdstr = parts[1]
+	}
+	// Parse the version string.
+	major := 1
+	minor := 0
+	patch := 0
+	// Parse pre-release and metadata string.
+	prmds := []string{}
+	// Done.
+	return New(major, minor, patch, prmds...), nil
+}
+
 // Major returns the major version.
 func (v *vsn) Major() int {
 	return v.major
@@ -152,7 +178,7 @@ func (v *vsn) Less(cv Version) bool {
 
 // String returns the version as string.
 func (v *vsn) String() string {
-	vs := fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
+	vs := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 	if len(v.preRelease) > 0 {
 		vs += "-" + v.PreRelease()
 	}
