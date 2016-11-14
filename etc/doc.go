@@ -40,21 +40,4 @@
 // isn't set to "./service-a". If nothing is set the default value is ".".
 package etc
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// Version returns the version of the SML package.
-func Version() version.Version {
-	return version.New(1, 6, 1)
-}
-
 // EOF

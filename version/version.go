@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/tideland/golib/errors"
 )
 
 //--------------------
@@ -95,29 +97,27 @@ func New(major, minor, patch int, prmds ...string) Version {
 }
 
 // Parse retrieves a version out of a string.
-func Parse(v string) (Version, error) {
+func Parse(vsnstr string) (Version, error) {
 	// Split version, pre-release, and metadata.
-	vparts := strings.SplitN(v, "-", 2)
-	vsnstr := ""
-	prmdstr := ""
-	switch len(vparts) {
-	case 0:
-		// TODO Mue 2016-11-13 Error.
-		return nil, errors.New()
-	case 1:
-		vsnstr = parts[0]
-	case 2:
-		vsnstr = parts[0]
-		prmdstr = parts[1]
+	npmstrs, err := splitVersionString(vsnstr)
+	if err != nil {
+		return nil, err
 	}
-	// Parse the version string.
-	major := 1
-	minor := 0
-	patch := 0
-	// Parse pre-release and metadata string.
+	// Parse these parts.
+	nums, err := parseNumberString(npmstrs[0])
+	if err != nil {
+		return nil, err
+	}
 	prmds := []string{}
+	if npmstrs[1] != "" {
+		prmds = strings.Split(npmstrs[1], ".")
+	}
+	if npmstrs[2] != "" {
+		prmds = append(prmds, Metadata)
+		prmds = append(prmds, strings.Split(npmstrs[2], ".")...)
+	}
 	// Done.
-	return New(major, minor, patch, prmds...), nil
+	return New(nums[0], nums[1], nums[2], prmds...), nil
 }
 
 // Major returns the major version.
@@ -183,7 +183,7 @@ func (v *vsn) String() string {
 		vs += "-" + v.PreRelease()
 	}
 	if len(v.metadata) > 0 {
-		vs += "+" + v.Metadata()
+		vs += Metadata + v.Metadata()
 	}
 	return vs
 }
@@ -260,6 +260,52 @@ func numericLess(a, b string) (bool, bool) {
 		return false, false
 	}
 	return an < bn, true
+}
+
+// splitVersionString seperates the version string into numbers,
+// pre-release, and metadata strings.
+func splitVersionString(vsnstr string) ([]string, error) {
+	npXm := strings.SplitN(vsnstr, Metadata, 2)
+	switch len(npXm) {
+	case 1:
+		nXp := strings.SplitN(npXm[0], "-", 2)
+		switch len(nXp) {
+		case 1:
+			return []string{nXp[0], "", ""}, nil
+		case 2:
+			return []string{nXp[0], nXp[1], ""}, nil
+		}
+	case 2:
+		nXp := strings.SplitN(npXm[0], "-", 2)
+		switch len(nXp) {
+		case 1:
+			return []string{nXp[0], "", npXm[1]}, nil
+		case 2:
+			return []string{nXp[0], nXp[1], npXm[1]}, nil
+		}
+	}
+	return nil, errors.New(ErrIllegalVersionFormat, errorMessages)
+}
+
+// parseNumberString retrieves major, minor, and patch number
+// of the passed string.
+func parseNumberString(nstr string) ([]int, error) {
+	nstrs := strings.Split(nstr, ".")
+	if len(nstrs) < 1 || len(nstrs) > 3 {
+		return nil, errors.New(ErrIllegalVersionFormat, errorMessages)
+	}
+	vsn := []int{1, 0, 0}
+	for i, nstr := range nstrs {
+		num, err := strconv.Atoi(nstr)
+		if err != nil {
+			return nil, errors.Annotate(err, ErrIllegalVersionFormat, errorMessages)
+		}
+		if num < 0 {
+			return nil, errors.New(ErrIllegalVersionFormat, errorMessages)
+		}
+		vsn[i] = num
+	}
+	return vsn, nil
 }
 
 // EOF

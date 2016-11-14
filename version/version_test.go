@@ -1,6 +1,6 @@
 // Tideland Go Library - Version - Unit Tests
 //
-// Copyright (C) 2014-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2014-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -22,9 +22,9 @@ import (
 // TESTS
 //--------------------
 
-// TestVersion tests the creation of a new versions and their
-// accessor ethods.
-func TestVersion(t *testing.T) {
+// TestNew tests the creation of new versions and their
+// accessor methods.
+func TestNew(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	tests := []struct {
 		id         string
@@ -36,7 +36,7 @@ func TestVersion(t *testing.T) {
 		metadata   string
 	}{
 		{
-			id:         "v1.2.3",
+			id:         "1.2.3",
 			vsn:        version.New(1, 2, 3),
 			major:      1,
 			minor:      2,
@@ -44,7 +44,7 @@ func TestVersion(t *testing.T) {
 			preRelease: "",
 			metadata:   "",
 		}, {
-			id:         "v1.0.3",
+			id:         "1.0.3",
 			vsn:        version.New(1, -2, 3),
 			major:      1,
 			minor:      0,
@@ -52,7 +52,7 @@ func TestVersion(t *testing.T) {
 			preRelease: "",
 			metadata:   "",
 		}, {
-			id:         "v1.2.3-alpha.2014-08-03",
+			id:         "1.2.3-alpha.2014-08-03",
 			vsn:        version.New(1, 2, 3, "alpha", "2014-08-03"),
 			major:      1,
 			minor:      2,
@@ -60,7 +60,7 @@ func TestVersion(t *testing.T) {
 			preRelease: "alpha.2014-08-03",
 			metadata:   "",
 		}, {
-			id:         "v1.2.3-alphabeta.7.11",
+			id:         "1.2.3-alphabeta.7.11",
 			vsn:        version.New(1, 2, 3, "alpha beta", "007", "1+1"),
 			major:      1,
 			minor:      2,
@@ -68,7 +68,7 @@ func TestVersion(t *testing.T) {
 			preRelease: "alphabeta.7.11",
 			metadata:   "",
 		}, {
-			id:         "v1.2.3+007.a",
+			id:         "1.2.3+007.a",
 			vsn:        version.New(1, 2, 3, version.Metadata, "007", "a"),
 			major:      1,
 			minor:      2,
@@ -76,7 +76,7 @@ func TestVersion(t *testing.T) {
 			preRelease: "",
 			metadata:   "007.a",
 		}, {
-			id:         "v1.2.3-alpha+007.a",
+			id:         "1.2.3-alpha+007.a",
 			vsn:        version.New(1, 2, 3, "alpha", version.Metadata, "007", "a"),
 			major:      1,
 			minor:      2,
@@ -84,7 +84,7 @@ func TestVersion(t *testing.T) {
 			preRelease: "alpha",
 			metadata:   "007.a",
 		}, {
-			id:         "v1.2.3-ALPHA+007.a",
+			id:         "1.2.3-ALPHA+007.a",
 			vsn:        version.New(1, 2, 3, "ALPHA", version.Metadata, "007", "a"),
 			major:      1,
 			minor:      2,
@@ -93,7 +93,7 @@ func TestVersion(t *testing.T) {
 			metadata:   "007.a",
 		},
 	}
-
+	// Perform tests.
 	for i, test := range tests {
 		assert.Logf("test #%d: %q", i, test.id)
 		assert.Equal(test.vsn.Major(), test.major)
@@ -102,6 +102,88 @@ func TestVersion(t *testing.T) {
 		assert.Equal(test.vsn.PreRelease(), test.preRelease)
 		assert.Equal(test.vsn.Metadata(), test.metadata)
 		assert.Equal(test.vsn.String(), test.id)
+	}
+}
+
+// TestParse tests the creation of new versions and their
+// accessor methods by parsing strings.
+func TestParse(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tests := []struct {
+		id         string
+		err        string
+		major      int
+		minor      int
+		patch      int
+		preRelease string
+		metadata   string
+	}{
+		{
+			id:         "1.2.3",
+			major:      1,
+			minor:      2,
+			patch:      3,
+			preRelease: "",
+			metadata:   "",
+		}, {
+			id:         "1.0.3",
+			major:      1,
+			minor:      0,
+			patch:      3,
+			preRelease: "",
+			metadata:   "",
+		}, {
+			id:         "1.2.3-alpha.2016-11-14",
+			major:      1,
+			minor:      2,
+			patch:      3,
+			preRelease: "alpha.2016-11-14",
+			metadata:   "",
+		}, {
+			id:         "1.2.3-alphabeta.7.11",
+			major:      1,
+			minor:      2,
+			patch:      3,
+			preRelease: "alphabeta.7.11",
+			metadata:   "",
+		}, {
+			id:         "1.2.3+007.a",
+			major:      1,
+			minor:      2,
+			patch:      3,
+			preRelease: "",
+			metadata:   "007.a",
+		}, {
+			id:         "1.2.3-alpha+007.a",
+			major:      1,
+			minor:      2,
+			patch:      3,
+			preRelease: "alpha",
+			metadata:   "007.a",
+		}, {
+			id:         "1.2.3-ALPHA+007.a",
+			major:      1,
+			minor:      2,
+			patch:      3,
+			preRelease: "ALPHA",
+			metadata:   "007.a",
+		},
+	}
+	// Perform tests.
+	for i, test := range tests {
+		assert.Logf("test #%d: %q", i, test.id)
+		vsn, err := version.Parse(test.id)
+		if test.err != "" {
+			assert.ErrorMatch(err, test.err)
+			continue
+		}
+		assert.Nil(err)
+		assert.Equal(vsn.Major(), test.major)
+		assert.Equal(vsn.Minor(), test.minor)
+		assert.Equal(vsn.Patch(), test.patch)
+		assert.Equal(vsn.PreRelease(), test.preRelease)
+		assert.Equal(vsn.Metadata(), test.metadata)
+		assert.Equal(vsn.String(), test.id)
 	}
 }
 
@@ -175,7 +257,7 @@ func TestLess(t *testing.T) {
 			less: false,
 		},
 	}
-
+	// Perform tests.
 	for i, test := range tests {
 		assert.Logf("test #%d: %q < %q", i, test.vsnA, test.vsnB)
 		assert.Equal(test.vsnA.Less(test.vsnB), test.less)
