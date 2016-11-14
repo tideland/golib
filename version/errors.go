@@ -24,7 +24,7 @@ const (
 )
 
 var errorMessages = errors.Messages{
-	ErrIllegalVersionFormat: "illegal version format",
+	ErrIllegalVersionFormat: "illegal version format: %s",
 }
 
 // EOF

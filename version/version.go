@@ -284,7 +284,7 @@ func splitVersionString(vsnstr string) ([]string, error) {
 			return []string{nXp[0], nXp[1], npXm[1]}, nil
 		}
 	}
-	return nil, errors.New(ErrIllegalVersionFormat, errorMessages)
+	return nil, errors.New(ErrIllegalVersionFormat, errorMessages, "wrong parts")
 }
 
 // parseNumberString retrieves major, minor, and patch number
@@ -292,16 +292,16 @@ func splitVersionString(vsnstr string) ([]string, error) {
 func parseNumberString(nstr string) ([]int, error) {
 	nstrs := strings.Split(nstr, ".")
 	if len(nstrs) < 1 || len(nstrs) > 3 {
-		return nil, errors.New(ErrIllegalVersionFormat, errorMessages)
+		return nil, errors.New(ErrIllegalVersionFormat, errorMessages, "wrong number parts")
 	}
 	vsn := []int{1, 0, 0}
 	for i, nstr := range nstrs {
 		num, err := strconv.Atoi(nstr)
 		if err != nil {
-			return nil, errors.Annotate(err, ErrIllegalVersionFormat, errorMessages)
+			return nil, errors.New(ErrIllegalVersionFormat, errorMessages, err.Error())
 		}
 		if num < 0 {
-			return nil, errors.New(ErrIllegalVersionFormat, errorMessages)
+			return nil, errors.New(ErrIllegalVersionFormat, errorMessages, "negative version number")
 		}
 		vsn[i] = num
 	}

@@ -111,6 +111,7 @@ func TestParse(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	tests := []struct {
 		id         string
+		vsn        string
 		err        string
 		major      int
 		minor      int
@@ -119,6 +120,22 @@ func TestParse(t *testing.T) {
 		metadata   string
 	}{
 		{
+			id:         "1",
+			vsn:        "1.0.0",
+			major:      1,
+			minor:      0,
+			patch:      0,
+			preRelease: "",
+			metadata:   "",
+		}, {
+			id:         "1.1",
+			vsn:        "1.1.0",
+			major:      1,
+			minor:      1,
+			patch:      0,
+			preRelease: "",
+			metadata:   "",
+		}, {
 			id:         "1.2.3",
 			major:      1,
 			minor:      2,
@@ -167,6 +184,27 @@ func TestParse(t *testing.T) {
 			patch:      3,
 			preRelease: "ALPHA",
 			metadata:   "007.a",
+		}, {
+			id:  "",
+			err: `.* illegal version format: .*ParseInt.*`,
+		}, {
+			id:  "a",
+			err: `.* illegal version format: .*ParseInt.*`,
+		}, {
+			id:  "1.a",
+			err: `.* illegal version format: .*ParseInt.*`,
+		}, {
+			id:  "1,1",
+			err: `.* illegal version format: .*ParseInt.*`,
+		}, {
+			id:  "-1",
+			err: `.* illegal version format: .*ParseInt.*`,
+		}, {
+			id:  "1.-1",
+			err: `.* illegal version format: .*ParseInt.*`,
+		}, {
+			id:  "+",
+			err: `.* illegal version format: .*ParseInt.*`,
 		},
 	}
 	// Perform tests.
@@ -183,7 +221,11 @@ func TestParse(t *testing.T) {
 		assert.Equal(vsn.Patch(), test.patch)
 		assert.Equal(vsn.PreRelease(), test.preRelease)
 		assert.Equal(vsn.Metadata(), test.metadata)
-		assert.Equal(vsn.String(), test.id)
+		if test.vsn != "" {
+			assert.Equal(vsn.String(), test.vsn)
+		} else {
+			assert.Equal(vsn.String(), test.id)
+		}
 	}
 }
 
