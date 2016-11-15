@@ -30,21 +30,4 @@
 // is not needed anymore it can be closed using sub.Close().
 package redis
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(4, 0, 2)
-}
-
 // EOF

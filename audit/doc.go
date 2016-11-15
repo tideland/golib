@@ -28,21 +28,4 @@
 // a safe and convenient way.
 package audit
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(4, 3, 0)
-}
-
 // EOF

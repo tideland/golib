@@ -30,21 +30,4 @@
 // See the example functions for more information.
 package loop
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the loop package.
-func PackageVersion() version.Version {
-	return version.New(4, 1, 0)
-}
-
 // EOF

@@ -8,21 +8,4 @@
 // The Tideland Go Library stringex package helps when working with strings.
 package stringex
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// Version returns the version of the stringex package.
-func Version() version.Version {
-	return version.New(1, 2, 0)
-}
-
 // EOF

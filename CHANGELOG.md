@@ -1,5 +1,12 @@
 # Tideland Go Library
 
+## 2016-11-15
+
+- Added *Parse()* and *Compare()* to *version*
+- Added package *library* for functions representing the whole
+  Go Library; currently only containing *Version()*
+- Extended *etc* to retrieve values out of environment variables
+
 ## 2016-11-01
 
 - Added *SetLevelString()* to *logger* for setting the level

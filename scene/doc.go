@@ -80,21 +80,4 @@
 // So scene.StartLimited(0, 0) is the same as scene.Start().
 package scene
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(2, 0, 0)
-}
-
 // EOF

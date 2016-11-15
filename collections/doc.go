@@ -12,21 +12,4 @@
 // this has to be done by the user.
 package collections
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(2, 5, 0)
-}
-
 // EOF

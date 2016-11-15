@@ -14,21 +14,4 @@
 // processor. The latter is used e.g. for printing SML documents.
 package sml
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// Version returns the version of the SML package.
-func Version() version.Version {
-	return version.New(3, 1, 1)
-}
-
 // EOF

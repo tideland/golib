@@ -1,6 +1,6 @@
 // Tideland Go Library - Errors
 //
-// Copyright (C) 2013-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -25,22 +25,5 @@
 // case of a chain of annotated errors those can be retrieved as a
 // slice of errors with Stack().
 package errors
-
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(4, 0, 0)
-}
 
 // EOF

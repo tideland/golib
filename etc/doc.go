@@ -11,7 +11,7 @@
 //
 //     {etc
 //         {global
-//             {base-directory /var/lib/myserver}
+//             {base-directory [$BASEDIR||/var/lib/myserver]}
 //             {host-address localhost:1234}
 //             {max-users 50}
 //         }
@@ -28,33 +28,21 @@
 //
 // The leading "etc" node of the path is set by default.
 //
-// If values contain templates formatted [path||default] the configuration
-// tries to read the value out of the given path and replace the template.
-// The default value is optional. It will be used, if the path cannot
-// be found. If the path is invalid and has no default the template will
-// stay inside the value. So accessing the directory of service-a by
+// If values contain templates formatted [<env-or-path>||<default>] the
+// configuration tries to read the value out of the environment (if the
+// name starts with a dollar sign) or given path inside the configuration.
+// This will be done tope-down. So like in the example above the global
+// base directory will be retrieved out of the environment and can later be
+// referenced by another entry. The default value is optional. It will be
+// used, if the environment variable or the path cannot be found. If a
+// path is invalid and has no default the template will stay inside the
+// value. So accessing the directory of service-a by
 //
 //     svcDir := cfg.ValueAsString("service-a/directory", ".")
 //
 // leads to "/var/lib/myserver/service-a" and if the base directory
-// isn't set to "./service-a". If nothing is set the default value is ".".
+// isn't set to "./service-a". If nothing is set the default value
+// is the "." passed in the method call.
 package etc
-
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// Version returns the version of the SML package.
-func Version() version.Version {
-	return version.New(1, 6, 1)
-}
 
 // EOF
