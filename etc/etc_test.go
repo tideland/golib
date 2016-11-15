@@ -14,6 +14,7 @@ package etc_test
 import (
 	"context"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -81,6 +82,11 @@ func TestReadFile(t *testing.T) {
 func TestTemplates(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
+	err := os.Setenv("GOLIB_ETC_TEST_A", "1.2.3.4")
+	assert.Nil(err)
+	err = os.Unsetenv("GOLIB_ETC_TEST_B")
+	assert.Nil(err)
+
 	source := `{etc
 	{a foo}
 	{tests
@@ -91,6 +97,9 @@ func TestTemplates(t *testing.T) {
 		{invalid-e x[unknown]x}
 		{invalid-f x[]x}
 		{invalid-g x[||]x}
+		{valid-h [$GOLIB_ETC_TEST_A]}
+		{valid-i [$GOLIB_ETC_TEST_B||4.3.2.1]}
+		{invalid-j [$]}
 	}
 	{sub {b bar}}
 	}`
@@ -117,6 +126,12 @@ func TestTemplates(t *testing.T) {
 	assert.Equal(vs, "x[]x")
 	vs = cfg.ValueAsString("tests/invalid-g", "xxx")
 	assert.Equal(vs, "xx")
+	vs = cfg.ValueAsString("tests/valid-h", "xxx")
+	assert.Equal(vs, "1.2.3.4")
+	vs = cfg.ValueAsString("tests/valid-i", "xxx")
+	assert.Equal(vs, "4.3.2.1")
+	vs = cfg.ValueAsString("tests/invalid-j", "xxx")
+	assert.Equal(vs, "[$]")
 }
 
 // TestHasPath tests the checking of paths.

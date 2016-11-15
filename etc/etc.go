@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -286,12 +287,23 @@ func (e *etc) postProcess() error {
 			return err
 		}
 		found := re.FindString(value)
-		pathDefault := strings.SplitN(found[1:len(found)-1], "||", 2)
-		dv := found
-		if len(pathDefault) > 1 {
-			dv = pathDefault[1]
+		// Look for default value.
+		sourceDefault := strings.SplitN(found[1:len(found)-1], "||", 2)
+		defaultValue := found
+		if len(sourceDefault) > 1 {
+			defaultValue = sourceDefault[1]
 		}
-		substitute := e.ValueAsString(pathDefault[0], dv)
+		// Check if source is environment variable or path.
+		substitute := ""
+		if strings.HasPrefix(sourceDefault[0], "$") {
+			if envValue, ok := os.LookupEnv(sourceDefault[0][1:]); ok {
+				substitute = envValue
+			} else {
+				substitute = defaultValue
+			}
+		} else {
+			substitute = e.ValueAsString(sourceDefault[0], defaultValue)
+		}
 		replaced := strings.Replace(value, found, substitute, -1)
 		_, err = changer.SetValue(replaced)
 		if err != nil {

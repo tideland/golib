@@ -21,7 +21,7 @@ import (
 
 // Version returns the Go Library version.
 func Version() Version {
-	return New(4, 13, 0, "alpha", "2016-11-15")
+	return New(4, 13, 0)
 }
 
 // EOF
