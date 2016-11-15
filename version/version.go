@@ -23,8 +23,25 @@ import (
 // CONST
 //--------------------
 
+// Precedence describes if a version is newer, equal, or older.
+type Precedence int
+
+// Level describes the level, on which a version differentiates
+// from an other.
+type Level string
+
 const (
 	Metadata = "+"
+
+	Newer Precedence = 1
+	Equal            = 0
+	Older            = -1
+
+	Major      Level = "major"
+	Minor            = "minor"
+	Patch            = "patch"
+	PreRelease       = "pre-release"
+	All              = "all"
 )
 
 //--------------------
@@ -50,7 +67,12 @@ type Version interface {
 	// Metadata returns a possible build metadata of the version.
 	Metadata() string
 
+	// Compare compares this version to the passed one. The result
+	// is from the perspective of this one.
+	Compare(cv Version) (Precedence, Level)
+
 	// Less returns true if this version is less than the passed one.
+	// This means this version is older.
 	Less(cv Version) bool
 }
 
@@ -120,63 +142,101 @@ func Parse(vsnstr string) (Version, error) {
 	return New(nums[0], nums[1], nums[2], prmds...), nil
 }
 
-// Major returns the major version.
+// Major implements the Version interface.
 func (v *vsn) Major() int {
 	return v.major
 }
 
-// Minor returns the minor version.
+// Minor implements the Version interface.
 func (v *vsn) Minor() int {
 	return v.minor
 }
 
-// Patch returns the patch version.
+// Patch implements the Version interface.
 func (v *vsn) Patch() int {
 	return v.patch
 }
 
-// PreRelease returns a possible pre-release of the version.
+// PreRelease implements the Version interface.
 func (v *vsn) PreRelease() string {
 	return strings.Join(v.preRelease, ".")
 }
 
-// Metadata returns a possible build metadata of the version.
+// Metadata implements the Version interface.
 func (v *vsn) Metadata() string {
 	return strings.Join(v.metadata, ".")
 }
 
-// Less returns true if this version is less than the passed one.
-func (v *vsn) Less(cv Version) bool {
-	// Major version.
-	if v.major < cv.Major() {
-		return true
+// Compare implements the Version interface.
+func (v *vsn) Compare(cv Version) (Precedence, Level) {
+	// Standard version parts.
+	switch {
+	case v.major < cv.Major():
+		return Older, Major
+	case v.major > cv.Major():
+		return Newer, Major
+	case v.minor < cv.Minor():
+		return Older, Minor
+	case v.minor > cv.Minor():
+		return Newer, Minor
+	case v.patch < cv.Patch():
+		return Older, Patch
+	case v.patch > cv.Patch():
+		return Newer, Patch
 	}
-	if v.major > cv.Major() {
-		return false
-	}
-	// Minor version.
-	if v.minor < cv.Minor() {
-		return true
-	}
-	if v.minor > cv.Minor() {
-		return false
-	}
-	// Patch version.
-	if v.patch < cv.Patch() {
-		return true
-	}
-	if v.patch > cv.Patch() {
-		return false
-	}
-	// Simple comparing done, now the pre-release is interesting.
+	// Now the parts of the pre-release.
 	cvpr := []string{}
-	if cvprs := cv.PreRelease(); len(cvprs) > 0 {
-		cvpr = strings.Split(cvprs, ".")
+	for _, cvprPart := range strings.Split(cv.PreRelease(), ".") {
+		if cvprPart != "" {
+			cvpr = append(cvpr, cvprPart)
+		}
 	}
-	return less(v.preRelease, cvpr)
+	vlen := len(v.preRelease)
+	cvlen := len(cvpr)
+	count := vlen
+	if cvlen < vlen {
+		count = cvlen
+	}
+	for i := 0; i < count; i++ {
+		vn, verr := strconv.Atoi(v.preRelease[i])
+		cvn, cverr := strconv.Atoi(cvpr[i])
+		if verr == nil && cverr == nil {
+			// Numerical comparison.
+			switch {
+			case vn < cvn:
+				return Older, PreRelease
+			case vn > cvn:
+				return Newer, PreRelease
+			}
+			continue
+		}
+		// Alphanumerical comparison.
+		switch {
+		case v.preRelease[i] < cvpr[i]:
+			return Older, PreRelease
+		case v.preRelease[i] > cvpr[i]:
+			return Newer, PreRelease
+		}
+	}
+	// Still no clean result, so the shorter
+	// pre-relese is older.
+	switch {
+	case vlen < cvlen:
+		return Newer, PreRelease
+	case vlen > cvlen:
+		return Older, PreRelease
+	}
+	// Last but not least: we are equal.
+	return Equal, All
 }
 
-// String returns the version as string.
+// Less implements the Version interface.
+func (v *vsn) Less(cv Version) bool {
+	precedence, _ := v.Compare(cv)
+	return precedence == Older
+}
+
+// String implements the fmt.Stringer interface.
 func (v *vsn) String() string {
 	vs := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 	if len(v.preRelease) > 0 {
@@ -226,40 +286,6 @@ func validID(id string, numeric bool) string {
 		}
 	}
 	return string(out)
-}
-
-// less compares two string slices and returns true
-// if a  is less than b.
-func less(a, b []string) bool {
-	for i := 0; i < len(a) && i < len(b); i++ {
-		nl, ok := numericLess(a[i], b[i])
-		switch {
-		case ok:
-			return nl
-		case a[i] > b[i]:
-			return false
-		case a[i] < b[i]:
-			return true
-		}
-	}
-	if len(a) > len(b) {
-		return true
-	}
-	return false
-}
-
-// numericLess tries to convert a and b into ints and
-// compares them then if possible.
-func numericLess(a, b string) (bool, bool) {
-	an, err := strconv.Atoi(a)
-	if err != nil {
-		return false, false
-	}
-	bn, err := strconv.Atoi(b)
-	if err != nil {
-		return false, false
-	}
-	return an < bn, true
 }
 
 // splitVersionString seperates the version string into numbers,

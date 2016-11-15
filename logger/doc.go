@@ -9,21 +9,4 @@
 // to log information with different levels and on different backends.
 package logger
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// Version returns the version of the logger package.
-func Version() version.Version {
-	return version.New(4, 3, 0)
-}
-
 // EOF

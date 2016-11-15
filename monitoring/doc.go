@@ -16,21 +16,4 @@
 // the points of interest.
 package monitoring
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// Version returns the version of the monitoring package.
-func Version() version.Version {
-	return version.New(4, 0, 2)
-}
-
 // EOF

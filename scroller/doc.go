@@ -14,21 +14,4 @@
 // tries to find that number of lines matching to the filter.
 package scroller
 
-//--------------------
-// IMPORTS
-//--------------------
-
-import (
-	"github.com/tideland/golib/version"
-)
-
-//--------------------
-// VERSION
-//--------------------
-
-// PackageVersion returns the version of the version package.
-func PackageVersion() version.Version {
-	return version.New(2, 0, 0)
-}
-
 // EOF

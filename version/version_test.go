@@ -95,7 +95,7 @@ func TestNew(t *testing.T) {
 	}
 	// Perform tests.
 	for i, test := range tests {
-		assert.Logf("test #%d: %q", i, test.id)
+		assert.Logf("new test #%d: %q", i, test.id)
 		assert.Equal(test.vsn.Major(), test.major)
 		assert.Equal(test.vsn.Minor(), test.minor)
 		assert.Equal(test.vsn.Patch(), test.patch)
@@ -209,7 +209,7 @@ func TestParse(t *testing.T) {
 	}
 	// Perform tests.
 	for i, test := range tests {
-		assert.Logf("test #%d: %q", i, test.id)
+		assert.Logf("parse test #%d: %q", i, test.id)
 		vsn, err := version.Parse(test.id)
 		if test.err != "" {
 			assert.ErrorMatch(err, test.err)
@@ -229,7 +229,102 @@ func TestParse(t *testing.T) {
 	}
 }
 
-// TestLess tests the comparing of two versions.
+// TestCompare tests the comparing of two versions.
+func TestCompare(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tests := []struct {
+		vsnA       version.Version
+		vsnB       version.Version
+		precedence version.Precedence
+		level      version.Level
+	}{
+		{
+			vsnA:       version.New(1, 2, 3),
+			vsnB:       version.New(1, 2, 3),
+			precedence: version.Equal,
+			level:      version.All,
+		}, {
+			vsnA:       version.New(1, 2, 3),
+			vsnB:       version.New(1, 2, 4),
+			precedence: version.Older,
+			level:      version.Patch,
+		}, {
+			vsnA:       version.New(1, 2, 3),
+			vsnB:       version.New(1, 3, 3),
+			precedence: version.Older,
+			level:      version.Minor,
+		}, {
+			vsnA:       version.New(1, 2, 3),
+			vsnB:       version.New(2, 2, 3),
+			precedence: version.Older,
+			level:      version.Major,
+		}, {
+			vsnA:       version.New(3, 2, 1),
+			vsnB:       version.New(1, 2, 3),
+			precedence: version.Newer,
+			level:      version.Major,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha"),
+			vsnB:       version.New(1, 2, 3),
+			precedence: version.Older,
+			level:      version.PreRelease,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", "1"),
+			vsnB:       version.New(1, 2, 3, "alpha"),
+			precedence: version.Older,
+			level:      version.PreRelease,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", "1"),
+			vsnB:       version.New(1, 2, 3, "alpha", "2"),
+			precedence: version.Older,
+			level:      version.PreRelease,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", "4711"),
+			vsnB:       version.New(1, 2, 3, "alpha", "471"),
+			precedence: version.Newer,
+			level:      version.PreRelease,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", "48"),
+			vsnB:       version.New(1, 2, 3, "alpha", "4711"),
+			precedence: version.Older,
+			level:      version.PreRelease,
+		}, {
+			vsnA:       version.New(1, 2, 3, version.Metadata, "alpha", "1"),
+			vsnB:       version.New(1, 2, 3, version.Metadata, "alpha", "2"),
+			precedence: version.Equal,
+			level:      version.All,
+		}, {
+			vsnA:       version.New(1, 2, 3, version.Metadata, "alpha", "2"),
+			vsnB:       version.New(1, 2, 3, version.Metadata, "alpha", "1"),
+			precedence: version.Equal,
+			level:      version.All,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", version.Metadata, "alpha", "2"),
+			vsnB:       version.New(1, 2, 3, "alpha", version.Metadata, "alpha", "1"),
+			precedence: version.Equal,
+			level:      version.All,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", "48", version.Metadata, "alpha", "2"),
+			vsnB:       version.New(1, 2, 3, "alpha", "4711", version.Metadata, "alpha", "1"),
+			precedence: version.Older,
+			level:      version.PreRelease,
+		}, {
+			vsnA:       version.New(1, 2, 3, "alpha", "2"),
+			vsnB:       version.New(1, 2, 3, "alpha", "1b"),
+			precedence: version.Newer,
+			level:      version.PreRelease,
+		},
+	}
+	// Perform tests.
+	for i, test := range tests {
+		assert.Logf("compare test #%d: %q <> %q -> %d / %s", i, test.vsnA, test.vsnB, test.precedence, test.level)
+		precedence, level := test.vsnA.Compare(test.vsnB)
+		assert.Equal(precedence, test.precedence)
+		assert.Equal(level, test.level)
+	}
+}
+
+// TestLess tests if a version is less (older) than another.
 func TestLess(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	tests := []struct {
@@ -301,7 +396,7 @@ func TestLess(t *testing.T) {
 	}
 	// Perform tests.
 	for i, test := range tests {
-		assert.Logf("test #%d: %q < %q", i, test.vsnA, test.vsnB)
+		assert.Logf("less test #%d: %q <> %q -> %v", i, test.vsnA, test.vsnB, test.less)
 		assert.Equal(test.vsnA.Less(test.vsnB), test.less)
 	}
 }
