@@ -155,16 +155,23 @@ func (uuid UUID) Copy() UUID {
 
 // Raw returns a copy of the UUID bytes.
 func (uuid UUID) Raw() [16]byte {
-	return [16]byte(uuid)
+	uuidCopy := uuid.Copy()
+	return [16]byte(uuidCopy)
 }
 
-// dump creates a copy a byte slice.
+// dump creates a copy as a byte slice.
 func (uuid UUID) dump() []byte {
 	dump := make([]byte, len(uuid))
 
 	copy(dump, uuid[:])
 
 	return dump
+}
+
+// ShortString returns a hexadecimal string representation
+// without separators.
+func (uuid UUID) ShortString() string {
+	return fmt.Sprintf("%x", uuid[0:16])
 }
 
 // String returns a hexadecimal string representation with

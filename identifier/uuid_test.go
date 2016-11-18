@@ -28,9 +28,11 @@ func TestStandardUUID(t *testing.T) {
 	// Asserts.
 	uuid := identifier.NewUUID()
 	assert.Equal(uuid.Version(), identifier.UUIDv4)
+	uuidShortStr := uuid.ShortString()
 	uuidStr := uuid.String()
 	assert.Equal(len(uuid), 16, "UUID length has to be 16")
-	assert.Match(uuidStr, "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "UUID has to match")
+	assert.Match(uuidShortStr, "[0-9a-f]{32}", "UUID short")
+	assert.Match(uuidStr, "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "UUID long")
 	// Check for unique creation, but only weak test.
 	uuids := make(map[string]bool)
 	for i := 0; i < 1000000; i++ {
