@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2016-11-22
+
+- Added *Name()* to *Generator* in *audit*
+
 ## 2016-11-15
 
 - Added *Parse()* and *Compare()* to *version*

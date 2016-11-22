@@ -1,6 +1,6 @@
 // Tideland Go Library - Audit - Unit Tests
 //
-// Copyright (C) 2013-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the NewGenerator BSD license.
@@ -221,7 +221,13 @@ func TestName(t *testing.T) {
 	assert.Equal(audit.ToUpperFirst("yadda"), "Yadda")
 
 	for i := 0; i < 10000; i++ {
-		first, middle, last := gen.MaleName()
+		first, middle, last := gen.Name()
+
+		assert.Match(first, `[A-Z][a-z]+(-[A-Z][a-z]+)?`)
+		assert.Match(middle, `[A-Z][a-z]+(-[A-Z][a-z]+)?`)
+		assert.Match(last, `[A-Z]['a-zA-Z]+`)
+
+		first, middle, last = gen.MaleName()
 
 		assert.Match(first, `[A-Z][a-z]+(-[A-Z][a-z]+)?`)
 		assert.Match(middle, `[A-Z][a-z]+(-[A-Z][a-z]+)?`)
