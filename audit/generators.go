@@ -1,6 +1,6 @@
 // Tideland Go Library - Audit
 //
-// Copyright (C) 2013-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -286,6 +286,15 @@ func (g *Generator) Paragraph() string {
 		sentences[i] = g.Sentence()
 	}
 	return strings.Join(sentences, " ")
+}
+
+// Name generates a male or female name consisting out of first,
+// middle and last name.
+func (g *Generator) Name() (first, middle, last string) {
+	if g.FlipCoin(50) {
+		return g.FemaleName()
+	}
+	return g.MaleName()
 }
 
 // MaleName generates a male name consisting out of first, middle
