@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2016-11-23
+
+- Fixed an error in *identifier* generation
+
 ## 2016-11-22
 
 - Added *Name()* to *Generator* in *audit*

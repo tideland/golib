@@ -53,6 +53,9 @@ func TestSepIdentifier(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	id := identifier.SepIdentifier("+", 1, "oNe", 2, "TWO", "3", "ÄÖÜ")
+	assert.Equal(id, "1+one+2+two+3", "wrong SepIdentifier() result")
+
+	id = identifier.LimitedSepIdentifier("+", false, 1, "oNe", 2, "TWO", "3", "ÄÖÜ")
 	assert.Equal(id, "1+one+2+two+3+äöü", "wrong SepIdentifier() result")
 
 	id = identifier.LimitedSepIdentifier("+", true, "     ", 1, "oNe", 2, "TWO", "3", "ÄÖÜ", "Four", "+#-:,")

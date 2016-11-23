@@ -32,21 +32,18 @@ func LimitedSepIdentifier(sep string, limit bool, parts ...interface{}) string {
 	iparts := make([]string, 0)
 	for _, p := range parts {
 		tmp := strings.Map(func(r rune) rune {
+			lcr := unicode.ToLower(r)
+			if !limit {
+				return lcr
+			}
 			// Check letter and digit.
-			if unicode.IsLetter(r) || unicode.IsDigit(r) {
-				lcr := unicode.ToLower(r)
-				if limit {
-					// Only 'a' to 'z' and '0' to '9'.
-					if lcr <= unicode.MaxASCII {
-						return lcr
-					} else {
-						return ' '
-					}
-				} else {
-					// Every char is allowed.
+			if unicode.IsLetter(lcr) || unicode.IsDigit(lcr) {
+				// Only 'a' to 'z' and '0' to '9'.
+				if lcr <= unicode.MaxASCII {
 					return lcr
 				}
 			}
+			// Replace with space.
 			return ' '
 		}, fmt.Sprintf("%v", p))
 		// Only use non-empty identifier parts.
@@ -62,7 +59,7 @@ func LimitedSepIdentifier(sep string, limit bool, parts ...interface{}) string {
 // Non letters and digits are exchanged with dashes and
 // reduced to a maximum of one each.
 func SepIdentifier(sep string, parts ...interface{}) string {
-	return LimitedSepIdentifier(sep, false, parts...)
+	return LimitedSepIdentifier(sep, true, parts...)
 }
 
 // Identifier works like SepIdentifier but the seperator
