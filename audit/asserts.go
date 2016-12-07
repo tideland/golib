@@ -1,6 +1,6 @@
 // Tideland Go Library - Audit
 //
-// Copyright (C) 2012-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -88,6 +88,49 @@ func (t Test) String() string {
 }
 
 //--------------------
+// PRINTER
+//--------------------
+
+// Printer allows to switch between different outputs.
+type Printer interface {
+	// Printf prints a formatted information.
+	Printf(format string, args ...interface{})
+}
+
+// printerBackend is the globally printer used during
+// the assertions.
+var (
+	printerBackend Printer = &fmtPrinter{}
+	mux            sync.Mutex
+)
+
+// fmtPrinter uses the standard fmt package for printing.
+type fmtPrinter struct{}
+
+// Printf implements the Printer interface.
+func (p *fmtPrinter) Printf(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+}
+
+// SetPrinter sets a new global printer and returns the
+// current one.
+func SetPrinter(p Printer) Printer {
+	mux.Lock()
+	defer mux.Unlock()
+	cp := printerBackend
+	printerBackend = p
+	return cp
+}
+
+// backendPrintf uses the printer backend for output. It is used
+// in the types below.
+func backendPrintf(format string, args ...interface{}) {
+	mux.Lock()
+	defer mux.Unlock()
+	printerBackend.Printf(format, args...)
+}
+
+//--------------------
 // FAILER
 //--------------------
 
@@ -106,7 +149,7 @@ type panicFailer struct{}
 
 // Logf is specified on the Failer interface.
 func (f panicFailer) Logf(format string, args ...interface{}) {
-	fmt.Printf(format+"\n", args...)
+	backendPrintf(format+"\n", args...)
 }
 
 // Fail is specified on the Failer interface.
@@ -159,7 +202,7 @@ func (f testingFailer) Logf(format string, args ...interface{}) {
 	_, file, line, _ := runtime.Caller(3)
 	_, fileName := path.Split(file)
 	prefix := fmt.Sprintf("%s:%d: ", fileName, line)
-	fmt.Printf(prefix+format+"\n", args...)
+	backendPrintf(prefix+format+"\n", args...)
 }
 
 // Fail is specified on the Failer interface.
@@ -194,7 +237,7 @@ func (f testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...s
 		fmt.Fprintf(buffer, "Description: %s\n", strings.Join(msgs, "\n             "))
 	}
 	fmt.Fprintf(buffer, "--------------------------------------------------------------------------------\n")
-	fmt.Print(buffer)
+	backendPrintf(buffer.String())
 	if f.shallFail {
 		f.failable.FailNow()
 	}
