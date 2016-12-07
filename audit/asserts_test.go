@@ -1,6 +1,6 @@
 // Tideland Go Library - Audit - Unit Tests
 //
-// Copyright (C) 2012-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -295,6 +295,23 @@ func TestPanicAssert(t *testing.T) {
 	assert.Assignable(47, foo, "should fail")
 
 	t.Errorf("should not be reached")
+}
+
+// TestValidationAssertion test the validation of data.
+func TestValidationAssertion(t *testing.T) {
+	assert, failures := audit.NewValidationAssertion()
+
+	assert.True(true, "should not fail")
+	assert.True(false, "sould fail")
+	assert.Equal(1, 2, "should fail")
+
+	if !failures.HasErrors() {
+		t.Errorf("should have errors")
+	}
+	if len(failures.Errors()) != 2 {
+		t.Errorf("wrong number of errors")
+	}
+	t.Log(failures.Error())
 }
 
 //--------------------
