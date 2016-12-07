@@ -13,6 +13,7 @@ package audit
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -144,15 +145,28 @@ type Failer interface {
 	Fail(test Test, obtained, expected interface{}, msgs ...string) bool
 }
 
+// Failures collects the collected failures
+// of a validation assertion.
+type Failures interface {
+	// HasErrors returns true, if assertion failures happened.
+	HasErrors() bool
+
+	// Errors returns the so far collected errors.
+	Errors() []error
+
+	// Error returns the collected errors as one error.
+	Error() error
+}
+
 // panicFailer reacts with a panic.
 type panicFailer struct{}
 
-// Logf is specified on the Failer interface.
+// Logf implements the Failer interface.
 func (f panicFailer) Logf(format string, args ...interface{}) {
 	backendPrintf(format+"\n", args...)
 }
 
-// Fail is specified on the Failer interface.
+// Fail implements the Failer interface.
 func (f panicFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
 	var obex string
 	switch test {
@@ -165,20 +179,64 @@ func (f panicFailer) Fail(test Test, obtained, expected interface{}, msgs ...str
 	default:
 		obex = fmt.Sprintf("'%v' <> '%v'", obtained, expected)
 	}
-	if len(msgs) > 0 {
-		jmsgs := strings.Join(msgs, " ")
-		if test == Fail {
-			panic(fmt.Sprintf("assert failed: %s (%s)", obex, jmsgs))
-		} else {
-			panic(fmt.Sprintf("assert '%s' failed: %s (%s)", test, obex, jmsgs))
-		}
-	} else {
-		if test == Fail {
-			panic(fmt.Sprintf("assert failed: %s", obex))
-		} else {
-			panic(fmt.Sprintf("assert '%s' failed: %s", test, obex))
-		}
+	panic(failString(test, obex, msgs...))
+}
+
+// validationFailer collects validation errors and additionally.
+type validationFailer struct {
+	mux  sync.Mutex
+	errs []error
+}
+
+// HasErrors implements the Failures interface.
+func (f *validationFailer) HasErrors() bool {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	return len(f.errs) > 0
+}
+
+// Errors implements the Failures interface.
+func (f *validationFailer) Errors() []error {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	return f.errs
+}
+
+// Error implements the Failures interface.
+func (f *validationFailer) Error() error {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	strs := []string{}
+	for i, err := range f.errs {
+		strs = append(strs, fmt.Sprintf("[%d] %v", i, err))
 	}
+	return errors.New(strings.Join(strs, " / "))
+}
+
+// Logf implements the Failer interface.
+func (f *validationFailer) Logf(format string, args ...interface{}) {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	backendPrintf(format+"\n", args...)
+}
+
+// Fail implements the Failer interface.
+func (f *validationFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	var obex string
+	switch test {
+	case True, False, Nil, NotNil, Empty, NotEmpty:
+		obex = fmt.Sprintf("'%v'", obtained)
+	case Implementor, Assignable, Unassignable:
+		obex = fmt.Sprintf("'%v' <> '%v'", ValueDescription(obtained), ValueDescription(expected))
+	case Fail:
+		obex = "fail intended"
+	default:
+		obex = fmt.Sprintf("'%v' <> '%v'", obtained, expected)
+	}
+	f.errs = append(f.errs, errors.New(failString(test, obex, msgs...)))
+	return true
 }
 
 // Failable allows an assertion to signal a fail to an external instance
@@ -195,7 +253,7 @@ type testingFailer struct {
 	shallFail bool
 }
 
-// Logf is specified on the Failer interface.
+// Logf implements the Failer interface.
 func (f testingFailer) Logf(format string, args ...interface{}) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
@@ -205,7 +263,7 @@ func (f testingFailer) Logf(format string, args ...interface{}) {
 	backendPrintf(prefix+format+"\n", args...)
 }
 
-// Fail is specified on the Failer interface.
+// Fail implements the Failer interface.
 func (f testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
 	f.mux.Lock()
 	defer f.mux.Unlock()
@@ -339,6 +397,14 @@ func NewPanicAssertion() Assertion {
 	return NewAssertion(&panicFailer{})
 }
 
+// NewValidationAssertion creates a new Assertion instance which collections
+// validation failures. The returned Failures instance allows to test an access
+// them.
+func NewValidationAssertion() (Assertion, Failures) {
+	vf := &validationFailer{}
+	return NewAssertion(vf), vf
+}
+
 // NewTestingAssertion creates a new Assertion instance for use with the testing
 // package. The *testing.T has to be passed as failable, the first argument.
 // shallFail controls if a failing assertion also lets fail the Go test.
@@ -355,12 +421,12 @@ type assertion struct {
 	failer Failer
 }
 
-// Logf is specified on the Assertion interface.
+// Logf implements the Assertion interface.
 func (a *assertion) Logf(format string, args ...interface{}) {
 	a.failer.Logf(format, args...)
 }
 
-// True is specified on the Assertion interface.
+// True implements the Assertion interface.
 func (a *assertion) True(obtained bool, msgs ...string) bool {
 	if !a.IsTrue(obtained) {
 		return a.failer.Fail(True, obtained, true, msgs...)
@@ -368,7 +434,7 @@ func (a *assertion) True(obtained bool, msgs ...string) bool {
 	return true
 }
 
-// False is specified on the Assertion interface.
+// False implements the Assertion interface.
 func (a *assertion) False(obtained bool, msgs ...string) bool {
 	if a.IsTrue(obtained) {
 		return a.failer.Fail(False, obtained, false, msgs...)
@@ -376,7 +442,7 @@ func (a *assertion) False(obtained bool, msgs ...string) bool {
 	return true
 }
 
-// Nil is specified on the Assertion interface.
+// Nil implements the Assertion interface.
 func (a *assertion) Nil(obtained interface{}, msgs ...string) bool {
 	if !a.IsNil(obtained) {
 		return a.failer.Fail(Nil, obtained, nil, msgs...)
@@ -384,7 +450,7 @@ func (a *assertion) Nil(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// NotNil is specified on the Assertion interface.
+// NotNil implements the Assertion interface.
 func (a *assertion) NotNil(obtained interface{}, msgs ...string) bool {
 	if a.IsNil(obtained) {
 		return a.failer.Fail(NotNil, obtained, nil, msgs...)
@@ -392,7 +458,7 @@ func (a *assertion) NotNil(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// Equal is specified on the Assertion interface.
+// Equal implements the Assertion interface.
 func (a *assertion) Equal(obtained, expected interface{}, msgs ...string) bool {
 	if !a.IsEqual(obtained, expected) {
 		return a.failer.Fail(Equal, obtained, expected, msgs...)
@@ -400,7 +466,7 @@ func (a *assertion) Equal(obtained, expected interface{}, msgs ...string) bool {
 	return true
 }
 
-// Different is specified on the Assertion interface.
+// Different implements the Assertion interface.
 func (a *assertion) Different(obtained, expected interface{}, msgs ...string) bool {
 	if a.IsEqual(obtained, expected) {
 		return a.failer.Fail(Different, obtained, expected, msgs...)
@@ -408,7 +474,7 @@ func (a *assertion) Different(obtained, expected interface{}, msgs ...string) bo
 	return true
 }
 
-// Contents is specified on the Assertion interface.
+// Contents implements the Assertion interface.
 func (a *assertion) Contents(obtained, full interface{}, msgs ...string) bool {
 	contains, err := a.Contains(obtained, full)
 	if err != nil {
@@ -420,7 +486,7 @@ func (a *assertion) Contents(obtained, full interface{}, msgs ...string) bool {
 	return true
 }
 
-// About is specified on the Assertion interface.
+// About implements the Assertion interface.
 func (a *assertion) About(obtained, expected, extend float64, msgs ...string) bool {
 	if !a.IsAbout(obtained, expected, extend) {
 		return a.failer.Fail(About, obtained, expected, msgs...)
@@ -428,7 +494,7 @@ func (a *assertion) About(obtained, expected, extend float64, msgs ...string) bo
 	return true
 }
 
-// Substring is specified on the Assertion interface.
+// Substring implements the Assertion interface.
 func (a *assertion) Substring(obtained, full string, msgs ...string) bool {
 	if !a.IsSubstring(obtained, full) {
 		return a.failer.Fail(Substring, obtained, full, msgs...)
@@ -436,7 +502,7 @@ func (a *assertion) Substring(obtained, full string, msgs ...string) bool {
 	return true
 }
 
-// Match is specified on the Assertion interface.
+// Match implements the Assertion interface.
 func (a *assertion) Match(obtained, regex string, msgs ...string) bool {
 	matches, err := a.IsMatching(obtained, regex)
 	if err != nil {
@@ -448,7 +514,7 @@ func (a *assertion) Match(obtained, regex string, msgs ...string) bool {
 	return true
 }
 
-// ErrorMatch is specified on the Assertion interface.
+// ErrorMatch implements the Assertion interface.
 func (a *assertion) ErrorMatch(obtained error, regex string, msgs ...string) bool {
 	if obtained == nil {
 		return a.failer.Fail(ErrorMatch, nil, regex, "error is nil")
@@ -463,7 +529,7 @@ func (a *assertion) ErrorMatch(obtained error, regex string, msgs ...string) boo
 	return true
 }
 
-// Implementor is specified on the Assertion interface.
+// Implementor implements the Assertion interface.
 func (a *assertion) Implementor(obtained, expected interface{}, msgs ...string) bool {
 	implements, err := a.IsImplementor(obtained, expected)
 	if err != nil {
@@ -475,7 +541,7 @@ func (a *assertion) Implementor(obtained, expected interface{}, msgs ...string) 
 	return implements
 }
 
-// Assignable is specified on the Assertion interface.
+// Assignable implements the Assertion interface.
 func (a *assertion) Assignable(obtained, expected interface{}, msgs ...string) bool {
 	if !a.IsAssignable(obtained, expected) {
 		return a.failer.Fail(Assignable, obtained, expected, msgs...)
@@ -483,7 +549,7 @@ func (a *assertion) Assignable(obtained, expected interface{}, msgs ...string) b
 	return true
 }
 
-// Unassignable is specified on the Assertion interface.
+// Unassignable implements the Assertion interface.
 func (a *assertion) Unassignable(obtained, expected interface{}, msgs ...string) bool {
 	if a.IsAssignable(obtained, expected) {
 		return a.failer.Fail(Unassignable, obtained, expected, msgs...)
@@ -491,7 +557,7 @@ func (a *assertion) Unassignable(obtained, expected interface{}, msgs ...string)
 	return true
 }
 
-// Empty is specified on the Assertion interface.
+// Empty implements the Assertion interface.
 func (a *assertion) Empty(obtained interface{}, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
@@ -504,7 +570,7 @@ func (a *assertion) Empty(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// NotEmpty is specified on the Assertion interface.
+// NotEmpty implements the Assertion interface.
 func (a *assertion) NotEmpty(obtained interface{}, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
@@ -517,7 +583,7 @@ func (a *assertion) NotEmpty(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// Length is specified on the Assertion interface.
+// Length implements the Assertion interface.
 func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
@@ -530,7 +596,7 @@ func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) b
 	return true
 }
 
-// Panics is specified on the Assertion interface.
+// Panics implements the Assertion interface.
 func (a *assertion) Panics(pf func(), msgs ...string) bool {
 	if !a.HasPanic(pf) {
 		return a.failer.Fail(Panics, ValueDescription(pf), nil, msgs...)
@@ -538,7 +604,7 @@ func (a *assertion) Panics(pf func(), msgs ...string) bool {
 	return true
 }
 
-// Wait is specified on the Assertion interface.
+// Wait implements the Assertion interface.
 func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool {
 	select {
 	case obtained := <-sigc:
@@ -551,7 +617,7 @@ func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout 
 	}
 }
 
-// Retry is specified on the Assertion interface.
+// Retry implements the Assertion interface.
 func (a *assertion) Retry(rf func() bool, retries int, pause time.Duration, msgs ...string) bool {
 	start := time.Now()
 	for r := 0; r < retries; r++ {
@@ -565,7 +631,7 @@ func (a *assertion) Retry(rf func() bool, retries int, pause time.Duration, msgs
 	return a.failer.Fail(Retry, info, "successful call", msgs...)
 }
 
-// Fail is specified on the Assertion interface.
+// Fail implements the Assertion interface.
 func (a *assertion) Fail(msgs ...string) bool {
 	return a.failer.Fail(Fail, nil, nil, msgs...)
 }
@@ -729,6 +795,22 @@ func MakeSigChan() chan interface{} {
 // lenable is an interface for the Len() mehod.
 type lenable interface {
 	Len() int
+}
+
+// failString constructs a fail string for panics or
+// validition errors.
+func failString(test Test, obex string, msgs ...string) string {
+	var out string
+	if test == Fail {
+		out = fmt.Sprintf("assert failed: %s", obex)
+	} else {
+		out = fmt.Sprintf("assert '%s' failed: %s", test, obex)
+	}
+	jmsgs := strings.Join(msgs, " ")
+	if len(jmsgs) > 0 {
+		out += " (" + jmsgs + ")"
+	}
+	return out
 }
 
 // EOF

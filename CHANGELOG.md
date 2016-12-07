@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2016-12-07
+
+- Added *ValidationAssertion* to *audit*
+
 ## 2016-11-23
 
 - Fixed an error in *identifier* generation
