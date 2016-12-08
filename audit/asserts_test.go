@@ -99,6 +99,42 @@ func TestAssertDifferent(t *testing.T) {
 	failingAssert.Different(2, 2, "should fail and be logged")
 }
 
+// TestAssertAbout tests the About() assertion.
+func TestAssertAbout(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	successfulAssert.About(1.0, 1.0, 0.0, "equal, no extend")
+	successfulAssert.About(1.0, 1.0, 0.1, "equal, little extend")
+	successfulAssert.About(0.9, 1.0, 0.1, "different, within bounds of extent")
+	successfulAssert.About(1.1, 1.0, 0.1, "different, within bounds of extent")
+	failingAssert.About(0.8, 1.0, 0.1, "different, out of bounds of extent")
+	failingAssert.About(1.2, 1.0, 0.1, "different, out of bounds of extent")
+}
+
+// TestAssertRange tests the Range() assertion.
+func TestAssertRange(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	successfulAssert.Range(byte(9), byte(1), byte(22), "byte in range")
+	successfulAssert.Range(9, 1, 22, "int in range")
+	successfulAssert.Range(9.0, 1.0, 22.0, "float64 in range")
+	successfulAssert.Range('f', 'a', 'z', "rune in range")
+	successfulAssert.Range("foo", "a", "zzzzz", "string in range")
+	successfulAssert.Range([]int{1, 2, 3}, 1, 10, "slice length in range")
+	successfulAssert.Range([3]int{1, 2, 3}, 1, 10, "array length in range")
+	successfulAssert.Range(map[int]int{3: 1, 2: 2, 1: 3}, 1, 10, "map length in range")
+	failingAssert.Range(byte(1), byte(10), byte(20), "byte out of range")
+	failingAssert.Range(1, 10, 20, "int out of range")
+	failingAssert.Range(1.0, 10.0, 20.0, "float64 out of range")
+	failingAssert.Range('a', 'x', 'z', "rune out of range")
+	failingAssert.Range("aaa", "uuuuu", "zzzzz", "string out of range")
+	failingAssert.Range([]int{1, 2, 3}, 5, 10, "slice length out of range")
+	failingAssert.Range([3]int{1, 2, 3}, 5, 10, "array length out of range")
+	failingAssert.Range(map[int]int{3: 1, 2: 2, 1: 3}, 5, 10, "map length out of range")
+}
+
 // TestAssertContents tests the Contents() assertion.
 func TestAssertContents(t *testing.T) {
 	successfulAssert := successfulAssertion(t)

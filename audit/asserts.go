@@ -41,6 +41,7 @@ const (
 	Different
 	Contents
 	About
+	Range
 	Substring
 	Match
 	ErrorMatch
@@ -66,6 +67,7 @@ var testNames = []string{
 	Different:    "different",
 	Contents:     "contents",
 	About:        "about",
+	Range:        "range",
 	Substring:    "substring",
 	Match:        "match",
 	ErrorMatch:   "error match",
@@ -168,17 +170,7 @@ func (f panicFailer) Logf(format string, args ...interface{}) {
 
 // Fail implements the Failer interface.
 func (f panicFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
-	var obex string
-	switch test {
-	case True, False, Nil, NotNil, Empty, NotEmpty:
-		obex = fmt.Sprintf("'%v'", obtained)
-	case Implementor, Assignable, Unassignable:
-		obex = fmt.Sprintf("'%v' <> '%v'", ValueDescription(obtained), ValueDescription(expected))
-	case Fail:
-		obex = "fail intended"
-	default:
-		obex = fmt.Sprintf("'%v' <> '%v'", obtained, expected)
-	}
+	obex := obexString(test, obtained, expected)
 	panic(failString(test, obex, msgs...))
 }
 
@@ -224,19 +216,9 @@ func (f *validationFailer) Logf(format string, args ...interface{}) {
 func (f *validationFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
 	f.mux.Lock()
 	defer f.mux.Unlock()
-	var obex string
-	switch test {
-	case True, False, Nil, NotNil, Empty, NotEmpty:
-		obex = fmt.Sprintf("'%v'", obtained)
-	case Implementor, Assignable, Unassignable:
-		obex = fmt.Sprintf("'%v' <> '%v'", ValueDescription(obtained), ValueDescription(expected))
-	case Fail:
-		obex = "fail intended"
-	default:
-		obex = fmt.Sprintf("'%v' <> '%v'", obtained, expected)
-	}
+	obex := obexString(test, obtained, expected)
 	f.errs = append(f.errs, errors.New(failString(test, obex, msgs...)))
-	return true
+	return false
 }
 
 // Failable allows an assertion to signal a fail to an external instance
@@ -334,8 +316,13 @@ type Assertion interface {
 	Contents(obtained, full interface{}, msgs ...string) bool
 
 	// About tests if obtained and expected are near to each other
-	// (within the given extend).
-	About(obtained, expected, extend float64, msgs ...string) bool
+	// (within the given extent).
+	About(obtained, expected, extent float64, msgs ...string) bool
+
+	// Range tests if obtained is larger or equal low and lower or
+	// equal high. Allowed are byte, int and float64 for numbers, runes
+	// and strings, or as a length test array, slices, and maps.
+	Range(obtained, low, hight interface{}, msgs ...string) bool
 
 	// Substring tests if obtained is a substring of the full string.
 	Substring(obtained, full string, msgs ...string) bool
@@ -487,9 +474,22 @@ func (a *assertion) Contents(obtained, full interface{}, msgs ...string) bool {
 }
 
 // About implements the Assertion interface.
-func (a *assertion) About(obtained, expected, extend float64, msgs ...string) bool {
-	if !a.IsAbout(obtained, expected, extend) {
+func (a *assertion) About(obtained, expected, extent float64, msgs ...string) bool {
+	if !a.IsAbout(obtained, expected, extent) {
 		return a.failer.Fail(About, obtained, expected, msgs...)
+	}
+	return true
+}
+
+// Range implements the Assertion interface.
+func (a *assertion) Range(obtained, low, high interface{}, msgs ...string) bool {
+	expected := &lowHigh{low, high}
+	inRange, err := a.IsInRange(obtained, low, high)
+	if err != nil {
+		return a.failer.Fail(Range, obtained, expected, "type missmatch: "+err.Error())
+	}
+	if !inRange {
+		return a.failer.Fail(Range, obtained, expected, msgs...)
 	}
 	return true
 }
@@ -670,14 +670,68 @@ func (t Tester) IsEqual(obtained, expected interface{}) bool {
 	return reflect.DeepEqual(obtained, expected)
 }
 
-// IsAbout checks if obtained and expected are to a given extend almost equal.
-func (t Tester) IsAbout(obtained, expected, extend float64) bool {
-	if extend < 0.0 {
-		extend = extend * (-1)
+// IsAbout checks if obtained and expected are to a given extent almost equal.
+func (t Tester) IsAbout(obtained, expected, extent float64) bool {
+	if extent < 0.0 {
+		extent = extent * (-1)
 	}
-	expectedMin := expected - extend
-	expectedMax := expected + extend
+	expectedMin := expected - extent
+	expectedMax := expected + extent
 	return obtained >= expectedMin && obtained <= expectedMax
+}
+
+// IsInRange checks, if obtained is inside the given range. In case of a
+// slice, array, or map it will check agains the length.
+func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
+	// First standard types.
+	switch o := obtained.(type) {
+	case byte:
+		l, lok := low.(byte)
+		h, hok := high.(byte)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no byte")
+		}
+		return l <= o && o <= h, nil
+	case int:
+		l, lok := low.(int)
+		h, hok := high.(int)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no int")
+		}
+		return l <= o && o <= h, nil
+	case float64:
+		l, lok := low.(float64)
+		h, hok := high.(float64)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no float64")
+		}
+		return l <= o && o <= h, nil
+	case rune:
+		l, lok := low.(rune)
+		h, hok := high.(rune)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no rune")
+		}
+		return l <= o && o <= h, nil
+	case string:
+		l, lok := low.(string)
+		h, hok := high.(string)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no string")
+		}
+		return l <= o && o <= h, nil
+	}
+	// Now check the collection types.
+	ol, err := t.Len(obtained)
+	if err != nil {
+		return false, errors.New("no valid type with a length")
+	}
+	l, lok := low.(int)
+	h, hok := high.(int)
+	if !lok && !hok {
+		return false, errors.New("low and/or high are no int")
+	}
+	return l <= ol && ol <= h, nil
 }
 
 // Contains checks if the obtained type is matching to the full type and
@@ -701,7 +755,7 @@ func (t Tester) Contains(obtained, full interface{}) (bool, error) {
 		}
 		return false, nil
 	}
-	return false, fmt.Errorf("full value is no string, array, or slice")
+	return false, errors.New("full value is no string, array, or slice")
 }
 
 // IsSubstring checks if obtained is a substring of the full string.
@@ -768,6 +822,12 @@ func (t Tester) HasPanic(pf func()) (ok bool) {
 // HELPER
 //--------------------
 
+// lowHigh transports the expected borders of a range test.
+type lowHigh struct {
+	low  interface{}
+	high interface{}
+}
+
 // ValueDescription returns a description of a value as string.
 func ValueDescription(value interface{}) string {
 	rvalue := reflect.ValueOf(value)
@@ -795,6 +855,24 @@ func MakeSigChan() chan interface{} {
 // lenable is an interface for the Len() mehod.
 type lenable interface {
 	Len() int
+}
+
+// obexString constructs a descriptive sting matching
+// to test, obtained, and expected value.
+func obexString(test Test, obtained, expected interface{}) string {
+	switch test {
+	case True, False, Nil, NotNil, Empty, NotEmpty:
+		return fmt.Sprintf("'%v'", obtained)
+	case Implementor, Assignable, Unassignable:
+		return fmt.Sprintf("'%v' <> '%v'", ValueDescription(obtained), ValueDescription(expected))
+	case Range:
+		lh := expected.(*lowHigh)
+		return fmt.Sprintf("not '%v' <= '%v' <= '%v'", lh.low, obtained, lh.high)
+	case Fail:
+		return "fail intended"
+	default:
+		return fmt.Sprintf("'%v' <> '%v'", obtained, expected)
+	}
 }
 
 // failString constructs a fail string for panics or
