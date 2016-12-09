@@ -43,6 +43,7 @@ const (
 	About
 	Range
 	Substring
+	Case
 	Match
 	ErrorMatch
 	Implementor
@@ -69,6 +70,7 @@ var testNames = []string{
 	About:        "about",
 	Range:        "range",
 	Substring:    "substring",
+	Case:         "case",
 	Match:        "match",
 	ErrorMatch:   "error match",
 	Implementor:  "implementor",
@@ -327,6 +329,9 @@ type Assertion interface {
 	// Substring tests if obtained is a substring of the full string.
 	Substring(obtained, full string, msgs ...string) bool
 
+	// Case tests if obtained string is uppercase or lowercase.
+	Case(obtained string, upperCase bool, msgs ...string) bool
+
 	// Match tests if the obtained string matches a regular expression.
 	Match(obtained, regex string, msgs ...string) bool
 
@@ -498,6 +503,17 @@ func (a *assertion) Range(obtained, low, high interface{}, msgs ...string) bool 
 func (a *assertion) Substring(obtained, full string, msgs ...string) bool {
 	if !a.IsSubstring(obtained, full) {
 		return a.failer.Fail(Substring, obtained, full, msgs...)
+	}
+	return true
+}
+
+// Case implements the Assertion interface.
+func (a *assertion) Case(obtained string, upperCase bool, msgs ...string) bool {
+	if !a.IsCase(obtained, upperCase) {
+		if upperCase {
+			return a.failer.Fail(Case, obtained, strings.ToUpper(obtained), msgs...)
+		}
+		return a.failer.Fail(Case, obtained, strings.ToLower(obtained), msgs...)
 	}
 	return true
 }
@@ -675,9 +691,9 @@ func (t Tester) IsAbout(obtained, expected, extent float64) bool {
 	if extent < 0.0 {
 		extent = extent * (-1)
 	}
-	expectedMin := expected - extent
-	expectedMax := expected + extent
-	return obtained >= expectedMin && obtained <= expectedMax
+	low := expected - extent
+	high := expected + extent
+	return low <= obtained && obtained <= high
 }
 
 // IsInRange checks, if obtained is inside the given range. In case of a
@@ -761,6 +777,14 @@ func (t Tester) Contains(obtained, full interface{}) (bool, error) {
 // IsSubstring checks if obtained is a substring of the full string.
 func (t Tester) IsSubstring(obtained, full string) bool {
 	return strings.Contains(full, obtained)
+}
+
+// IsCase checks if the obtained string is uppercase or lowercase.
+func (t Tester) IsCase(obtained string, upperCase bool) bool {
+	if upperCase {
+		return obtained == strings.ToUpper(obtained)
+	}
+	return obtained == strings.ToLower(obtained)
 }
 
 // IsMatching checks if the obtained string matches a regular expression.

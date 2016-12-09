@@ -159,6 +159,17 @@ func TestAssertSubstring(t *testing.T) {
 	failingAssert.Substring("this  is  assert  test", "this is assert test", "should fail and be logged")
 }
 
+// TestAssertCase tests the Case() assertion.
+func TestAssertCase(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	successfulAssert.Case("FOO", true, "is all uppercase")
+	successfulAssert.Case("foo", false, "is all lowercase")
+	failingAssert.Case("Foo", true, "is mixed case")
+	failingAssert.Case("Foo", false, "is mixed case")
+}
+
 // TestAssertMatch tests the Match() assertion.
 func TestAssertMatch(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
