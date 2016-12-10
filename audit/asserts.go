@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"reflect"
 	"regexp"
@@ -53,6 +54,7 @@ const (
 	NotEmpty
 	Length
 	Panics
+	PathExists
 	Wait
 	Retry
 	Fail
@@ -80,6 +82,7 @@ var testNames = []string{
 	NotEmpty:     "not empty",
 	Length:       "length",
 	Panics:       "panics",
+	PathExists:   "path exists",
 	Wait:         "wait",
 	Retry:        "retry",
 	Fail:         "fail",
@@ -365,6 +368,9 @@ type Assertion interface {
 	// Panics checks if the passed function panics.
 	Panics(pf func(), msgs ...string) bool
 
+	// PathExists checks if the passed path or file exists.
+	PathExists(path string, msgs ...string) bool
+
 	// Wait until a received signal or a timeout. The signal has
 	// to be the expected value.
 	Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool
@@ -607,7 +613,6 @@ func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) b
 	}
 	if length != expected {
 		return a.failer.Fail(Length, length, expected, msgs...)
-
 	}
 	return true
 }
@@ -616,6 +621,18 @@ func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) b
 func (a *assertion) Panics(pf func(), msgs ...string) bool {
 	if !a.HasPanic(pf) {
 		return a.failer.Fail(Panics, ValueDescription(pf), nil, msgs...)
+	}
+	return true
+}
+
+// PathExists implements the Assertion interface.
+func (a *assertion) PathExists(obtained string, msgs ...string) bool {
+	valid, err := a.IsValidPath(obtained)
+	if err != nil {
+		return a.failer.Fail(PathExists, obtained, true, err.Error())
+	}
+	if !valid {
+		return a.failer.Fail(PathExists, obtained, true, msgs...)
 	}
 	return true
 }
@@ -840,6 +857,19 @@ func (t Tester) HasPanic(pf func()) (ok bool) {
 	}()
 	pf()
 	return false
+}
+
+// IsValidPath checks if the given directory or
+// file path exists.
+func (t Tester) IsValidPath(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
 }
 
 //--------------------

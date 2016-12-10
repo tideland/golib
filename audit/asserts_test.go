@@ -269,6 +269,19 @@ func TestAssertPanics(t *testing.T) {
 	failingAssert.Panics(func() { _ = 1 + 1 }, "should not panic")
 }
 
+// TestAssertPathExists tests the PathExists() assertion.
+func TestAssertPathExists(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	td := audit.NewTempDir(successfulAssert)
+	successfulAssert.NotNil(td)
+	defer td.Restore()
+
+	successfulAssert.PathExists(td.String(), "temporary directory exists")
+	failingAssert.PathExists("/this/path/will/hopefully/not/exist", "illegal path")
+}
+
 // TestAssertWait tests the wait testing.
 func TestAssertWait(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
