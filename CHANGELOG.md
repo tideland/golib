@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2016-12-11
+
+- Added asserts for *range*, *cae*, and *path exists*
+
 ## 2016-12-07
 
 - Added *ValidationAssertion* to *audit*
