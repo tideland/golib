@@ -118,6 +118,11 @@ type Etc interface {
 	// the passed values. The keys of the map have to be slash
 	// separated configuration paths without the leading "etc".
 	Apply(appl Application) (Etc, error)
+
+	// Write writes the configuration as SML to the passed target.
+	// If prettyPrint is true the written SML is indented and has
+	// linebreaks.
+	Write(target io.Writer, prettyPrint bool) error
 }
 
 // etc implements the Etc interface.
@@ -257,6 +262,42 @@ func (e *etc) Apply(appl Application) (Etc, error) {
 		}
 	}
 	return ec, nil
+}
+
+// Write implements the Etc interface.
+func (e *etc) Write(target io.Writer, prettyPrint bool) error {
+	// Build the nodes tree.
+	builder := sml.NewNodeBuilder()
+	depth := 0
+	err := e.values.DoAllDeep(func(ks []string, v string) error {
+		switch {
+		case len(ks) > depth:
+			builder.BeginTagNode(ks[depth])
+			builder.TextNode(v)
+			depth++
+		case len(ks) == depth:
+			builder.EndTagNode()
+			builder.BeginTagNode(ks[depth])
+			builder.TextNode(v)
+		case len(ks) < depth:
+			builder.EndTagNode()
+			builder.BeginTagNode(ks[depth])
+			builder.TextNode(v)
+			depth--
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	root, err := builder.Root()
+	if err != nil {
+		return err
+	}
+	// Now write the node structure.
+	wp := sml.NewStandardSMLWriter()
+	wctx := sml.NewWriterContext(wp, target, prettyPrint, "   ")
+	return sml.WriteSML(root, wctx)
 }
 
 // Apply implements the Stringer interface.
