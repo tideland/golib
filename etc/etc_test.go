@@ -12,6 +12,7 @@ package etc_test
 //--------------------
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
@@ -76,6 +77,22 @@ func TestReadFile(t *testing.T) {
 
 	_, err = etc.ReadFile("some-not-existing-configuration-file-due-to-wierd-name")
 	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
+}
+
+// TestWrite tests the writing of configurations.
+func TestWrite(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {sub-a World}{sub-b My {sub-b-sub Friend}}}{b Done}}"
+	cfg, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	var b bytes.Buffer
+
+	err = cfg.Write(&b, false)
+	assert.Nil(err)
+
+	t.Logf(b.String())
 }
 
 // TestTemplates tests the substitution of templates.

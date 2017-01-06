@@ -20,7 +20,7 @@ import (
 //--------------------
 
 const (
-	ErrBuilder = iota
+	ErrBuilder = iota + 1
 	ErrReader
 	ErrNoRootProcessor
 	ErrRegisteredPlugin

@@ -35,7 +35,7 @@ import (
 type key int
 
 var (
-	etcKey    key = 0
+	etcKey    key = 1
 	etcRoot       = []string{"etc"}
 	defaulter     = stringex.NewDefaulter("etc", false)
 )
@@ -270,25 +270,33 @@ func (e *etc) Write(target io.Writer, prettyPrint bool) error {
 	builder := sml.NewNodeBuilder()
 	depth := 0
 	err := e.values.DoAllDeep(func(ks []string, v string) error {
+		doDepth := len(ks)
+		tag := ks[doDepth-1]
+		for i := depth; i > doDepth; i-- {
+			builder.EndTagNode()
+		}
 		switch {
-		case len(ks) > depth:
-			builder.BeginTagNode(ks[depth])
+		case doDepth > depth:
+			builder.BeginTagNode(tag)
 			builder.TextNode(v)
-			depth++
-		case len(ks) == depth:
+			depth = doDepth
+		case doDepth == depth:
 			builder.EndTagNode()
-			builder.BeginTagNode(ks[depth])
+			builder.BeginTagNode(tag)
 			builder.TextNode(v)
-		case len(ks) < depth:
+		case doDepth < depth:
 			builder.EndTagNode()
-			builder.BeginTagNode(ks[depth])
+			builder.BeginTagNode(tag)
 			builder.TextNode(v)
-			depth--
+			depth = doDepth
 		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	for i := depth; i > 0; i-- {
+		builder.EndTagNode()
 	}
 	root, err := builder.Root()
 	if err != nil {
