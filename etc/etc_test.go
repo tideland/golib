@@ -1,6 +1,6 @@
 // Tideland Go Library - Etc - Unit Tests
 //
-// Copyright (C) 2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2016-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -83,16 +83,39 @@ func TestReadFile(t *testing.T) {
 func TestWrite(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
-	source := "{etc {a Hello}{sub {sub-a World}{sub-b My {sub-b-sub Friend}}}{b Done}}"
-	cfg, err := etc.ReadString(source)
+	source := "{etc {a Hello}{sub {sub-a World}{sub-b {sub-b-sub My}}}{b Friend}}"
+	cfgIn, err := etc.ReadString(source)
 	assert.Nil(err)
 
-	var b bytes.Buffer
+	var notPretty bytes.Buffer
+	var pretty bytes.Buffer
 
-	err = cfg.Write(&b, false)
+	err = cfgIn.Write(&notPretty, false)
+	assert.Nil(err)
+	err = cfgIn.Write(&pretty, true)
 	assert.Nil(err)
 
-	t.Logf(b.String())
+	notPrettyStr := notPretty.String()
+	prettyStr := pretty.String()
+
+	cfgOutNotPretty, err := etc.ReadString(notPrettyStr)
+	assert.Nil(err)
+	cfgOutPretty, err := etc.ReadString(prettyStr)
+	assert.Nil(err)
+
+	paths := []string{
+		"a",
+		"sub/sub-a",
+		"sub/sub-b/sub-b-sub",
+		"b",
+	}
+	for _, path := range paths {
+		vsIn := cfgIn.ValueAsString(path, "in")
+		vsOutNotPretty := cfgOutNotPretty.ValueAsString(path, "out")
+		assert.Equal(vsIn, vsOutNotPretty)
+		vsOutPretty := cfgOutPretty.ValueAsString(path, "out")
+		assert.Equal(vsIn, vsOutPretty)
+	}
 }
 
 // TestTemplates tests the substitution of templates.
