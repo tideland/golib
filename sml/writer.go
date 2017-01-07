@@ -106,7 +106,7 @@ func WriteSML(node Node, ctx *WriterContext) error {
 // OpenTag writes the opening of a tag.
 func (w *mlWriter) OpenTag(tag []string) error {
 	w.activatePlugin(tag[0])
-	w.writeIndent()
+	w.writeIndent(true)
 	if err := w.activePlugin().OpenTag(tag); err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (w *mlWriter) OpenTag(tag []string) error {
 // CloseTag writes the closing of a tag.
 func (w *mlWriter) CloseTag(tag []string) error {
 	w.indent--
-	w.writeIndent()
+	w.writeIndent(false)
 	if err := w.activePlugin().CloseTag(tag); err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (w *mlWriter) CloseTag(tag []string) error {
 
 // Text writes a text with an encoding of special runes.
 func (w *mlWriter) Text(text string) error {
-	w.writeIndent()
+	w.writeIndent(true)
 	if err := w.activePlugin().Text(text); err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (w *mlWriter) Text(text string) error {
 
 // Raw writes raw data without any encoding.
 func (w *mlWriter) Raw(raw string) error {
-	w.writeIndent()
+	w.writeIndent(true)
 	if err := w.activePlugin().Raw(raw); err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (w *mlWriter) Raw(raw string) error {
 
 // Comment writes comment data without any encoding.
 func (w *mlWriter) Comment(comment string) error {
-	w.writeIndent()
+	w.writeIndent(true)
 	if err := w.activePlugin().Comment(comment); err != nil {
 		return err
 	}
@@ -179,12 +179,12 @@ func (w *mlWriter) activePlugin() WriterProcessor {
 }
 
 // writeIndent writes an indentation if wanted.
-func (w *mlWriter) writeIndent() {
+func (w *mlWriter) writeIndent(open bool) {
 	if w.context.prettyPrint {
 		for i := 0; i < w.indent; i++ {
 			w.context.Writef(w.context.indentStr)
 		}
-	} else {
+	} else if open {
 		w.context.Writef(" ")
 	}
 }

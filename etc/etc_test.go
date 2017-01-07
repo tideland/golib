@@ -1,6 +1,6 @@
 // Tideland Go Library - Etc - Unit Tests
 //
-// Copyright (C) 2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2016-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -12,6 +12,7 @@ package etc_test
 //--------------------
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
@@ -76,6 +77,45 @@ func TestReadFile(t *testing.T) {
 
 	_, err = etc.ReadFile("some-not-existing-configuration-file-due-to-wierd-name")
 	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
+}
+
+// TestWrite tests the writing of configurations.
+func TestWrite(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub {sub-a World}{sub-b {sub-b-sub My}}}{b Friend}}"
+	cfgIn, err := etc.ReadString(source)
+	assert.Nil(err)
+
+	var notPretty bytes.Buffer
+	var pretty bytes.Buffer
+
+	err = cfgIn.Write(&notPretty, false)
+	assert.Nil(err)
+	err = cfgIn.Write(&pretty, true)
+	assert.Nil(err)
+
+	notPrettyStr := notPretty.String()
+	prettyStr := pretty.String()
+
+	cfgOutNotPretty, err := etc.ReadString(notPrettyStr)
+	assert.Nil(err)
+	cfgOutPretty, err := etc.ReadString(prettyStr)
+	assert.Nil(err)
+
+	paths := []string{
+		"a",
+		"sub/sub-a",
+		"sub/sub-b/sub-b-sub",
+		"b",
+	}
+	for _, path := range paths {
+		vsIn := cfgIn.ValueAsString(path, "in")
+		vsOutNotPretty := cfgOutNotPretty.ValueAsString(path, "out")
+		assert.Equal(vsIn, vsOutNotPretty)
+		vsOutPretty := cfgOutPretty.ValueAsString(path, "out")
+		assert.Equal(vsIn, vsOutPretty)
+	}
 }
 
 // TestTemplates tests the substitution of templates.
