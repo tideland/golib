@@ -39,13 +39,19 @@ func TestRingBufferPush(t *testing.T) {
 	assert.Equal(rb.String(), "[1]->[alpha]->[<nil>]->[true]")
 }
 
-// TestRingBufferPop tests the popping of values.
+// TestRingBufferPeekPop tests the peeking and popping of values.
 func TestRingBufferPop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	rb := collections.NewRingBuffer(10)
 	assert.Equal(rb.Cap(), 10)
 	assert.Length(rb, 0)
+	v, ok := rb.Peek()
+	assert.False(ok)
+	assert.Nil(v)
+	v, ok = rb.Pop()
+	assert.False(ok)
+	assert.Nil(v)
 
 	rb.Push(1, "alpha", nil, true)
 	assert.Length(rb, 4)
@@ -63,7 +69,10 @@ func TestRingBufferPop(t *testing.T) {
 		{nil, false, 0},
 	}
 	for _, test := range tests {
-		v, ok := rb.Pop()
+		v, ok := rb.Peek()
+		assert.Equal(v, test.value)
+		assert.Equal(ok, test.ok)
+		v, ok = rb.Pop()
 		assert.Equal(v, test.value)
 		assert.Equal(ok, test.ok)
 		assert.Length(rb, test.length)

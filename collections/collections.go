@@ -43,6 +43,10 @@ type RingBuffer interface {
 	// Push adds values to the end of the buffer.
 	Push(values ...interface{})
 
+	// Peek returns the first value of the buffer. If the
+	// buffer is empty the second return value is false.
+	Peek() (interface{}, bool)
+
 	// Pop removes and returns the first value of the buffer. If
 	// the buffer is empty the second return value is false.
 	Pop() (interface{}, bool)

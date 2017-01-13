@@ -15,7 +15,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.18.0
+Version 4.19.0
 
 ## Packages
 

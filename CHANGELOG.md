@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2017-01-13
+
+- *collections.RingBuffer* now provides *Peek()*
+
 ## 2017-01-07
 
 - *etc.Etc* now can write to an *io.Reader*
