@@ -71,6 +71,14 @@ func (rb *ringBuffer) Push(values ...interface{}) {
 	}
 }
 
+// Peek implements the RingBuffer interface.
+func (rb *ringBuffer) Peek() (interface{}, bool) {
+	if rb.start.used == false {
+		return nil, false
+	}
+	return rb.start.value, true
+}
+
 // Pop implements the RingBuffer interface.
 func (rb *ringBuffer) Pop() (interface{}, bool) {
 	if rb.start.used == false {
