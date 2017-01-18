@@ -1,6 +1,6 @@
 // Tideland Go Library - Audit
 //
-// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -156,8 +156,14 @@ func (g *Generator) OneIntOf(values ...int) int {
 	return values[i]
 }
 
-// OneIStringOf returns one of the passed strings.
+// OneStringOf returns one of the passed strings.
 func (g *Generator) OneStringOf(values ...string) string {
+	i := g.Int(0, len(values)-1)
+	return values[i]
+}
+
+// OneDurationOf returns one of the passed durations.
+func (g *Generator) OneDurationOf(values ...time.Duration) time.Duration {
 	i := g.Int(0, len(values)-1)
 	return values[i]
 }
@@ -374,6 +380,14 @@ func (g *Generator) Duration(lo, hi time.Duration) time.Duration {
 	}
 	n := g.rand.Int63n(int64(hi) - int64(lo) + 1)
 	return lo + time.Duration(n)
+}
+
+// SleepOneOf chooses randomely one of the passed durations
+// and lets the goroutine sleep for this time.
+func (g *Generator) SleepOneOf(sleeps ...time.Duration) time.Duration {
+	sleep := g.OneDurationOf(sleeps...)
+	time.Sleep(sleep)
+	return sleep
 }
 
 // Time generates a time between the given one and that time

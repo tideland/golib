@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2017-01-18
+
+- *audit.Generator* now provides *OneDurationOf()*
+  and *SleepOneOf()*
+
 ## 2017-01-13
 
 - *collections.RingBuffer* now provides *Peek()*

@@ -1,6 +1,6 @@
 // Tideland Go Library - Audit - Unit Tests
 //
-// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the NewGenerator BSD license.
@@ -123,6 +123,9 @@ func TestOneOf(t *testing.T) {
 
 		s := gen.OneStringOf("one", "two", "three", "four", "five")
 		assert.Substring(s, "one/two/three/four/five")
+
+		d := gen.OneDurationOf(1*time.Second, 2*time.Second, 3*time.Second)
+		assert.True(d >= 1*time.Second && d <= 3*time.Second)
 	}
 }
 
@@ -277,7 +280,7 @@ func TestEMail(t *testing.T) {
 	}
 }
 
-// TestDimes tests the generation of durations and times.
+// TestTimes tests the generation of durations and times.
 func TestTimes(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	gen := audit.NewGenerator(audit.SimpleRand())
@@ -299,6 +302,20 @@ func TestTimes(t *testing.T) {
 		t := gen.Time(loc, now, dur)
 		assert.True(t.Equal(now) || t.After(now))
 		assert.True(t.Before(now.Add(dur)) || t.Equal(now.Add(dur)))
+	}
+
+	one := 1 * time.Millisecond
+	two := 2 * time.Millisecond
+	three := 3 * time.Millisecond
+	four := 4 * time.Millisecond
+	five := 5 * time.Millisecond
+	for i := 0; i < 1000; i++ {
+		before := time.Now().UnixNano()
+		gen.SleepOneOf(one, two, three, four, five)
+		after := time.Now().UnixNano()
+		duration := (after - before) / 1000000
+		assert.True(duration > 0)
+		assert.True(duration < 6)
 	}
 }
 
