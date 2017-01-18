@@ -6,16 +6,17 @@ The *Tideland Go Library* contains a larger set of useful Google Go packages
 for different purposes.
 
 **ATTENTION:** The `cells` package has been migrated into an own repository
-at https://github.com/tideland/gocells.
+at [https://github.com/tideland/gocells](https://github.com/tideland/gocells).
 
 **ATTENTION:** The `web` package is now deprecated. It has been migrated
-and extended into the repository https://github.com/tideland/gorest.
+and extended into the repository 
+[https://github.com/tideland/gorest](https://github.com/tideland/gorest).
 
 I hope you like them. ;)
 
 ## Version
 
-Version 4.19.0
+Version 4.20.0
 
 ## Packages
 
