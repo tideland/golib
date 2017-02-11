@@ -328,7 +328,7 @@ type Assertion interface {
 	// Range tests if obtained is larger or equal low and lower or
 	// equal high. Allowed are byte, int and float64 for numbers, runes
 	// and strings, or as a length test array, slices, and maps.
-	Range(obtained, low, hight interface{}, msgs ...string) bool
+	Range(obtained, low, high interface{}, msgs ...string) bool
 
 	// Substring tests if obtained is a substring of the full string.
 	Substring(obtained, full string, msgs ...string) bool
