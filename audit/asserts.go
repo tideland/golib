@@ -179,7 +179,8 @@ func (f panicFailer) Fail(test Test, obtained, expected interface{}, msgs ...str
 	panic(failString(test, obex, msgs...))
 }
 
-// validationFailer collects validation errors and additionally.
+// validationFailer collects validation errors, e.g. when
+// validating form input data.
 type validationFailer struct {
 	mux  sync.Mutex
 	errs []error
@@ -241,7 +242,7 @@ type testingFailer struct {
 }
 
 // Logf implements the Failer interface.
-func (f testingFailer) Logf(format string, args ...interface{}) {
+func (f *testingFailer) Logf(format string, args ...interface{}) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 	_, file, line, _ := runtime.Caller(3)
@@ -251,7 +252,7 @@ func (f testingFailer) Logf(format string, args ...interface{}) {
 }
 
 // Fail implements the Failer interface.
-func (f testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
+func (f *testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 	pc, file, line, _ := runtime.Caller(3)
@@ -327,7 +328,7 @@ type Assertion interface {
 	// Range tests if obtained is larger or equal low and lower or
 	// equal high. Allowed are byte, int and float64 for numbers, runes
 	// and strings, or as a length test array, slices, and maps.
-	Range(obtained, low, hight interface{}, msgs ...string) bool
+	Range(obtained, low, high interface{}, msgs ...string) bool
 
 	// Substring tests if obtained is a substring of the full string.
 	Substring(obtained, full string, msgs ...string) bool
@@ -770,23 +771,43 @@ func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
 // Contains checks if the obtained type is matching to the full type and
 // if that containes the obtained data.
 func (t Tester) Contains(obtained, full interface{}) (bool, error) {
-	obtainedValue := reflect.ValueOf(obtained)
-	fullValue := reflect.ValueOf(full)
-	fullKind := fullValue.Kind()
-	switch fullKind {
-	case reflect.String:
-		obtainedString := obtainedValue.String()
-		fulltString := fullValue.String()
-		return strings.Contains(fulltString, obtainedString), nil
-	case reflect.Array, reflect.Slice:
-		length := fullValue.Len()
-		for i := 0; i < length; i++ {
-			currentValue := fullValue.Index(i)
-			if reflect.DeepEqual(obtained, currentValue.Interface()) {
-				return true, nil
-			}
+	switch fullValue := full.(type) {
+	case string:
+		// Content of a string.
+		switch obtainedValue := obtained.(type) {
+		case string:
+			return strings.Contains(fullValue, obtainedValue), nil
+		case []byte:
+			return strings.Contains(fullValue, string(obtainedValue)), nil
+		default:
+			obtainedString := fmt.Sprintf("%v", obtainedValue)
+			return strings.Contains(fullValue, obtainedString), nil
 		}
-		return false, nil
+	case []byte:
+		// Content of a byte slice.
+		switch obtainedValue := obtained.(type) {
+		case string:
+			return bytes.Contains(fullValue, []byte(obtainedValue)), nil
+		case []byte:
+			return bytes.Contains(fullValue, obtainedValue), nil
+		default:
+			obtainedBytes := []byte(fmt.Sprintf("%v", obtainedValue))
+			return bytes.Contains(fullValue, obtainedBytes), nil
+		}
+	default:
+		// Content of any array or slice, use reflection.
+		value := reflect.ValueOf(full)
+		kind := value.Kind()
+		if kind == reflect.Array || kind == reflect.Slice {
+			length := value.Len()
+			for i := 0; i < length; i++ {
+				current := value.Index(i)
+				if reflect.DeepEqual(obtained, current.Interface()) {
+					return true, nil
+				}
+			}
+			return false, nil
+		}
 	}
 	return false, errors.New("full value is no string, array, or slice")
 }

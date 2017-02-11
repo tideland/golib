@@ -66,7 +66,7 @@ func TestBuildDate(t *testing.T) {
 // TestInts tests the generation of ints.
 func TestInts(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	// Test individual ints.
 	for i := 0; i < 10000; i++ {
@@ -109,7 +109,7 @@ func TestInts(t *testing.T) {
 // TestOneOf tests the generation of selections.
 func TestOneOf(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	for i := 0; i < 10000; i++ {
 		b := gen.OneByteOf(1, 2, 3, 4, 5)
@@ -132,7 +132,7 @@ func TestOneOf(t *testing.T) {
 // TestWords tests the generation of words.
 func TestWords(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	// Test single words.
 	for i := 0; i < 10000; i++ {
@@ -158,7 +158,7 @@ func TestWords(t *testing.T) {
 // TestPattern tests the generation based on patterns.
 func TestPattern(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 	assertPattern := func(pattern, runes string) {
 		set := make(map[rune]bool)
 		for _, r := range runes {
@@ -192,7 +192,7 @@ func TestPattern(t *testing.T) {
 // TestText tests the generation of text.
 func TestText(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	for i := 0; i < 10000; i++ {
 		s := gen.Sentence()
@@ -219,7 +219,7 @@ func TestText(t *testing.T) {
 // TestName tests the generation of names.
 func TestName(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	assert.Equal(audit.ToUpperFirst("yadda"), "Yadda")
 
@@ -247,7 +247,7 @@ func TestName(t *testing.T) {
 // TestDomain tests the generation of domains.
 func TestDomain(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	for i := 0; i < 00100; i++ {
 		domain := gen.Domain()
@@ -259,7 +259,7 @@ func TestDomain(t *testing.T) {
 // TestURL tests the generation of URLs.
 func TestURL(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	for i := 0; i < 10000; i++ {
 		url := gen.URL()
@@ -271,7 +271,7 @@ func TestURL(t *testing.T) {
 // TestEMail tests the generation of e-mail addresses.
 func TestEMail(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	for i := 0; i < 10000; i++ {
 		addr := gen.EMail()
@@ -283,7 +283,7 @@ func TestEMail(t *testing.T) {
 // TestTimes tests the generation of durations and times.
 func TestTimes(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	gen := audit.NewGenerator(audit.SimpleRand())
+	gen := audit.NewGenerator(audit.FixedRand())
 
 	for i := 0; i < 10000; i++ {
 		// Test durations.
@@ -293,15 +293,15 @@ func TestTimes(t *testing.T) {
 		if hi < lo {
 			lo, hi = hi, lo
 		}
-		assert.True(lo <= d && d <= hi)
+		assert.True(lo <= d && d <= hi, "High / Low")
 
 		// Test times.
 		loc := time.Local
 		now := time.Now()
 		dur := gen.Duration(24*time.Hour, 30*24*time.Hour)
 		t := gen.Time(loc, now, dur)
-		assert.True(t.Equal(now) || t.After(now))
-		assert.True(t.Before(now.Add(dur)) || t.Equal(now.Add(dur)))
+		assert.True(t.Equal(now) || t.After(now), "Equal or after now")
+		assert.True(t.Before(now.Add(dur)) || t.Equal(now.Add(dur)), "Before or equal now plus duration")
 	}
 
 	one := 1 * time.Millisecond
@@ -314,8 +314,8 @@ func TestTimes(t *testing.T) {
 		gen.SleepOneOf(one, two, three, four, five)
 		after := time.Now().UnixNano()
 		duration := (after - before) / 1000000
-		assert.True(duration > 0)
-		assert.True(duration < 6)
+		assert.True(duration >= 0, "duration greater/equal 0")
+		assert.True(duration <= 6, "duration smaller/equal 6")
 	}
 }
 
