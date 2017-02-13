@@ -255,7 +255,7 @@ func (f *testingFailer) Logf(format string, args ...interface{}) {
 func (f *testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
 	f.mux.Lock()
 	defer f.mux.Unlock()
-	pc, file, line, _ := runtime.Caller(3)
+	pc, file, line, _ := runtime.Caller(2)
 	_, fileName := path.Split(file)
 	funcNameParts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
 	funcNamePartsIdx := len(funcNameParts) - 1
