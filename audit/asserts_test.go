@@ -146,6 +146,15 @@ func TestAssertContents(t *testing.T) {
 	failingAssert.Contents(4711, "foo")
 	failingAssert.Contents(4711, []interface{}{1, "2", 3, "4711", 5, 6, 7, 8, 9})
 	successfulAssert.Contents("4711", []interface{}{1, "2", 3, "4711", 5, 6, 7, 8, 9})
+	failingAssert.Contents("foobar", []byte("the quick brown fox jumps over the lazy dog"))
+}
+
+// TestAssertContentsPrint test the visualization of failing content tests.
+func TestAssertContentsPrint(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, false)
+
+	assert.Contents("foobar", []byte("the quick brown fox jumps over the lazy dog"), "test fails but passes, just visualization")
+	assert.Contents([]byte("foobar"), []byte("the quick brown ..."), "test fails but passes, just visualization")
 }
 
 // TestAssertSubstring tests the Substring() assertion.

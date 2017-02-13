@@ -1,5 +1,13 @@
 # Tideland Go Library
 
+## 2017-02-13
+
+- *audit.Assertion* now is better in comparing strings with
+  byte slices in *Contains*
+- output of *Contains* in case of failing tests is now more
+  clear and also handles strings and byte slices better
+  readable
+
 ## 2017-01-18
 
 - *audit.Generator* now provides *OneDurationOf()*
