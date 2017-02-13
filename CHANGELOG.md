@@ -7,6 +7,7 @@
 - output of *Contains* in case of failing tests is now more
   clear and also handles strings and byte slices better
   readable
+- fixed error in file and line determination for test output
 
 ## 2017-01-18
 
