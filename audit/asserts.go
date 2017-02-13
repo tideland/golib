@@ -274,6 +274,15 @@ func (f *testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...
 	case Implementor, Assignable, Unassignable:
 		fmt.Fprintf(buffer, "Obtained...: %v\n", ValueDescription(obtained))
 		fmt.Fprintf(buffer, "Expected...: %v\n", ValueDescription(expected))
+	case Contents:
+		switch typedObtained := obtained.(type) {
+		case string:
+			fmt.Fprintf(buffer, "Part.......: %s\n", typedObtained)
+			fmt.Fprintf(buffer, "Full.......: %s\n", expected)
+		default:
+			fmt.Fprintf(buffer, "Part.......: %v\n", obtained)
+			fmt.Fprintf(buffer, "Full.......: %v\n", expected)
+		}
 	case Fail:
 	default:
 		fmt.Fprintf(buffer, "Obtained...: %v\n", obtained)
@@ -474,13 +483,13 @@ func (a *assertion) Different(obtained, expected interface{}, msgs ...string) bo
 }
 
 // Contents implements the Assertion interface.
-func (a *assertion) Contents(obtained, full interface{}, msgs ...string) bool {
-	contains, err := a.Contains(obtained, full)
+func (a *assertion) Contents(part, full interface{}, msgs ...string) bool {
+	contains, err := a.Contains(part, full)
 	if err != nil {
-		return a.failer.Fail(Contents, obtained, full, "type missmatch: "+err.Error())
+		return a.failer.Fail(Contents, part, full, "type missmatch: "+err.Error())
 	}
 	if !contains {
-		return a.failer.Fail(Contents, obtained, full, msgs...)
+		return a.failer.Fail(Contents, part, full, msgs...)
 	}
 	return true
 }
@@ -768,31 +777,31 @@ func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
 	return l <= ol && ol <= h, nil
 }
 
-// Contains checks if the obtained type is matching to the full type and
-// if that containes the obtained data.
-func (t Tester) Contains(obtained, full interface{}) (bool, error) {
+// Contains checks if the part type is matching to the full type and
+// if the full data containes the part data.
+func (t Tester) Contains(part, full interface{}) (bool, error) {
 	switch fullValue := full.(type) {
 	case string:
 		// Content of a string.
-		switch obtainedValue := obtained.(type) {
+		switch partValue := part.(type) {
 		case string:
-			return strings.Contains(fullValue, obtainedValue), nil
+			return strings.Contains(fullValue, partValue), nil
 		case []byte:
-			return strings.Contains(fullValue, string(obtainedValue)), nil
+			return strings.Contains(fullValue, string(partValue)), nil
 		default:
-			obtainedString := fmt.Sprintf("%v", obtainedValue)
-			return strings.Contains(fullValue, obtainedString), nil
+			partString := fmt.Sprintf("%v", partValue)
+			return strings.Contains(fullValue, partString), nil
 		}
 	case []byte:
 		// Content of a byte slice.
-		switch obtainedValue := obtained.(type) {
+		switch partValue := part.(type) {
 		case string:
-			return bytes.Contains(fullValue, []byte(obtainedValue)), nil
+			return bytes.Contains(fullValue, []byte(partValue)), nil
 		case []byte:
-			return bytes.Contains(fullValue, obtainedValue), nil
+			return bytes.Contains(fullValue, partValue), nil
 		default:
-			obtainedBytes := []byte(fmt.Sprintf("%v", obtainedValue))
-			return bytes.Contains(fullValue, obtainedBytes), nil
+			partBytes := []byte(fmt.Sprintf("%v", partValue))
+			return bytes.Contains(fullValue, partBytes), nil
 		}
 	default:
 		// Content of any array or slice, use reflection.
@@ -802,7 +811,7 @@ func (t Tester) Contains(obtained, full interface{}) (bool, error) {
 			length := value.Len()
 			for i := 0; i < length; i++ {
 				current := value.Index(i)
-				if reflect.DeepEqual(obtained, current.Interface()) {
+				if reflect.DeepEqual(part, current.Interface()) {
 					return true, nil
 				}
 			}
