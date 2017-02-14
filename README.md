@@ -14,6 +14,8 @@ and extended into the repository
 
 I hope you like them. ;)
 
+[![Sourcegraph](https://sourcegraph.com/github.com/tideland/golib/-/badge.svg)](https://sourcegraph.com/github.com/tideland/golb?badge)
+
 ## Version
 
 Version 4.21.2
