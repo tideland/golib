@@ -245,9 +245,12 @@ type testingFailer struct {
 func (f *testingFailer) Logf(format string, args ...interface{}) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
-	_, file, line, _ := runtime.Caller(3)
+	pc, file, line, _ := runtime.Caller(2)
 	_, fileName := path.Split(file)
-	prefix := fmt.Sprintf("%s:%d: ", fileName, line)
+	funcNameParts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
+	funcNamePartsIdx := len(funcNameParts) - 1
+	funcName := funcNameParts[funcNamePartsIdx]
+	prefix := fmt.Sprintf("%s:%d %s(): ", fileName, line, funcName)
 	backendPrintf(prefix+format+"\n", args...)
 }
 
@@ -696,14 +699,13 @@ func (t Tester) IsNil(obtained interface{}) bool {
 	if obtained == nil {
 		// Standard test.
 		return true
-	} else {
-		// Some types have to be tested via reflection.
-		value := reflect.ValueOf(obtained)
-		kind := value.Kind()
-		switch kind {
-		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-			return value.IsNil()
-		}
+	}
+	// Some types have to be tested via reflection.
+	value := reflect.ValueOf(obtained)
+	kind := value.Kind()
+	switch kind {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return value.IsNil()
 	}
 	return false
 }
