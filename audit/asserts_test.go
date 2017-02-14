@@ -153,6 +153,7 @@ func TestAssertContents(t *testing.T) {
 func TestAssertContentsPrint(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, false)
 
+	assert.Logf("printing of failing content tests")
 	assert.Contents("foobar", []byte("the quick brown fox jumps over the lazy dog"), "test fails but passes, just visualization")
 	assert.Contents([]byte("foobar"), []byte("the quick brown ..."), "test fails but passes, just visualization")
 }
