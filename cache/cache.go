@@ -1,6 +1,6 @@
 // Tideland Go Library - Cache
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -12,7 +12,6 @@ package cache
 //--------------------
 
 import (
-	"sync"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -23,197 +22,151 @@ import (
 // CONSTANTS
 //--------------------
 
+// bucketStatus defines the different statuses of a bucket.
+type bucketStatus int
+
 const (
-	ErrCannotRetrieve = iota + 1
+	statusNew bucketStatus = iota + 1
+	statusLoaded
+	statusOutdated
 )
 
-var errorMessages = errors.Messages{
-	ErrCannotRetrieve: "cannot retrieve cached value: %v",
+//--------------------
+// CACHEABLE
+//--------------------
+
+// Cacheable defines the interface for all cacheable information.
+type Cacheable interface {
+	// ID returns the identifier of the information.
+	ID() string
+
+	// IsOutdated checks if their's a newer version of the Cacheable.
+	IsOutdated() (bool, error)
+
+	// Discard tells the Cacheable to clean up itself.
+	Discard() error
 }
 
 //--------------------
-// CACHE MANAGER
+// LOADER
 //--------------------
 
-type cacheManagerChange struct {
-	register bool
-	value    *cachedValue
-}
+// CacheableLoader allows the user to define a function for
+// loading/reloading of cacheable instances.
+type CacheableLoader func(id string) (Cacheable, error)
 
-// cacheManager stores references and sets the values
-// to nil periodically.
-type cacheManager struct {
-	values  []*cachedValue
-	changec chan *cacheManagerChange
-	loop    loop.Loop
-}
+//--------------------
+// OPTIONS
+//--------------------
 
-// newCacheManager creates a new manager.
-func newCacheManager() *cacheManager {
-	m := &cacheManager{
-		values:  []*cachedValue{},
-		changec: make(chan *cacheManagerChange),
+// Option allows to configure a Cache.
+type Option func(c Cache) error
+
+// Loader returns the option to set the loader function.
+func Loader(l CacheableLoader) Option {
+	return func(c Cache) error {
+		switch oc := c.(type) {
+		case *cache:
+			oc.load = l
+			return nil
+		default:
+			return errors.New(ErrIllegalCache, errorMessages)
+		}
 	}
-	m.loop = loop.Go(m.backendLoop)
-	return m
 }
 
-// register a cached value.
-func (m *cacheManager) register(v *cachedValue) {
-	m.changec <- &cacheManagerChange{true, v}
+//--------------------
+// CACHE
+//--------------------
+
+// Cache loads and returns instances by ID and caches them in memory.
+type Cache interface {
+	// Load returns a Cacheable from memory or source.
+	Load(id string, timeout time.Duration) (Cacheable, error)
+
+	// Discard explicitely removes a Cacheable from Cache. Normally
+	// done automatically.
+	Discard(id string) error
+
+	// Stop tells the Cache to stop working.
+	Stop() error
 }
 
-// unRegister a cached value.
-func (m *cacheManager) unregister(v *cachedValue) {
-	m.changec <- &cacheManagerChange{false, v}
+// responser descibes a channel for functions returning
+// the result of a call.
+type responser chan func() (Cacheable, error)
+
+// bucket contains a Cacheable and the data needed to manage it.
+type bucket struct {
+	cacheable Cacheable
+	status    bucketStatus
+	loaded    time.Time
+	lastUsed  time.Time
+	waiters   []responser
 }
 
-// backendLoop processing the changes and the cleanings.
-func (m *cacheManager) backendLoop(l loop.Loop) error {
-	ticker := time.NewTicker(30 * time.Second)
+// cache implements the Cache interface.
+type cache struct {
+	load    CacheableLoader
+	buckets map[string]*bucket
+	taskc   chan task
+	backend loop.Loop
+}
+
+// New creates a new cache.
+func New(options ...Option) (Cache, error) {
+	c := &cache{
+		buckets: make(map[string]*bucket),
+		taskc:   make(chan task),
+	}
+	for _, option := range options {
+		if err := option(c); err != nil {
+			return nil, errors.Annotate(err, ErrSettingOptions, errorMessages)
+		}
+	}
+	if c.load == nil {
+		return nil, errors.New(ErrNoLoader, errorMessages)
+	}
+	c.backend = loop.Go(c.backendLoop)
+	return c, nil
+}
+
+// Load implements the Cache interface.
+func (c *cache) Load(id string, timeout time.Duration) (Cacheable, error) {
+	// Send lookup task.
+	responsec := make(responser, 1)
+	c.taskc <- lookupTask(id, responsec)
+	// Receive response.
+	select {
+	case response := <-responsec:
+		return response()
+	case <-time.After(timeout):
+		return nil, errors.New(ErrTimeout, errorMessages)
+	}
+}
+
+// Discard implements the Cache interface.
+func (c *cache) Discard(id string) error {
+	return nil
+}
+
+// Stop implements the Cache interface.
+func (c *cache) Stop() error {
+	return c.backend.Stop()
+}
+
+// backendLoop runs the cache.
+func (c *cache) backendLoop(l loop.Loop) error {
+	// Run loop.
 	for {
 		select {
 		case <-l.ShallStop():
 			return nil
-		case c := <-m.changec:
-			if c.register {
-				m.doRegister(c.value)
-			} else {
-				m.doUnregister(c.value)
+		case do := <-c.taskc:
+			if err := do(c); err != nil {
+				return err
 			}
-		case <-ticker.C:
-			m.doCleaning()
 		}
-	}
-}
-
-// doRegister performs the registration.
-func (m *cacheManager) doRegister(v *cachedValue) {
-	// Look for a free space.
-	for i := range m.values {
-		if m.values[i] == nil {
-			v.id = i
-			m.values[i] = v
-			return
-		}
-	}
-	// None found, append.
-	i := len(m.values)
-	v.id = i
-	m.values = append(m.values, v)
-}
-
-// doUnregister performs the unregistration.
-func (m *cacheManager) doUnregister(v *cachedValue) {
-	m.values[v.id] = nil
-}
-
-// doCleaning cleans the cached values.
-func (m *cacheManager) doCleaning() {
-	now := time.Now()
-	for _, v := range m.values {
-		if v != nil {
-			v.checkCleaning(now)
-		}
-	}
-}
-
-// cache is the only instance of the cache manager.
-var cache = newCacheManager()
-
-//--------------------
-// CACHED VALUE
-//--------------------
-
-type CachedValue interface {
-	// Value returns the cached value. If an error occurred
-	// during retrieval that will be returned too.
-	Value() (v interface{}, err error)
-
-	// Clear clears the cached value so that it will be
-	// retrieved again when Value() is called the next time.
-	Clear()
-
-	// Remove removes this cached value from the cache.
-	Remove()
-}
-
-// RetrievalFunc is the signature of a function responsible for the retrieval
-// of the cached value from somewhere else in the system, e.g. a database.
-type RetrievalFunc func() (interface{}, error)
-
-// cachedValue implements the CachedValue interface.
-type cachedValue struct {
-	mux           sync.Mutex
-	id            int
-	value         interface{}
-	retrievalFunc RetrievalFunc
-	ttl           time.Duration
-	lastAccess    time.Time
-}
-
-// NewCachedValue creates a new cache. The retrieval func is
-// responsible for the retrieval of the value while ttl defines
-// how long the value is valid.
-func NewCachedValue(r RetrievalFunc, ttl time.Duration) CachedValue {
-	v := &cachedValue{
-		retrievalFunc: r,
-		ttl:           ttl,
-		lastAccess:    time.Now(),
-	}
-	cache.register(v)
-	return v
-}
-
-// Value implements the CachedValue interface.
-func (v *cachedValue) Value() (value interface{}, err error) {
-	v.mux.Lock()
-	defer v.mux.Unlock()
-	defer func() {
-		if r := recover(); r != nil {
-			value = nil
-			err = errors.New(ErrCannotRetrieve, errorMessages, r)
-		}
-	}()
-	if v.value != nil {
-		if time.Now().Sub(v.lastAccess) > v.ttl {
-			v.value = nil
-		}
-	}
-	if v.value == nil {
-		if v.value, err = v.retrievalFunc(); err != nil {
-			v.value = nil
-			return nil, err
-		}
-	}
-	v.lastAccess = time.Now()
-	return v.value, nil
-}
-
-// Clear implements the CachedValue interface.
-func (v *cachedValue) Clear() {
-	v.mux.Lock()
-	defer v.mux.Unlock()
-	v.value = nil
-}
-
-// Remove implements the CachedValue interface.
-func (v *cachedValue) Remove() {
-	v.mux.Lock()
-	defer v.mux.Unlock()
-	cache.unregister(v)
-	v.value = nil
-	v.retrievalFunc = nil
-}
-
-// checkCleaning checks if the timespan between now and the last
-// access is largen than the time to live. In this case the value
-// is cleared.
-func (v *cachedValue) checkCleaning(now time.Time) {
-	v.mux.Lock()
-	defer v.mux.Unlock()
-	if now.Sub(v.lastAccess) > v.ttl {
-		v.value = nil
 	}
 }
 

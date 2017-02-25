@@ -18,7 +18,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.21.3
+Version 4.22.0
 
 ## Packages
 
@@ -31,7 +31,7 @@ to generate test data.
 
 ### Cache
 
-Lazy Loading and Caching of Values.
+Individual caches for types implementing an interface.
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/cache?status.svg)](https://godoc.org/github.com/tideland/golib/cache)
 
