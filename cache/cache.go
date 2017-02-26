@@ -26,9 +26,8 @@ import (
 type bucketStatus int
 
 const (
-	statusNew bucketStatus = iota + 1
+	statusLoading bucketStatus = iota + 1
 	statusLoaded
-	statusOutdated
 )
 
 //--------------------
@@ -107,17 +106,21 @@ type bucket struct {
 
 // cache implements the Cache interface.
 type cache struct {
-	load    CacheableLoader
-	buckets map[string]*bucket
-	taskc   chan task
-	backend loop.Loop
+	load     CacheableLoader
+	interval time.Duration
+	ttl      time.Duration
+	buckets  map[string]*bucket
+	taskc    chan task
+	backend  loop.Loop
 }
 
 // New creates a new cache.
 func New(options ...Option) (Cache, error) {
 	c := &cache{
-		buckets: make(map[string]*bucket),
-		taskc:   make(chan task),
+		interval: time.Minute,
+		ttl:      10 * time.Minute,
+		buckets:  make(map[string]*bucket),
+		taskc:    make(chan task),
 	}
 	for _, option := range options {
 		if err := option(c); err != nil {
@@ -157,6 +160,9 @@ func (c *cache) Stop() error {
 
 // backendLoop runs the cache.
 func (c *cache) backendLoop(l loop.Loop) error {
+	// Prepare ticker for lifetime check.
+	checker := time.NewTicker(c.interval)
+	defer checker.Stop()
 	// Run loop.
 	for {
 		select {
@@ -166,8 +172,34 @@ func (c *cache) backendLoop(l loop.Loop) error {
 			if err := do(c); err != nil {
 				return err
 			}
+		case <-checker.C:
+			if err := c.checkLifetime(); err != nil {
+				return err
+			}
 		}
 	}
+}
+
+// checkLifetime looks for too long unused Cacheables
+// and removes them.
+func (c *cache) checkLifetime() error {
+	unused := []string{}
+	now := time.Now()
+	// First find old ones.
+	for id, bucket := range c.buckets {
+		if bucket.lastUsed.Add(c.ttl).Before(now) {
+			unused = append(unused, id)
+		}
+	}
+	// Now delete found ones.
+	for _, id := range unused {
+		cacheable := c.buckets[id].cacheable
+		delete(c.buckets, id)
+		if err := cacheable.Discard(); err != nil {
+			return errors.Annotate(err, ErrDiscard, errorMessages, id)
+		}
+	}
+	return nil
 }
 
 // EOF

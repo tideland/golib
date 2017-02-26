@@ -13,6 +13,8 @@ package cache
 
 import (
 	"time"
+
+	"github.com/tideland/golib/errors"
 )
 
 //--------------------
@@ -22,12 +24,12 @@ import (
 // task contains any task a cache shall do.
 type task func(c *cache) error
 
-// cancelTask notifies the cache that a loading failed.
-func cancelTask(id string, err error) task {
+// failedTask notifies the cache that a loading failed.
+func failedTask(id string, err error) task {
 	return func(c *cache) error {
 		for _, waiter := range c.buckets[id].waiters {
 			waiter <- func() (Cacheable, error) {
-				return nil, err
+				return nil, errors.Annotate(err, ErrLoading, errorMessages, id)
 			}
 		}
 		delete(c.buckets, id)
@@ -35,8 +37,8 @@ func cancelTask(id string, err error) task {
 	}
 }
 
-// addTask notifies the cache that a loading succeeded.
-func addTask(id string, cacheable Cacheable) task {
+// successTask notifies the cache that a loading succeeded.
+func successTask(id string, cacheable Cacheable) task {
 	return func(c *cache) error {
 		b := c.buckets[id]
 		b.cacheable = cacheable
@@ -57,9 +59,9 @@ func addTask(id string, cacheable Cacheable) task {
 func loading(c *cache, id string) {
 	cacheable, err := c.load(id)
 	if err != nil {
-		c.taskc <- cancelTask(id, err)
+		c.taskc <- failedTask(id, err)
 	} else {
-		c.taskc <- addTask(id, cacheable)
+		c.taskc <- successTask(id, cacheable)
 	}
 }
 
@@ -69,12 +71,37 @@ func lookupTask(id string, responsec responser) task {
 		b, ok := c.buckets[id]
 		switch {
 		case !ok:
+			// ID is unknown.
 			c.buckets[id] = &bucket{
-				status:  statusNew,
+				status:  statusLoading,
 				waiters: []responser{responsec},
 			}
 			go loading(c, id)
-		case ok && b.status == statusNew:
+		case ok && b.status == statusLoading:
+			// ID is known but Cacheable is not yet retrieved.
+			b.waiters = append(b.waiters, responsec)
+		case ok && b.status == statusLoaded:
+			// ID is known and Cacheable is loaded.
+			outdated, err := b.cacheable.IsOutdated()
+			if err != nil {
+				// Error during check if outdated.
+				responsec <- func() (Cacheable, error) {
+					return nil, errors.Annotate(err, ErrCheckOutdated, errorMessages, id)
+				}
+				delete(c.buckets, id)
+				return nil
+			}
+			if outdated {
+				// Outdated, so reload.
+				c.buckets[id].status = statusLoading
+				c.buckets[id].waiters = []responser{responsec}
+				go loading(c, id)
+			}
+			// Everything fine.
+			b.lastUsed = time.Now()
+			responsec <- func() (Cacheable, error) {
+				return b.cacheable, nil
+			}
 		}
 		return nil
 	}
