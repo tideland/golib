@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/identifier"
 	"github.com/tideland/golib/loop"
 )
 
@@ -61,6 +62,19 @@ type CacheableLoader func(id string) (Cacheable, error)
 // Option allows to configure a Cache.
 type Option func(c Cache) error
 
+// ID returns the option to set the cache ID.
+func ID(id string) Option {
+	return func(c Cache) error {
+		switch oc := c.(type) {
+		case *cache:
+			oc.id = id
+			return nil
+		default:
+			return errors.New(ErrIllegalCache, errorMessages)
+		}
+	}
+}
+
 // Loader returns the option to set the loader function.
 func Loader(l CacheableLoader) Option {
 	return func(c Cache) error {
@@ -106,6 +120,7 @@ type bucket struct {
 
 // cache implements the Cache interface.
 type cache struct {
+	id       string
 	load     CacheableLoader
 	interval time.Duration
 	ttl      time.Duration
@@ -117,6 +132,7 @@ type cache struct {
 // New creates a new cache.
 func New(options ...Option) (Cache, error) {
 	c := &cache{
+		id:       identifier.NewUUID().String(),
 		interval: time.Minute,
 		ttl:      10 * time.Minute,
 		buckets:  make(map[string]*bucket),
@@ -130,7 +146,7 @@ func New(options ...Option) (Cache, error) {
 	if c.load == nil {
 		return nil, errors.New(ErrNoLoader, errorMessages)
 	}
-	c.backend = loop.Go(c.backendLoop)
+	c.backend = loop.Go(c.backendLoop, "cache", c.id)
 	return c, nil
 }
 
@@ -150,7 +166,13 @@ func (c *cache) Load(id string, timeout time.Duration) (Cacheable, error) {
 
 // Discard implements the Cache interface.
 func (c *cache) Discard(id string) error {
-	return nil
+	// Send discard task.
+	responsec := make(responser, 1)
+	c.taskc <- discardTask(id, responsec)
+	// Receive response.
+	response := <-responsec
+	_, err := response()
+	return err
 }
 
 // Stop implements the Cache interface.

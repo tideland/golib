@@ -107,4 +107,22 @@ func lookupTask(id string, responsec responser) task {
 	}
 }
 
+// discardTask returns the task for discarding a Cacheable.
+func discardTask(id string, responsec responser) task {
+	return func(c *cache) error {
+		b, ok := c.buckets[id]
+		if !ok {
+			// Not found, so nothing to discard.
+			return nil
+		}
+		// Delete bucket and discard Cacheable.
+		cacheable := b.cacheable
+		delete(c.buckets, id)
+		if err := cacheable.Discard(); err != nil {
+			return errors.Annotate(err, ErrDiscard, errorMessages, id)
+		}
+		return nil
+	}
+}
+
 // EOF
