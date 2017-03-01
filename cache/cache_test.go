@@ -12,6 +12,7 @@ package cache_test
 //--------------------
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -73,6 +74,29 @@ func TestLoading(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(cacheable.ID(), "valid-cacheable")
 	assert.True(second < first)
+}
+
+// TestConcurrentLoading tests the concurrent loading.
+func TestConcurrentLoading(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	c, err := cache.New(cache.ID("concurrent-loading"), cache.Loader(testCacheableLoader))
+	assert.Nil(err)
+	defer c.Stop()
+
+	var wg sync.WaitGroup
+
+	for i := 9; i < 100; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			cacheable, err := c.Load("concurrent", time.Second)
+			assert.Nil(err)
+			assert.Equal(cacheable.ID(), "concurrent")
+			assert.Logf("Goroutine %d loaded %q", n, cacheable.ID())
+		}(i)
+	}
+	wg.Wait()
 }
 
 // TestOutdating tests the outdating of Cacheables.
@@ -166,10 +190,15 @@ func (tc *testCacheable) IsOutdated() (bool, error) {
 	switch tc.id {
 	case "error-during-check":
 		return false, errors.New(errIsObtained, errorMessages, tc.id)
-	case "is-outdated":
+	case "error-during-reloading":
 		loaded[tc.id]++
 		if loaded[tc.id] == 5 {
 			reloaded[tc.id] = true
+			return true, nil
+		}
+	case "is-outdated":
+		loaded[tc.id]++
+		if loaded[tc.id] == 5 {
 			return true, nil
 		}
 	}
