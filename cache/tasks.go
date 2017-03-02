@@ -116,10 +116,13 @@ func discardTask(id string, responsec responser) task {
 			return nil
 		}
 		// Delete bucket and discard Cacheable.
-		cacheable := b.cacheable
+		err := b.cacheable.Discard()
 		delete(c.buckets, id)
-		if err := cacheable.Discard(); err != nil {
-			return errors.Annotate(err, ErrDiscard, errorMessages, id)
+		if err != nil {
+			err = errors.Annotate(err, ErrDiscard, errorMessages, id)
+		}
+		responsec <- func() (Cacheable, error) {
+			return nil, err
 		}
 		return nil
 	}

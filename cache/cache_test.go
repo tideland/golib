@@ -136,6 +136,31 @@ func TestOutdating(t *testing.T) {
 	assert.ErrorMatch(err, ".*error during loading.*")
 }
 
+// TestDiscarding tests the discarding of Cacheables.
+func TestDiscarding(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	c, err := cache.New(cache.ID("discarding"), cache.Loader(testCacheableLoader))
+	assert.Nil(err)
+	defer c.Stop()
+
+	// Test successful discarding.
+	cacheable, err := c.Load("successful-discarding", time.Second)
+	assert.Nil(err)
+	assert.Equal(cacheable.ID(), "successful-discarding")
+
+	err = c.Discard("successful-discarding")
+	assert.Nil(err)
+
+	//And now discarding with error.
+	cacheable, err = c.Load("error-during-discarding", time.Second)
+	assert.Nil(err)
+	assert.NotNil(cacheable)
+
+	err = c.Discard("error-during-discarding")
+	assert.True(errors.IsError(err, cache.ErrDiscard))
+}
+
 //--------------------
 // HELPERS
 //--------------------
@@ -143,12 +168,14 @@ func TestOutdating(t *testing.T) {
 const (
 	errLoading = iota + 1
 	errIsObtained
+	errDiscarding
 	errDoubleDiscarding
 )
 
 var errorMessages = errors.Messages{
 	errLoading:          "error during loading",
 	errIsObtained:       "error during check if '%s' is obtained",
+	errDiscarding:       "error during discarding of '%s'",
 	errDoubleDiscarding: "cacheable '%s' double discarded",
 }
 
@@ -207,6 +234,9 @@ func (tc *testCacheable) IsOutdated() (bool, error) {
 
 // Discard tells the Cacheable to clean up itself.
 func (tc *testCacheable) Discard() error {
+	if tc.id == "error-during-discarding" {
+		return errors.New(errDiscarding, errorMessages, tc.id)
+	}
 	if tc.discarded {
 		return errors.New(errDoubleDiscarding, errorMessages, tc.id)
 	}

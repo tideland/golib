@@ -88,6 +88,32 @@ func Loader(l CacheableLoader) Option {
 	}
 }
 
+// Interval returns the option to set the cleanup check interval.
+func Interval(d time.Duration) Option {
+	return func(c Cache) error {
+		switch oc := c.(type) {
+		case *cache:
+			oc.interval = d
+			return nil
+		default:
+			return errors.New(ErrIllegalCache, errorMessages)
+		}
+	}
+}
+
+// TTL returns the option to set the time to live for Cacheables.
+func TTL(d time.Duration) Option {
+	return func(c Cache) error {
+		switch oc := c.(type) {
+		case *cache:
+			oc.ttl = d
+			return nil
+		default:
+			return errors.New(ErrIllegalCache, errorMessages)
+		}
+	}
+}
+
 //--------------------
 // CACHE
 //--------------------
@@ -214,12 +240,16 @@ func (c *cache) checkLifetime() error {
 		}
 	}
 	// Now delete found ones.
+	var errs []error
 	for _, id := range unused {
 		cacheable := c.buckets[id].cacheable
 		delete(c.buckets, id)
 		if err := cacheable.Discard(); err != nil {
-			return errors.Annotate(err, ErrDiscard, errorMessages, id)
+			errs = append(errs, err)
 		}
+	}
+	if len(errs) > 0 {
+		return errors.Collect(errs...)
 	}
 	return nil
 }
