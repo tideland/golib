@@ -27,17 +27,19 @@ const (
 	ErrLoading
 	ErrCheckOutdated
 	ErrDiscard
+	ErrDiscardedWhileLoading
 	ErrTimeout
 )
 
 var errorMessages = errors.Messages{
-	ErrSettingOptions: "cannot set option",
-	ErrIllegalCache:   "illegal cache type for option",
-	ErrNoLoader:       "no loader configured",
-	ErrLoading:        "cannot load cacheable '%s'",
-	ErrCheckOutdated:  "cannot check if '%s' is outdated",
-	ErrDiscard:        "cannot discard '%s'",
-	ErrTimeout:        "timeout",
+	ErrSettingOptions:        "cannot set option",
+	ErrIllegalCache:          "illegal cache type for option",
+	ErrNoLoader:              "no loader configured",
+	ErrLoading:               "cannot load cacheable '%s'",
+	ErrCheckOutdated:         "cannot check if '%s' is outdated",
+	ErrDiscard:               "cannot discard '%s'",
+	ErrDiscardedWhileLoading: "cacheable '%s' discarded while loading",
+	ErrTimeout:               "timeout",
 }
 
 // EOF

@@ -22,6 +22,22 @@ import (
 )
 
 //--------------------
+// CONSTANTS
+//--------------------
+
+const (
+	idErrorDuringLoading    = "/error/during/loading"
+	idErrorDuringReloading  = "/error/during/reloading"
+	idErrorDuringCheck      = "/error/during/check"
+	idErrorDuringDiscarding = "/error/during/discarding"
+	idTimeout               = "/timeout"
+	idIsOutdated            = "/is/outdated"
+	idValidCacheable        = "/valid/cacheable"
+	idSuccessfulDiscarding  = "/successful/discarding"
+	idConcurrent            = "/concurrent"
+)
+
+//--------------------
 // TESTS
 //--------------------
 
@@ -55,24 +71,24 @@ func TestLoading(t *testing.T) {
 	assert.Nil(err)
 	defer c.Stop()
 
-	cacheable, err := c.Load("error-during-loading", time.Second)
+	cacheable, err := c.Load(idErrorDuringLoading, time.Second)
 	assert.Nil(cacheable)
 	assert.ErrorMatch(err, ".*error during loading.*")
 
-	cacheable, err = c.Load("timeout", 10*time.Millisecond)
+	cacheable, err = c.Load(idTimeout, 10*time.Millisecond)
 	assert.Nil(cacheable)
 	assert.ErrorMatch(err, ".*timeout.*")
 
 	now := time.Now()
-	cacheable, err = c.Load("valid-cacheable", time.Second)
+	cacheable, err = c.Load(idValidCacheable, time.Second)
 	first := time.Now().Sub(now)
 	assert.Nil(err)
-	assert.Equal(cacheable.ID(), "valid-cacheable")
+	assert.Equal(cacheable.ID(), idValidCacheable)
 	now = time.Now()
-	cacheable, err = c.Load("valid-cacheable", time.Second)
+	cacheable, err = c.Load(idValidCacheable, time.Second)
 	second := time.Now().Sub(now)
 	assert.Nil(err)
-	assert.Equal(cacheable.ID(), "valid-cacheable")
+	assert.Equal(cacheable.ID(), idValidCacheable)
 	assert.True(second < first)
 }
 
@@ -90,9 +106,9 @@ func TestConcurrentLoading(t *testing.T) {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			cacheable, err := c.Load("concurrent", time.Second)
+			cacheable, err := c.Load(idConcurrent, time.Second)
 			assert.Nil(err)
-			assert.Equal(cacheable.ID(), "concurrent")
+			assert.Equal(cacheable.ID(), idConcurrent)
 			assert.Logf("Goroutine %d loaded %q", n, cacheable.ID())
 		}(i)
 	}
@@ -108,31 +124,31 @@ func TestOutdating(t *testing.T) {
 	defer c.Stop()
 
 	// Test if outdate check fails.
-	cacheable, err := c.Load("error-during-check", time.Second)
+	cacheable, err := c.Load(idErrorDuringCheck, time.Second)
 	assert.Nil(err)
-	assert.Equal(cacheable.ID(), "error-during-check")
+	assert.Equal(cacheable.ID(), idErrorDuringCheck)
 
-	cacheable, err = c.Load("error-during-check", time.Second)
+	cacheable, err = c.Load(idErrorDuringCheck, time.Second)
 	assert.Nil(cacheable)
-	assert.ErrorMatch(err, ".*error during check if 'error-during-check' is obtained.*")
+	assert.ErrorMatch(err, ".*error during check if '/error/during/check' is outdated.*")
 
 	// Test reload when outdated.
 	for i := 1; i < 6; i++ {
-		_, err := c.Load("is-outdated", time.Second)
+		_, err := c.Load(idIsOutdated, time.Second)
 		assert.Nil(err)
-		assert.Equal(loaded["is-outdated"], i)
+		assert.Equal(loaded[idIsOutdated], i)
 	}
-	_, err = c.Load("is-outdated", time.Second)
+	_, err = c.Load(idIsOutdated, time.Second)
 	assert.Nil(err)
-	assert.Equal(loaded["is-outdated"], 1)
+	assert.Equal(loaded[idIsOutdated], 1)
 
 	// Test error during reload.
 	for i := 1; i < 6; i++ {
-		_, err := c.Load("error-during-reloading", time.Second)
+		_, err := c.Load(idErrorDuringReloading, time.Second)
 		assert.Nil(err)
-		assert.Equal(loaded["error-during-reloading"], i)
+		assert.Equal(loaded[idErrorDuringReloading], i)
 	}
-	_, err = c.Load("error-during-reloading", time.Second)
+	_, err = c.Load(idErrorDuringReloading, time.Second)
 	assert.ErrorMatch(err, ".*error during loading.*")
 }
 
@@ -144,21 +160,35 @@ func TestDiscarding(t *testing.T) {
 	assert.Nil(err)
 	defer c.Stop()
 
-	// Test successful discarding.
-	cacheable, err := c.Load("successful-discarding", time.Second)
+	// Test successful discarding, multiple times ok.
+	cacheable, err := c.Load(idSuccessfulDiscarding, time.Second)
 	assert.Nil(err)
-	assert.Equal(cacheable.ID(), "successful-discarding")
+	assert.Equal(cacheable.ID(), idSuccessfulDiscarding)
 
-	err = c.Discard("successful-discarding")
+	err = c.Discard(idSuccessfulDiscarding)
 	assert.Nil(err)
 
-	//And now discarding with error.
-	cacheable, err = c.Load("error-during-discarding", time.Second)
+	err = c.Discard(idSuccessfulDiscarding)
+	assert.Nil(err)
+
+	// And now discarding with error.
+	cacheable, err = c.Load(idErrorDuringDiscarding, time.Second)
 	assert.Nil(err)
 	assert.NotNil(cacheable)
 
-	err = c.Discard("error-during-discarding")
+	err = c.Discard(idErrorDuringDiscarding)
 	assert.True(errors.IsError(err, cache.ErrDiscard))
+
+	// Discard while several ones are waiting.
+	for i := 0; i < 10; i++ {
+		go func() {
+			cacheable, err := c.Load(idTimeout, time.Second)
+			assert.Nil(cacheable)
+			assert.Nil(err)
+		}()
+	}
+	err = c.Discard(idTimeout)
+	assert.Nil(err)
 }
 
 //--------------------
@@ -167,14 +197,14 @@ func TestDiscarding(t *testing.T) {
 
 const (
 	errLoading = iota + 1
-	errIsObtained
+	errIsOutdated
 	errDiscarding
 	errDoubleDiscarding
 )
 
 var errorMessages = errors.Messages{
 	errLoading:          "error during loading",
-	errIsObtained:       "error during check if '%s' is obtained",
+	errIsOutdated:       "error during check if '%s' is outdated",
 	errDiscarding:       "error during discarding of '%s'",
 	errDoubleDiscarding: "cacheable '%s' double discarded",
 }
@@ -186,14 +216,14 @@ var reloaded = map[string]bool{}
 // testCacheableLoader loads the testCacheable.
 func testCacheableLoader(id string) (cache.Cacheable, error) {
 	switch id {
-	case "error-during-loading":
+	case idErrorDuringLoading:
 		return nil, errors.New(errLoading, errorMessages)
-	case "timeout":
+	case idTimeout:
 		time.Sleep(50 * time.Millisecond)
 	}
 	time.Sleep(50 * time.Millisecond)
 	loaded[id] = 1
-	if id == "error-during-reloading" && reloaded[id] {
+	if id == idErrorDuringReloading && reloaded[id] {
 		return nil, errors.New(errLoading, errorMessages)
 	}
 	return &testCacheable{
@@ -215,15 +245,15 @@ func (tc *testCacheable) ID() string {
 // IsOutdated checks if their's a newer version of the Cacheable.
 func (tc *testCacheable) IsOutdated() (bool, error) {
 	switch tc.id {
-	case "error-during-check":
-		return false, errors.New(errIsObtained, errorMessages, tc.id)
-	case "error-during-reloading":
+	case idErrorDuringCheck:
+		return false, errors.New(errIsOutdated, errorMessages, tc.id)
+	case idErrorDuringReloading:
 		loaded[tc.id]++
 		if loaded[tc.id] == 5 {
 			reloaded[tc.id] = true
 			return true, nil
 		}
-	case "is-outdated":
+	case idIsOutdated:
 		loaded[tc.id]++
 		if loaded[tc.id] == 5 {
 			return true, nil
@@ -234,7 +264,7 @@ func (tc *testCacheable) IsOutdated() (bool, error) {
 
 // Discard tells the Cacheable to clean up itself.
 func (tc *testCacheable) Discard() error {
-	if tc.id == "error-during-discarding" {
+	if tc.id == idErrorDuringDiscarding {
 		return errors.New(errDiscarding, errorMessages, tc.id)
 	}
 	if tc.discarded {
