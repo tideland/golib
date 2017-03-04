@@ -115,6 +115,18 @@ func TTL(d time.Duration) Option {
 }
 
 //--------------------
+// INFO
+//--------------------
+
+// Info containes statistical information about the Cache.
+type Info struct {
+	ID       string
+	Interval time.Duration
+	TTL      time.Duration
+	Len      int
+}
+
+//--------------------
 // CACHE
 //--------------------
 
@@ -127,13 +139,16 @@ type Cache interface {
 	// done automatically.
 	Discard(id string) error
 
+	// Info returns information about the Cache.
+	Info() (Info, error)
+
 	// Stop tells the Cache to stop working.
 	Stop() error
 }
 
-// responser descibes a channel for functions returning
-// the result of a call.
-type responser chan func() (Cacheable, error)
+// responder descibes a channel for functions returning
+// the result of a task.
+type responder chan func() (Cacheable, *Info, error)
 
 // bucket contains a Cacheable and the data needed to manage it.
 type bucket struct {
@@ -141,7 +156,7 @@ type bucket struct {
 	status    bucketStatus
 	loaded    time.Time
 	lastUsed  time.Time
-	waiters   []responser
+	waiters   []responder
 }
 
 // cache implements the Cache interface.
@@ -179,12 +194,13 @@ func New(options ...Option) (Cache, error) {
 // Load implements the Cache interface.
 func (c *cache) Load(id string, timeout time.Duration) (Cacheable, error) {
 	// Send lookup task.
-	responsec := make(responser, 1)
+	responsec := make(responder, 1)
 	c.taskc <- lookupTask(id, responsec)
 	// Receive response.
 	select {
 	case response := <-responsec:
-		return response()
+		cacheable, _, err := response()
+		return cacheable, err
 	case <-time.After(timeout):
 		return nil, errors.New(ErrTimeout, errorMessages, "loading")
 	}
@@ -193,15 +209,30 @@ func (c *cache) Load(id string, timeout time.Duration) (Cacheable, error) {
 // Discard implements the Cache interface.
 func (c *cache) Discard(id string) error {
 	// Send discard task.
-	responsec := make(responser, 1)
+	responsec := make(responder, 1)
 	c.taskc <- discardTask(id, responsec)
 	// Receive response.
 	select {
 	case response := <-responsec:
-		_, err := response()
+		_, _, err := response()
 		return err
 	case <-time.After(5 * time.Second):
 		return errors.New(ErrTimeout, errorMessages, "discarding")
+	}
+}
+
+// Info implements the Cache interface.
+func (c *cache) Info() (Info, error) {
+	// Send info task.
+	responsec := make(responder, 1)
+	c.taskc <- infoTask(responsec)
+	// Receive response.
+	select {
+	case response := <-responsec:
+		_, info, err := response()
+		return *info, err
+	case <-time.After(5 * time.Second):
+		return Info{}, errors.New(ErrTimeout, errorMessages, "informating")
 	}
 }
 
@@ -239,6 +270,9 @@ func (c *cache) cleanup() error {
 	now := time.Now()
 	// First find old ones.
 	for id, bucket := range c.buckets {
+		if bucket.status == statusLoading {
+			continue
+		}
 		if bucket.lastUsed.Add(c.ttl).Before(now) {
 			unused = append(unused, id)
 		}

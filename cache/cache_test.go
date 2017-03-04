@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cache"
 	"github.com/tideland/golib/errors"
@@ -35,6 +37,7 @@ const (
 	idValidCacheable        = "/valid/cacheable"
 	idSuccessfulDiscarding  = "/successful/discarding"
 	idConcurrent            = "/concurrent"
+	idCleanup               = "/cleanup/%d"
 )
 
 //--------------------
@@ -196,6 +199,25 @@ func TestDiscarding(t *testing.T) {
 	err = c.Discard(idTimeout)
 	assert.Nil(err)
 	wg.Wait()
+}
+
+// TestCleanup tests the cleanup of unused Cacheables.
+func TestCleanup(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	c, err := cache.New(cache.ID("cleanup"), cache.Loader(testCacheableLoader),
+		cache.Interval(25*time.Millisecond), cache.TTL(50*time.Millisecond))
+	assert.Nil(err)
+	defer c.Stop()
+
+	// Fill the cache.
+	for i := 0; i < 50; i++ {
+		id := fmt.Sprintf(idCleanup, i)
+		cacheable, err := c.Load(id, time.Second)
+		assert.Nil(err)
+		assert.Equal(cacheable.ID(), id)
+	}
+	time.Sleep(time.Second)
 }
 
 //--------------------
