@@ -5,9 +5,11 @@
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// Package cache lazily loads information on demand and caches them. In
-// case of too many instances older ones will be removed. Also those
-// existing longer than a defined duration will be removed again.
+// Package cache lazily loads information on demand and caches them.
+// The data inside a cache has to implement the Cacheable interface
+// which also contains methods for checking, if the information is
+// outdated, and for discarding the cached instance. It is loaded
+// by a user defined CacheableLoader function.
 package cache
 
 // EOF

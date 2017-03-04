@@ -31,7 +31,7 @@ to generate test data.
 
 ### Cache
 
-Individual caches for types implementing an interface.
+Individual caches for types implementing the Cacheable interface.
 
 [![GoDoc](https://godoc.org/github.com/tideland/golib/cache?status.svg)](https://godoc.org/github.com/tideland/golib/cache)
 

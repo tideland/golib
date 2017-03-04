@@ -186,7 +186,7 @@ func (c *cache) Load(id string, timeout time.Duration) (Cacheable, error) {
 	case response := <-responsec:
 		return response()
 	case <-time.After(timeout):
-		return nil, errors.New(ErrTimeout, errorMessages)
+		return nil, errors.New(ErrTimeout, errorMessages, "loading")
 	}
 }
 
@@ -196,9 +196,13 @@ func (c *cache) Discard(id string) error {
 	responsec := make(responser, 1)
 	c.taskc <- discardTask(id, responsec)
 	// Receive response.
-	response := <-responsec
-	_, err := response()
-	return err
+	select {
+	case response := <-responsec:
+		_, err := response()
+		return err
+	case <-time.After(5 * time.Second):
+		return errors.New(ErrTimeout, errorMessages, "discarding")
+	}
 }
 
 // Stop implements the Cache interface.
@@ -221,16 +225,16 @@ func (c *cache) backendLoop(l loop.Loop) error {
 				return err
 			}
 		case <-checker.C:
-			if err := c.checkLifetime(); err != nil {
+			if err := c.cleanup(); err != nil {
 				return err
 			}
 		}
 	}
 }
 
-// checkLifetime looks for too long unused Cacheables
+// cleanup looks for too long unused Cacheables
 // and removes them.
-func (c *cache) checkLifetime() error {
+func (c *cache) cleanup() error {
 	unused := []string{}
 	now := time.Now()
 	// First find old ones.

@@ -27,8 +27,8 @@ type task func(c *cache) error
 // failedTask notifies the cache that a loading failed.
 func failedTask(id string, err error) task {
 	return func(c *cache) error {
+		// Check for discarded Cacheable first.
 		if c.buckets[id] == nil {
-			// Has been discarded.
 			return nil
 		}
 		// Notify all waiters.
@@ -45,8 +45,8 @@ func failedTask(id string, err error) task {
 // successTask notifies the cache that a loading succeeded.
 func successTask(id string, cacheable Cacheable) task {
 	return func(c *cache) error {
+		// Check for discarded Cacheable first.
 		if c.buckets[id] == nil {
-			// Has been discarded.
 			return nil
 		}
 		// Set bucket values.
@@ -129,11 +129,15 @@ func discardTask(id string, responsec responser) task {
 			}
 			return nil
 		}
-		// Delete bucket and discard Cacheable.
-		err := b.cacheable.Discard()
-		for _, waiter := range c.buckets[id].waiters {
+		// Discard Cacheable, notify possible waiters,
+		// delete bucket, and notify caller.
+		var err error
+		if b.cacheable != nil {
+			err = b.cacheable.Discard()
+		}
+		for _, waiter := range b.waiters {
 			waiter <- func() (Cacheable, error) {
-				return nil, errors.Annotate(err, ErrDiscardedWhileLoading, errorMessages, id)
+				return nil, errors.New(ErrDiscardedWhileLoading, errorMessages, id)
 			}
 		}
 		delete(c.buckets, id)

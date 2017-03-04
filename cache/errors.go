@@ -39,7 +39,7 @@ var errorMessages = errors.Messages{
 	ErrCheckOutdated:         "cannot check if '%s' is outdated",
 	ErrDiscard:               "cannot discard '%s'",
 	ErrDiscardedWhileLoading: "cacheable '%s' discarded while loading",
-	ErrTimeout:               "timeout",
+	ErrTimeout:               "timeout while %s",
 }
 
 // EOF

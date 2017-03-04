@@ -180,15 +180,22 @@ func TestDiscarding(t *testing.T) {
 	assert.True(errors.IsError(err, cache.ErrDiscard))
 
 	// Discard while several ones are waiting.
+	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			cacheable, err := c.Load(idTimeout, time.Second)
-			assert.Nil(cacheable)
-			assert.Nil(err)
+			if err == nil {
+				assert.Equal(cacheable.ID(), idTimeout)
+			} else {
+				assert.True(errors.IsError(err, cache.ErrDiscardedWhileLoading))
+			}
 		}()
 	}
 	err = c.Discard(idTimeout)
 	assert.Nil(err)
+	wg.Wait()
 }
 
 //--------------------
@@ -209,9 +216,11 @@ var errorMessages = errors.Messages{
 	errDoubleDiscarding: "cacheable '%s' double discarded",
 }
 
-var loaded = map[string]int{}
-
-var reloaded = map[string]bool{}
+var (
+	mutex    sync.Mutex
+	loaded   = map[string]int{}
+	reloaded = map[string]bool{}
+)
 
 // testCacheableLoader loads the testCacheable.
 func testCacheableLoader(id string) (cache.Cacheable, error) {
@@ -222,7 +231,9 @@ func testCacheableLoader(id string) (cache.Cacheable, error) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	time.Sleep(50 * time.Millisecond)
+	mutex.Lock()
 	loaded[id] = 1
+	mutex.Unlock()
 	if id == idErrorDuringReloading && reloaded[id] {
 		return nil, errors.New(errLoading, errorMessages)
 	}
@@ -248,13 +259,19 @@ func (tc *testCacheable) IsOutdated() (bool, error) {
 	case idErrorDuringCheck:
 		return false, errors.New(errIsOutdated, errorMessages, tc.id)
 	case idErrorDuringReloading:
+		mutex.Lock()
 		loaded[tc.id]++
+		mutex.Unlock()
 		if loaded[tc.id] == 5 {
+			mutex.Lock()
 			reloaded[tc.id] = true
+			mutex.Unlock()
 			return true, nil
 		}
 	case idIsOutdated:
+		mutex.Lock()
 		loaded[tc.id]++
+		mutex.Unlock()
 		if loaded[tc.id] == 5 {
 			return true, nil
 		}
