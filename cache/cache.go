@@ -139,8 +139,11 @@ type Cache interface {
 	// done automatically.
 	Discard(id string) error
 
-	// Info returns information about the Cache.
-	Info() (Info, error)
+	// Clear empties the Cache.
+	Clear() error
+
+	// Len returns the number of entries in the Cache.
+	Len() int
 
 	// Stop tells the Cache to stop working.
 	Stop() error
@@ -148,7 +151,7 @@ type Cache interface {
 
 // responder descibes a channel for functions returning
 // the result of a task.
-type responder chan func() (Cacheable, *Info, error)
+type responder chan func() (Cacheable, error)
 
 // bucket contains a Cacheable and the data needed to manage it.
 type bucket struct {
@@ -167,6 +170,7 @@ type cache struct {
 	ttl      time.Duration
 	buckets  map[string]*bucket
 	taskc    chan task
+	lenc     chan chan int
 	backend  loop.Loop
 }
 
@@ -178,6 +182,7 @@ func New(options ...Option) (Cache, error) {
 		ttl:      10 * time.Minute,
 		buckets:  make(map[string]*bucket),
 		taskc:    make(chan task),
+		lenc:     make(chan chan int),
 	}
 	for _, option := range options {
 		if err := option(c); err != nil {
@@ -199,7 +204,7 @@ func (c *cache) Load(id string, timeout time.Duration) (Cacheable, error) {
 	// Receive response.
 	select {
 	case response := <-responsec:
-		cacheable, _, err := response()
+		cacheable, err := response()
 		return cacheable, err
 	case <-time.After(timeout):
 		return nil, errors.New(ErrTimeout, errorMessages, "loading")
@@ -214,26 +219,36 @@ func (c *cache) Discard(id string) error {
 	// Receive response.
 	select {
 	case response := <-responsec:
-		_, _, err := response()
+		_, err := response()
 		return err
 	case <-time.After(5 * time.Second):
 		return errors.New(ErrTimeout, errorMessages, "discarding")
 	}
 }
 
-// Info implements the Cache interface.
-func (c *cache) Info() (Info, error) {
-	// Send info task.
+// Clear implements the Cache interface.
+func (c *cache) Clear() error {
+	// Send clear task.
 	responsec := make(responder, 1)
-	c.taskc <- infoTask(responsec)
+	c.taskc <- clearTask(responsec)
 	// Receive response.
 	select {
 	case response := <-responsec:
-		_, info, err := response()
-		return *info, err
+		_, err := response()
+		return err
 	case <-time.After(5 * time.Second):
-		return Info{}, errors.New(ErrTimeout, errorMessages, "informating")
+		return errors.New(ErrTimeout, errorMessages, "discarding")
 	}
+}
+
+// Len implements the Cache interface.
+func (c *cache) Len() int {
+	// Send info task.
+	lenc := make(chan int, 1)
+	c.lenc <- lenc
+	// Receive response.
+	l := <-lenc
+	return l
 }
 
 // Stop implements the Cache interface.
@@ -255,6 +270,8 @@ func (c *cache) backendLoop(l loop.Loop) error {
 			if err := do(c); err != nil {
 				return err
 			}
+		case lenc := <-c.lenc:
+			lenc <- len(c.buckets)
 		case <-checker.C:
 			if err := c.cleanup(); err != nil {
 				return err

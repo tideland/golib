@@ -58,8 +58,9 @@ func TestNoLoader(t *testing.T) {
 // a loader.
 func TestLoader(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
 
-	c, err := cache.New(cache.ID("loader"), cache.Loader(testCacheableLoader))
+	c, err := cache.New(cache.ID("loader"), cache.Loader(te.loader))
 	assert.Nil(err)
 	assert.NotNil(c)
 	err = c.Stop()
@@ -69,8 +70,9 @@ func TestLoader(t *testing.T) {
 // TestLoading tests the load method of a Cache.
 func TestLoading(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
 
-	c, err := cache.New(cache.ID("loading"), cache.Loader(testCacheableLoader))
+	c, err := cache.New(cache.ID("loading"), cache.Loader(te.loader))
 	assert.Nil(err)
 	defer c.Stop()
 
@@ -98,8 +100,9 @@ func TestLoading(t *testing.T) {
 // TestConcurrentLoading tests the concurrent loading.
 func TestConcurrentLoading(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
 
-	c, err := cache.New(cache.ID("concurrent-loading"), cache.Loader(testCacheableLoader))
+	c, err := cache.New(cache.ID("concurrent-loading"), cache.Loader(te.loader))
 	assert.Nil(err)
 	defer c.Stop()
 
@@ -118,15 +121,15 @@ func TestConcurrentLoading(t *testing.T) {
 	wg.Wait()
 }
 
-// TestOutdating tests the outdating of Cacheables.
-func TestOutdating(t *testing.T) {
+// TestOutdatingFail tests the failing outdating of Cacheables.
+func TestOutdatingFail(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
 
-	c, err := cache.New(cache.ID("outdating"), cache.Loader(testCacheableLoader))
+	c, err := cache.New(cache.ID("outdating-fail"), cache.Loader(te.loader))
 	assert.Nil(err)
 	defer c.Stop()
 
-	// Test if outdate check fails.
 	cacheable, err := c.Load(idErrorDuringCheck, time.Second)
 	assert.Nil(err)
 	assert.Equal(cacheable.ID(), idErrorDuringCheck)
@@ -134,22 +137,41 @@ func TestOutdating(t *testing.T) {
 	cacheable, err = c.Load(idErrorDuringCheck, time.Second)
 	assert.Nil(cacheable)
 	assert.ErrorMatch(err, ".*error during check if '/error/during/check' is outdated.*")
+}
 
-	// Test reload when outdated.
+// TestOutdatingReload tests the reload of outdated Cacheables.
+func TestOutdatingReload(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
+
+	c, err := cache.New(cache.ID("outdating-reload"), cache.Loader(te.loader))
+	assert.Nil(err)
+	defer c.Stop()
+
 	for i := 1; i < 6; i++ {
-		_, err := c.Load(idIsOutdated, time.Second)
+		_, err := c.Load(idIsOutdated, time.Minute)
 		assert.Nil(err)
-		assert.Equal(loaded[idIsOutdated], i)
+		assert.Equal(te.loaded[idIsOutdated], i)
 	}
 	_, err = c.Load(idIsOutdated, time.Second)
 	assert.Nil(err)
-	assert.Equal(loaded[idIsOutdated], 1)
+	assert.Equal(te.loaded[idIsOutdated], 1)
+}
 
-	// Test error during reload.
+// TestOutdatingReloadError tests an error during reload of
+// outdated Cacheables.
+func TestOutdatingReloadError(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
+
+	c, err := cache.New(cache.ID("outdating-reload-error"), cache.Loader(te.loader))
+	assert.Nil(err)
+	defer c.Stop()
+
 	for i := 1; i < 6; i++ {
 		_, err := c.Load(idErrorDuringReloading, time.Second)
 		assert.Nil(err)
-		assert.Equal(loaded[idErrorDuringReloading], i)
+		assert.Equal(te.loaded[idErrorDuringReloading], i)
 	}
 	_, err = c.Load(idErrorDuringReloading, time.Second)
 	assert.ErrorMatch(err, ".*error during loading.*")
@@ -158,8 +180,9 @@ func TestOutdating(t *testing.T) {
 // TestDiscarding tests the discarding of Cacheables.
 func TestDiscarding(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
 
-	c, err := cache.New(cache.ID("discarding"), cache.Loader(testCacheableLoader))
+	c, err := cache.New(cache.ID("discarding"), cache.Loader(te.loader))
 	assert.Nil(err)
 	defer c.Stop()
 
@@ -204,9 +227,10 @@ func TestDiscarding(t *testing.T) {
 // TestCleanup tests the cleanup of unused Cacheables.
 func TestCleanup(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
 
-	c, err := cache.New(cache.ID("cleanup"), cache.Loader(testCacheableLoader),
-		cache.Interval(25*time.Millisecond), cache.TTL(50*time.Millisecond))
+	c, err := cache.New(cache.ID("cleanup"), cache.Loader(te.loader),
+		cache.Interval(250*time.Millisecond), cache.TTL(250*time.Millisecond))
 	assert.Nil(err)
 	defer c.Stop()
 
@@ -217,7 +241,35 @@ func TestCleanup(t *testing.T) {
 		assert.Nil(err)
 		assert.Equal(cacheable.ID(), id)
 	}
-	time.Sleep(time.Second)
+	firstLen := c.Len()
+	time.Sleep(500 * time.Millisecond)
+	secondLen := c.Len()
+	assert.Logf("1st: %d > 2nd: %d", firstLen, secondLen)
+	assert.True(firstLen > secondLen)
+}
+
+// TestClear tests the clearing of a Cache.
+func TestClear(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	te := initEnvironment()
+
+	c, err := cache.New(cache.ID("clear"), cache.Loader(te.loader))
+	assert.Nil(err)
+	defer c.Stop()
+
+	// Fill the cache.
+	for i := 0; i < 50; i++ {
+		id := fmt.Sprintf(idCleanup, i)
+		cacheable, err := c.Load(id, time.Second)
+		assert.Nil(err)
+		assert.Equal(cacheable.ID(), id)
+	}
+	firstLen := c.Len()
+	err = c.Clear()
+	assert.Nil(err)
+	secondLen := c.Len()
+	assert.Logf("1st: %d > 2nd: %d", firstLen, secondLen)
+	assert.True(firstLen > secondLen)
 }
 
 //--------------------
@@ -238,14 +290,22 @@ var errorMessages = errors.Messages{
 	errDoubleDiscarding: "cacheable '%s' double discarded",
 }
 
-var (
+type testEnvironment struct {
 	mutex    sync.Mutex
-	loaded   = map[string]int{}
-	reloaded = map[string]bool{}
-)
+	loaded   map[string]int
+	reloaded map[string]bool
+}
 
-// testCacheableLoader loads the testCacheable.
-func testCacheableLoader(id string) (cache.Cacheable, error) {
+// initEnvironment creates a new test environment.
+func initEnvironment() *testEnvironment {
+	return &testEnvironment{
+		loaded:   make(map[string]int),
+		reloaded: make(map[string]bool),
+	}
+}
+
+// loader loads the testCacheable.
+func (te *testEnvironment) loader(id string) (cache.Cacheable, error) {
 	switch id {
 	case idErrorDuringLoading:
 		return nil, errors.New(errLoading, errorMessages)
@@ -253,13 +313,14 @@ func testCacheableLoader(id string) (cache.Cacheable, error) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	time.Sleep(50 * time.Millisecond)
-	mutex.Lock()
-	loaded[id] = 1
-	mutex.Unlock()
-	if id == idErrorDuringReloading && reloaded[id] {
+	te.mutex.Lock()
+	te.loaded[id] = 1
+	te.mutex.Unlock()
+	if id == idErrorDuringReloading && te.reloaded[id] {
 		return nil, errors.New(errLoading, errorMessages)
 	}
 	return &testCacheable{
+		te:        te,
 		id:        id,
 		discarded: false,
 	}, nil
@@ -267,6 +328,7 @@ func testCacheableLoader(id string) (cache.Cacheable, error) {
 
 // testCacheable implements Cacheable for testing.
 type testCacheable struct {
+	te        *testEnvironment
 	id        string
 	discarded bool
 }
@@ -281,20 +343,20 @@ func (tc *testCacheable) IsOutdated() (bool, error) {
 	case idErrorDuringCheck:
 		return false, errors.New(errIsOutdated, errorMessages, tc.id)
 	case idErrorDuringReloading:
-		mutex.Lock()
-		loaded[tc.id]++
-		mutex.Unlock()
-		if loaded[tc.id] == 5 {
-			mutex.Lock()
-			reloaded[tc.id] = true
-			mutex.Unlock()
+		tc.te.mutex.Lock()
+		tc.te.loaded[tc.id]++
+		tc.te.mutex.Unlock()
+		if tc.te.loaded[tc.id] == 5 {
+			tc.te.mutex.Lock()
+			tc.te.reloaded[tc.id] = true
+			tc.te.mutex.Unlock()
 			return true, nil
 		}
 	case idIsOutdated:
-		mutex.Lock()
-		loaded[tc.id]++
-		mutex.Unlock()
-		if loaded[tc.id] == 5 {
+		tc.te.mutex.Lock()
+		tc.te.loaded[tc.id]++
+		tc.te.mutex.Unlock()
+		if tc.te.loaded[tc.id] == 5 {
 			return true, nil
 		}
 	}

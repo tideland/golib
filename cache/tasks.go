@@ -33,8 +33,8 @@ func failedTask(id string, err error) task {
 		}
 		// Notify all waiters.
 		for _, waiter := range c.buckets[id].waiters {
-			waiter <- func() (Cacheable, *Info, error) {
-				return nil, nil, errors.Annotate(err, ErrLoading, errorMessages, id)
+			waiter <- func() (Cacheable, error) {
+				return nil, errors.Annotate(err, ErrLoading, errorMessages, id)
 			}
 		}
 		delete(c.buckets, id)
@@ -57,8 +57,8 @@ func successTask(id string, cacheable Cacheable) task {
 		b.lastUsed = b.loaded
 		// Notify all waiters.
 		for _, waiter := range c.buckets[id].waiters {
-			waiter <- func() (Cacheable, *Info, error) {
-				return cacheable, nil, nil
+			waiter <- func() (Cacheable, error) {
+				return cacheable, nil
 			}
 		}
 		b.waiters = nil
@@ -96,8 +96,8 @@ func lookupTask(id string, responsec responder) task {
 			outdated, err := b.cacheable.IsOutdated()
 			if err != nil {
 				// Error during check if outdated.
-				responsec <- func() (Cacheable, *Info, error) {
-					return nil, nil, errors.Annotate(err, ErrCheckOutdated, errorMessages, id)
+				responsec <- func() (Cacheable, error) {
+					return nil, errors.Annotate(err, ErrCheckOutdated, errorMessages, id)
 				}
 				delete(c.buckets, id)
 				return nil
@@ -110,8 +110,8 @@ func lookupTask(id string, responsec responder) task {
 			}
 			// Everything fine.
 			b.lastUsed = time.Now()
-			responsec <- func() (Cacheable, *Info, error) {
-				return b.cacheable, nil, nil
+			responsec <- func() (Cacheable, error) {
+				return b.cacheable, nil
 			}
 		}
 		return nil
@@ -121,39 +121,63 @@ func lookupTask(id string, responsec responder) task {
 // discardTask returns the task for discarding a Cacheable.
 func discardTask(id string, responsec responder) task {
 	return func(c *cache) error {
-		b, ok := c.buckets[id]
+		bucket, ok := c.buckets[id]
 		if !ok {
 			// Not found, so nothing to discard.
-			responsec <- func() (Cacheable, *Info, error) {
-				return nil, nil, nil
+			responsec <- func() (Cacheable, error) {
+				return nil, nil
 			}
 			return nil
 		}
 		// Discard Cacheable, notify possible waiters,
 		// delete bucket, and notify caller.
 		var err error
-		if b.cacheable != nil {
-			err = b.cacheable.Discard()
+		if bucket.cacheable != nil {
+			err = bucket.cacheable.Discard()
 		}
-		for _, waiter := range b.waiters {
-			waiter <- func() (Cacheable, *Info, error) {
-				return nil, nil, errors.New(ErrDiscardedWhileLoading, errorMessages, id)
+		for _, waiter := range bucket.waiters {
+			waiter <- func() (Cacheable, error) {
+				return nil, errors.New(ErrDiscardedWhileLoading, errorMessages, id)
 			}
 		}
 		delete(c.buckets, id)
 		if err != nil {
 			err = errors.Annotate(err, ErrDiscard, errorMessages, id)
 		}
-		responsec <- func() (Cacheable, *Info, error) {
-			return nil, nil, err
+		responsec <- func() (Cacheable, error) {
+			return nil, err
 		}
 		return nil
 	}
 }
 
-// infoTask returns the task for gathering statistical information.
-func infoTask(responsec responder) task {
+// clearTask returns the task to clear the cache.
+func clearTask(responsec responder) task {
 	return func(c *cache) error {
+		var errs []error
+		for id, bucket := range c.buckets {
+			switch bucket.status {
+			case statusLoading:
+				for _, waiter := range bucket.waiters {
+					waiter <- func() (Cacheable, error) {
+						return nil, errors.New(ErrDiscardedWhileLoading, errorMessages, id)
+					}
+				}
+			case statusLoaded:
+				if err := bucket.cacheable.Discard(); err != nil {
+					errs = append(errs, err)
+				}
+			}
+		}
+		c.buckets = make(map[string]*bucket)
+		var err error
+		if len(errs) > 0 {
+			err = errors.Collect(errs...)
+		}
+		responsec <- func() (Cacheable, error) {
+			return nil, err
+		}
+		return nil
 	}
 }
 
