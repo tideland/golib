@@ -11,8 +11,77 @@ package cache
 // IMPORTS
 //--------------------
 
+import (
+	"io"
+	"os"
+	"time"
+
+	"github.com/tideland/golib/errors"
+)
+
 //--------------------
 // LOADER
 //--------------------
+
+// FileCacheable contains a file.
+type FileCacheable interface {
+	Cacheable
+
+	io.Reader
+}
+
+// fileCacheable implements the FileCacheable interface.
+type fileCacheable struct {
+	name    string
+	modTime time.Time
+	data    []byte
+}
+
+// ID implements the Cacheable interface.
+func (c *fileCacheable) ID() string {
+	return c.name
+}
+
+// IsOutdated implements the Cacheable interface.
+func (c *fileCacheable) IsOutdated() (bool, error) {
+	fi, err := os.Stat(c.name)
+	if err != nil {
+		return false, errors.Annotate(err, ErrFileChecking, errorMessages)
+	}
+	if fi.ModTime().After(c.modTime) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// Discard implements the Cacheable interface.
+func (c *fileCacheable) Discard() error {
+	return nil
+}
+
+// Read implements the Reader interface.
+func (c *fileCacheable) Read(p []byte) (int, error) {
+	return 0, nil
+}
+
+// NewFileLoader returns a CacheableLoader for files. It
+// starts at the given root directory.
+func NewFileLoader(root string) CacheableLoader {
+	return func(name string) (Cacheable, error) {
+		fn := root + name
+		f, err := os.Open(fn)
+		if err != nil {
+			return nil, errors.Annotate(err, ErrFileOpening, errorMessages)
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			return nil, errors.Annotate(err, ErrFileOpening, errorMessages)
+		}
+		return &fileCacheable{
+			name:    name,
+			modTime: fi.ModTime(),
+		}, nil
+	}
+}
 
 // EOF
