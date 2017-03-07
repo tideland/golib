@@ -29,7 +29,8 @@ const (
 	ErrDiscard
 	ErrDiscardedWhileLoading
 	ErrTimeout
-	ErrFileOpening
+	ErrFileLoading
+	ErrFileSize
 	ErrFileChecking
 )
 
@@ -42,7 +43,8 @@ var errorMessages = errors.Messages{
 	ErrDiscard:               "cannot discard '%s'",
 	ErrDiscardedWhileLoading: "cacheable '%s' discarded while loading",
 	ErrTimeout:               "timeout while %s",
-	ErrFileOpening:           "cannot open file '%s'",
+	ErrFileLoading:           "cannot load file '%s'",
+	ErrFileSize:              "file '%s' is too large",
 	ErrFileChecking:          "cannot check file '%s'",
 }
 

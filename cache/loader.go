@@ -16,6 +16,8 @@ import (
 	"os"
 	"time"
 
+	"io/ioutil"
+
 	"github.com/tideland/golib/errors"
 )
 
@@ -61,25 +63,30 @@ func (c *fileCacheable) Discard() error {
 
 // Read implements the Reader interface.
 func (c *fileCacheable) Read(p []byte) (int, error) {
-	return 0, nil
+	n := copy(p, c.data)
+	return n, nil
 }
 
 // NewFileLoader returns a CacheableLoader for files. It
 // starts at the given root directory.
-func NewFileLoader(root string) CacheableLoader {
+func NewFileLoader(root string, maxSize int64) CacheableLoader {
 	return func(name string) (Cacheable, error) {
 		fn := root + name
-		f, err := os.Open(fn)
+		fi, err := os.Stat(fn)
 		if err != nil {
-			return nil, errors.Annotate(err, ErrFileOpening, errorMessages)
+			return nil, errors.Annotate(err, ErrFileLoading, errorMessages, name)
 		}
-		fi, err := f.Stat()
+		if fi.Size() > maxSize {
+			return nil, errors.New(ErrFileSize, errorMessages, name)
+		}
+		data, err := ioutil.ReadFile(fn)
 		if err != nil {
-			return nil, errors.Annotate(err, ErrFileOpening, errorMessages)
+			return nil, errors.Annotate(err, ErrFileLoading, errorMessages, name)
 		}
 		return &fileCacheable{
 			name:    name,
 			modTime: fi.ModTime(),
+			data:    data,
 		}, nil
 	}
 }
