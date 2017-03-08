@@ -13,10 +13,9 @@ package cache
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
 	"time"
-
-	"io/ioutil"
 
 	"github.com/tideland/golib/errors"
 )
