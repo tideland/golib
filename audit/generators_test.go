@@ -304,18 +304,18 @@ func TestTimes(t *testing.T) {
 		assert.True(t.Before(now.Add(dur)) || t.Equal(now.Add(dur)), "Before or equal now plus duration")
 	}
 
-	one := 1 * time.Millisecond
-	two := 2 * time.Millisecond
-	three := 3 * time.Millisecond
-	four := 4 * time.Millisecond
-	five := 5 * time.Millisecond
+	sleeps := map[int]time.Duration{
+		1: 1 * time.Millisecond,
+		2: 2 * time.Millisecond,
+		3: 3 * time.Millisecond,
+		4: 4 * time.Millisecond,
+		5: 5 * time.Millisecond,
+	}
 	for i := 0; i < 1000; i++ {
-		before := time.Now().UnixNano()
-		gen.SleepOneOf(one, two, three, four, five)
-		after := time.Now().UnixNano()
-		duration := (after - before) / 1000000
-		assert.True(duration >= 0, "duration greater/equal 0")
-		assert.True(duration <= 6, "duration smaller/equal 6")
+		sleep := gen.SleepOneOf(sleeps[1], sleeps[2], sleeps[3], sleeps[4], sleeps[5])
+		s := int(sleep) / 1000000
+		_, ok := sleeps[s]
+		assert.True(ok, "Choosen duration is one the arguments")
 	}
 }
 
