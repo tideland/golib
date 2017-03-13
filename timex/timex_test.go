@@ -1,6 +1,6 @@
 // Tideland Go Library - Time Extensions - Unit Tests
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -87,15 +87,20 @@ func TestCrontabKeep(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	// Create test crontab with job.
-	c := timex.NewCrontab(10 * time.Millisecond)
-	j := &cronjob{0, false, false}
+	c := timex.NewCrontab(50 * time.Millisecond)
+	j := &cronjob{[]time.Time{}, false, false}
 
 	c.Add("keep", j)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(time.Second)
 	c.Remove("keep")
 	c.Stop()
 
-	assert.Equal(j.counter, 3, "job counter increased twice")
+	for i := range j.times {
+		if i > 0 {
+			d := j.times[i].Sub(j.times[i-1])
+			assert.True(d.Seconds() >= 0.05)
+		}
+	}
 }
 
 // Test crontab removing the job.
@@ -104,14 +109,14 @@ func TestCrontabRemove(t *testing.T) {
 
 	// Create test crontab with job.
 	c := timex.NewCrontab(10 * time.Millisecond)
-	j := &cronjob{0, false, false}
+	j := &cronjob{[]time.Time{}, false, false}
 
 	c.Add("remove", j)
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	c.Remove("remove")
 	c.Stop()
 
-	assert.Equal(j.counter, 10, "job counter increased max ten times")
+	assert.Length(j.times, 10, "job counter increased max ten times")
 }
 
 // Test crontab removing the job after an error.
@@ -120,14 +125,14 @@ func TestCrontabError(t *testing.T) {
 
 	// Create test crontab with job.
 	c := timex.NewCrontab(10 * time.Millisecond)
-	j := &cronjob{0, false, true}
+	j := &cronjob{[]time.Time{}, false, true}
 
 	c.Add("remove", j)
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	c.Remove("remove")
 	c.Stop()
 
-	assert.Equal(j.counter, 5, "job counter increased max five times")
+	assert.Length(j.times, 5, "job counter increased max five times")
 }
 
 // TestRetrySuccess tests a successful retry.
@@ -190,9 +195,9 @@ func TestRetryTooOften(t *testing.T) {
 //--------------------
 
 type cronjob struct {
-	counter int
-	flip    bool
-	fail    bool
+	times []time.Time
+	flip  bool
+	fail  bool
 }
 
 func (j *cronjob) ShallExecute(t time.Time) bool {
@@ -201,11 +206,11 @@ func (j *cronjob) ShallExecute(t time.Time) bool {
 }
 
 func (j *cronjob) Execute() (bool, error) {
-	j.counter++
-	if j.fail && j.counter == 5 {
+	j.times = append(j.times, time.Now())
+	if j.fail && len(j.times) == 5 {
 		return false, errors.New("failed")
 	}
-	if j.counter == 10 {
+	if len(j.times) == 10 {
 		return false, nil
 	}
 	return true, nil
