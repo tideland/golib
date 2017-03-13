@@ -1,6 +1,6 @@
 // Tideland Go Library - Time Extensions
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -44,18 +44,18 @@ type command struct {
 // Crontab is one cron server. A system can run multiple in
 // parallel.
 type Crontab struct {
+	frequency   time.Duration
 	jobs        map[string]Job
 	commandChan chan *command
-	ticker      *time.Ticker
 	loop        loop.Loop
 }
 
 // NewCrontab creates a cron server.
 func NewCrontab(freq time.Duration) *Crontab {
 	c := &Crontab{
+		frequency:   freq,
 		jobs:        make(map[string]Job),
 		commandChan: make(chan *command),
-		ticker:      time.NewTicker(freq),
 	}
 	c.loop = loop.GoRecoverable(c.backendLoop, c.checkRecovering, "crontab", freq.String())
 	return c
@@ -78,6 +78,7 @@ func (c *Crontab) Remove(id string) {
 
 // backendLoop runs the server backend.
 func (c *Crontab) backendLoop(l loop.Loop) error {
+	ticker := time.NewTicker(c.frequency)
 	for {
 		select {
 		case <-l.ShallStop():
@@ -88,7 +89,7 @@ func (c *Crontab) backendLoop(l loop.Loop) error {
 			} else {
 				delete(c.jobs, cmd.id)
 			}
-		case now := <-c.ticker.C:
+		case now := <-ticker.C:
 			for id, job := range c.jobs {
 				c.do(id, job, now)
 			}

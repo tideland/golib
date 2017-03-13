@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2017-03-13
+
+- Fixed flaky tests in *timex* package
+
 ## 2017-02-13
 
 - *audit.Assertion* now is better in comparing strings with
