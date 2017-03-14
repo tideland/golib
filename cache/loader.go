@@ -15,6 +15,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/tideland/golib/errors"
@@ -70,7 +71,7 @@ func (c *fileCacheable) Read(p []byte) (int, error) {
 // starts at the given root directory.
 func NewFileLoader(root string, maxSize int64) CacheableLoader {
 	return func(name string) (Cacheable, error) {
-		fn := root + name
+		fn := filepath.Join(root, name)
 		fi, err := os.Stat(fn)
 		if err != nil {
 			return nil, errors.Annotate(err, ErrFileLoading, errorMessages, name)
