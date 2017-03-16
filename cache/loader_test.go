@@ -13,16 +13,18 @@ package cache_test
 
 import (
 	"io/ioutil"
-	"testing"
-
 	"path/filepath"
-
-	"time"
+	"testing"
 
 	"github.com/tideland/golib/audit"
 	"github.com/tideland/golib/cache"
-	"github.com/tideland/golib/monitoring"
 )
+
+//--------------------
+// CONSTANTS
+//--------------------
+
+const multiplier = 1024 * 1024
 
 //--------------------
 // TESTS
@@ -40,8 +42,7 @@ func TestFileLoader(t *testing.T) {
 	createFile(assert, td.String(), "fd", 4)
 	createFile(assert, td.String(), "fe", 5)
 
-	mega := 1024 * 1024
-	loader := cache.NewFileLoader(td.String(), int64(3*mega))
+	loader := cache.NewFileLoader(td.String(), int64(3*multiplier))
 	tests := []struct {
 		name string
 		size int
@@ -55,25 +56,21 @@ func TestFileLoader(t *testing.T) {
 	for i, test := range tests {
 		assert.Logf("test #%d: %s with size %d mb", i, test.name, test.size)
 		for j := 0; j < 10; j++ {
-			m := monitoring.BeginMeasuring(test.name)
 			c, err := loader(test.name)
 			assert.Nil(err)
 			assert.Equal(c.ID(), test.name)
 			fc, ok := c.(cache.FileCacheable)
 			assert.True(ok)
-			p := make([]byte, test.size*mega)
+			p := make([]byte, test.size*multiplier)
 			rc, err := fc.ReadCloser()
 			assert.Nil(err)
 			n, err := rc.Read(p)
 			assert.Nil(err)
-			assert.Equal(n, test.size*mega)
+			assert.Equal(n, test.size*multiplier)
 			err = rc.Close()
 			assert.Nil(err)
-			m.EndMeasuring()
 		}
 	}
-	time.Sleep(5 * time.Second)
-	monitoring.MeasuringPointsPrintAll()
 }
 
 //--------------------
@@ -83,9 +80,8 @@ func TestFileLoader(t *testing.T) {
 // createFile creates a file for loader tests.
 func createFile(assert audit.Assertion, dir, name string, size int) string {
 	fn := filepath.Join(dir, name)
-	mega := 1024 * 1024
 	data := []byte{}
-	for i := 0; i < size*mega; i++ {
+	for i := 0; i < size*multiplier; i++ {
 		data = append(data, 'X')
 	}
 	err := ioutil.WriteFile(fn, []byte(data), 0644)
