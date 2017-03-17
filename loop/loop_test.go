@@ -1,6 +1,6 @@
 // Tideland Go Library - Loop - Unit Test
 //
-// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -20,11 +20,12 @@ import (
 	"github.com/tideland/golib/loop"
 )
 
+//--------------------
+// CONSTANTS
+//--------------------
+
 var (
-	shortTimeout  time.Duration = 25 * time.Millisecond
-	longTimeout   time.Duration = 100 * time.Millisecond
-	longerTimeout time.Duration = 150 * time.Millisecond
-	stayCalm      time.Duration = 5 * time.Second
+	timeout time.Duration = 5 * time.Second
 )
 
 //--------------------
@@ -35,11 +36,12 @@ var (
 // after a stop.
 func TestSimpleStop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.Go(makeSimpleLF(donec), "simple-stop")
+	bundle := newChannelBundle()
+	l := loop.Go(makeSimpleLF(bundle), "simple-stop")
 
+	assert.Wait(bundle.startedc, true, timeout)
 	assert.Nil(l.Stop(), "no error after simple stop")
-	assert.Wait(donec, true, shortTimeout)
+	assert.Wait(bundle.donec, true, timeout)
 
 	status, _ := l.Error()
 
@@ -50,87 +52,96 @@ func TestSimpleStop(t *testing.T) {
 // when stopped.
 func TestSimpleRestart(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.Go(makeSimpleLF(donec), "simple-restart")
+	bundle := newChannelBundle()
+	l := loop.Go(makeSimpleLF(bundle), "simple-restart")
 
+	assert.Wait(bundle.startedc, true, timeout)
 	assert.ErrorMatch(l.Restart(), ".*cannot restart unstopped.*")
 
 	status, _ := l.Error()
 
 	assert.Equal(loop.Running, status)
-
 	assert.Nil(l.Stop())
-	assert.Wait(donec, true, shortTimeout)
+	assert.Wait(bundle.donec, true, timeout)
 
 	status, _ = l.Error()
 
 	assert.Equal(loop.Stopped, status)
-
 	assert.Nil(l.Restart())
+	assert.Wait(bundle.startedc, true, timeout)
 
 	status, _ = l.Error()
 
 	assert.Equal(loop.Running, status)
 	assert.Nil(l.Stop())
-	assert.Wait(donec, true, shortTimeout)
+	assert.Wait(bundle.donec, true, timeout)
 }
 
 // TestSimpleKill tests the simple backend returning an error
 // after a kill.
 func TestSimpleKill(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.Go(makeSimpleLF(donec), "simple-kill")
+	bundle := newChannelBundle()
+	l := loop.Go(makeSimpleLF(bundle), "simple-kill")
+
+	assert.Wait(bundle.startedc, true, timeout)
 
 	l.Kill(errors.New("ouch"))
 
-	assert.ErrorMatch(l.Stop(), "ouch", "error has to be 'ouch'")
-	assert.Wait(donec, true, shortTimeout)
+	assert.ErrorMatch(l.Stop(), "ouch")
+	assert.Wait(bundle.donec, true, timeout)
 
 	status, _ := l.Error()
 
-	assert.Equal(loop.Stopped, status, "loop is stopped")
+	assert.Equal(status, loop.Stopped)
 }
 
 // TestError tests an internal error.
 func TestError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.Go(makeErrorLF(donec), "error")
+	bundle := newChannelBundle()
+	l := loop.Go(makeErrorLF(bundle), "error")
 
-	time.Sleep(longTimeout)
+	assert.Wait(bundle.startedc, true, timeout)
 
-	assert.ErrorMatch(l.Stop(), "timed out", "error has to be 'timed out'")
-	assert.Wait(donec, true, shortTimeout)
+	bundle.errorc <- true
+
+	assert.ErrorMatch(l.Stop(), "internal loop error")
+	assert.Wait(bundle.donec, true, timeout)
 
 	status, _ := l.Error()
 
-	assert.Equal(loop.Stopped, status, "loop is stopped")
+	assert.Equal(status, loop.Stopped)
 }
 
 // TestDeferredError tests an error in a deferred function inside the loop.
 func TestDeferredError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.Go(makeDeferredErrorLF(donec), "deferred-error")
+	bundle := newChannelBundle()
+	l := loop.Go(makeDeferredErrorLF(bundle), "deferred-error")
 
-	assert.ErrorMatch(l.Stop(), "deferred error", "error has to be 'deferred error'")
-	assert.Wait(donec, true, shortTimeout)
+	assert.Wait(bundle.startedc, true, timeout)
+	assert.ErrorMatch(l.Stop(), "deferred error")
+	assert.Wait(bundle.donec, true, timeout)
+
 	status, _ := l.Error()
 
-	assert.Equal(loop.Stopped, status, "loop is stopped")
+	assert.Equal(status, loop.Stopped)
 }
 
 // TestStopRecoverings tests the regular stop of a recovered loop.
 func TestStopRecoverings(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.GoRecoverable(makeRecoverPanicLF(), makeIgnorePanicsRF(donec), "stop-recoverings")
+	lbundle := newChannelBundle()
+	rbundle := newChannelBundle()
+	l := loop.GoRecoverable(makeRecoverPanicLF(lbundle), makeIgnorePanicsRF(rbundle), "stop-recoverings")
 
-	time.Sleep(longTimeout)
+	assert.Wait(lbundle.startedc, true, timeout)
 
-	assert.Nil(l.Stop(), "no error after simple stop")
-	assert.Wait(donec, "recovered", longTimeout)
+	lbundle.errorc <- true
+
+	assert.Nil(l.Stop())
+	assert.Wait(rbundle.donec, "recovered", timeout)
 
 	status, _ := l.Error()
 
@@ -140,43 +151,58 @@ func TestStopRecoverings(t *testing.T) {
 // TestEndRecoverings tests the regular internal stop of a recovered loop.
 func TestEndRecoverings(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.GoRecoverable(makeRecoverNoErrorLF(donec), makeIgnorePanicsRF(nil), "end-recoverings")
+	lbundle := newChannelBundle()
+	rbundle := newChannelBundle()
+	l := loop.GoRecoverable(makeRecoverNoErrorLF(lbundle), makeIgnorePanicsRF(rbundle), "end-recoverings")
 
-	time.Sleep(longTimeout)
+	assert.Wait(lbundle.startedc, true, timeout)
 
-	assert.Wait(donec, true, longTimeout)
+	lbundle.stopc <- true
+
+	assert.Wait(lbundle.donec, true, timeout)
 
 	status, _ := l.Error()
-	assert.Equal(loop.Stopped, status)
+	assert.Equal(status, loop.Stopped)
 }
 
 // TestRecoveringsPanic test recoverings after panics.
 func TestRecoveringsPanic(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.GoRecoverable(makeRecoverPanicLF(), makeCheckCountRF(donec), "recoverings-panic")
+	lbundle := newChannelBundle()
+	rbundle := newChannelBundle()
+	l := loop.GoRecoverable(makeRecoverPanicLF(lbundle), makeCheckCountRF(rbundle), "recoverings-panic")
 
-	time.Sleep(longerTimeout)
+	go func() {
+		for i := 0; i < 10; i++ {
+			<-lbundle.startedc
 
+			lbundle.errorc <- true
+
+			<-rbundle.startedc
+		}
+	}()
+
+	assert.Wait(rbundle.donec, 5, timeout)
 	assert.ErrorMatch(l.Stop(), "too many panics")
-	assert.Wait(donec, true, longTimeout)
 
 	status, _ := l.Error()
 
-	assert.Equal(loop.Stopped, status)
+	assert.Equal(status, loop.Stopped)
 }
 
-// TestRecoveringsError tests recoverings after errors
+// TestRecoveringsError tests recoverings after errors.
 func TestRecoveringsError(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	donec := audit.MakeSigChan()
-	l := loop.GoRecoverable(makeRecoverErrorLF(), makeCatchTimeoutRF(donec), "recoverings-error")
+	lbundle := newChannelBundle()
+	rbundle := newChannelBundle()
+	l := loop.GoRecoverable(makeRecoverErrorLF(lbundle), makeCatchErrorRF(rbundle), "recoverings-error")
 
-	time.Sleep(longerTimeout)
+	assert.Wait(lbundle.startedc, true, timeout)
 
-	assert.ErrorMatch(l.Stop(), "timed out", "error has to be 'timed out'")
-	assert.Wait(donec, "timed out", longTimeout)
+	lbundle.errorc <- true
+
+	assert.ErrorMatch(l.Stop(), "error")
+	assert.Wait(rbundle.donec, "error", timeout)
 
 	status, _ := l.Error()
 
@@ -187,12 +213,15 @@ func TestRecoveringsError(t *testing.T) {
 // sentinel descriptions.
 func TestDescription(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
 
 	s := loop.GoSentinel("one")
-	lA := loop.Go(makeSimpleLF(doneAC), "two", "three", "four")
-	lB := loop.Go(makeSimpleLF(doneBC))
+	lA := loop.Go(makeSimpleLF(abundle), "two", "three", "four")
+	lB := loop.Go(makeSimpleLF(bbundle))
+
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
 
 	s.Observe(lA, lB)
 
@@ -207,71 +236,88 @@ func TestDescription(t *testing.T) {
 // stopping of a sentinel.
 func TestSimpleSentinel(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
-	doneCC := audit.MakeSigChan()
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
 
 	s := loop.GoSentinel("simple-sentinel")
-	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
+
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
 
 	s.Observe(lA, lB, lC)
 
 	assert.Nil(s.Stop())
-	assert.Wait(doneAC, true, shortTimeout)
-	assert.Wait(doneBC, true, shortTimeout)
-	assert.Wait(doneCC, true, shortTimeout)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(cbundle.donec, true, timeout)
 
 	status, _ := s.Error()
 
-	assert.Equal(loop.Stopped, status)
+	assert.Equal(status, loop.Stopped)
 }
 
 // TestSentinelStoppingLoop tests the stopping
 // of a loop before sentinel stops.
 func TestSentinelStoppingLoop(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneC := audit.MakeSigChan()
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
 
 	s := loop.GoSentinel("sentinel-stopping-loop")
-	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
+
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
 
 	s.Observe(lA, lB, lC)
 
 	assert.Nil(lB.Stop())
-	assert.Wait(doneC, true, shortTimeout)
+	assert.Wait(bbundle.donec, true, timeout)
 
 	assert.Nil(s.Stop())
-	assert.Wait(doneC, true, shortTimeout)
-	assert.Wait(doneC, true, shortTimeout)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(cbundle.donec, true, timeout)
 
 	status, _ := s.Error()
 
-	assert.Equal(loop.Stopped, status)
+	assert.Equal(status, loop.Stopped)
 }
 
 // TestSentinelForget tests the forgetting of loops
 // by a sentinel.
 func TestSentineForget(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneC := audit.MakeSigChan()
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
+	dbundle := newChannelBundle()
 
 	s := loop.GoSentinel("sentinel-forget")
-	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
-	lD := loop.Go(makeSimpleLF(doneC), "loop", "d")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
+	lD := loop.Go(makeSimpleLF(dbundle), "loop", "d")
+
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
+	assert.Wait(dbundle.startedc, true, timeout)
 
 	s.Observe(lA, lB, lC, lD)
-	time.Sleep(longTimeout)
 	s.Forget(lB, lC)
 
 	assert.Nil(s.Stop())
-	assert.Wait(doneC, true, shortTimeout)
-	assert.Wait(doneC, true, shortTimeout)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(dbundle.donec, true, timeout)
 
 	status, _ := s.Error()
 
@@ -283,19 +329,25 @@ func TestSentineForget(t *testing.T) {
 // no handler and so ignores the error.
 func TestSentinelKillingLoopNoHandler(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneC := audit.MakeSigChan()
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
 
 	s := loop.GoSentinel("sentinel-killing-loop-no-handler")
-	lA := loop.Go(makeSimpleLF(doneC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneC), "loop", "c")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
 
 	s.Observe(lA, lB, lC)
 
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
+
 	lB.Kill(errors.New("bang!"))
-	assert.Wait(doneC, true, stayCalm)
-	assert.Wait(doneC, true, stayCalm)
-	assert.Wait(doneC, true, stayCalm)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(cbundle.donec, true, timeout)
 
 	assert.ErrorMatch(s.Stop(), ".*bang!.*")
 
@@ -309,31 +361,35 @@ func TestSentinelKillingLoopNoHandler(t *testing.T) {
 // a handler and restarts the loop.
 func TestSentinelKillingLoopHandlerRestarts(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	doneAC := audit.MakeSigChan()
-	doneBC := audit.MakeSigChan()
-	doneCC := audit.MakeSigChan()
-	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
+	sbundle := newChannelBundle()
+	shandler := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
 		o.Restart()
-		handlerC <- true
+		sbundle.donec <- true
 		return nil, nil
 	}
 
-	s := loop.GoNotifiedSentinel(handlerF, "sentinel-killing-loop-handler-restarts")
-	lA := loop.Go(makeSimpleLF(doneAC), "loop", "a")
-	lB := loop.Go(makeSimpleLF(doneBC), "loop", "b")
-	lC := loop.Go(makeSimpleLF(doneCC), "loop", "c")
+	s := loop.GoNotifiedSentinel(shandler, "sentinel-killing-loop-handler-restarts")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
 
 	s.Observe(lA, lB, lC)
 
-	time.Sleep(shortTimeout)
-	lB.Kill(errors.New("bang!"))
-	assert.Wait(handlerC, true, shortTimeout)
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
 
+	lB.Kill(errors.New("bang!"))
+
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(sbundle.donec, true, timeout)
 	assert.Nil(s.Stop())
-	assert.Wait(doneBC, true, shortTimeout)
-	assert.Wait(doneAC, true, shortTimeout)
-	assert.Wait(doneCC, true, shortTimeout)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(cbundle.donec, true, timeout)
 
 	status, _ := s.Error()
 
@@ -345,33 +401,32 @@ func TestSentinelKillingLoopHandlerRestarts(t *testing.T) {
 // a handler which stops the processing.
 func TestSentinelKillingLoopHandlerStops(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	infoAC := audit.MakeSigChan()
-	infoBC := audit.MakeSigChan()
-	infoCC := audit.MakeSigChan()
-	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
-		handlerC <- true
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
+	sbundle := newChannelBundle()
+	shandler := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
+		sbundle.donec <- true
 		return nil, errors.New("oh no!")
 	}
 
-	s := loop.GoNotifiedSentinel(handlerF, "sentinel-killing-loop-with-stops")
-	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
-	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
-	lC := loop.Go(makeStartStopLF(infoCC), "loop", "c")
+	s := loop.GoNotifiedSentinel(shandler, "sentinel-killing-loop-with-stops")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
 
 	s.Observe(lA, lB, lC)
 
-	assert.Wait(infoAC, "started", stayCalm)
-	assert.Wait(infoBC, "started", stayCalm)
-	assert.Wait(infoCC, "started", stayCalm)
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
 
-	time.Sleep(shortTimeout)
 	lB.Kill(errors.New("bang!"))
 
-	assert.Wait(infoBC, "stopped", stayCalm)
-	assert.Wait(infoAC, "stopped", stayCalm)
-	assert.Wait(infoCC, "stopped", stayCalm)
-	assert.Wait(handlerC, true, stayCalm)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(cbundle.donec, true, timeout)
+	assert.Wait(sbundle.donec, true, timeout)
 
 	assert.ErrorMatch(s.Stop(), ".*oh no!.*")
 
@@ -385,39 +440,38 @@ func TestSentinelKillingLoopHandlerStops(t *testing.T) {
 // a handler which restarts all observables.
 func TestSentinelKillingLoopHandlerRestartAll(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	infoAC := audit.MakeSigChan()
-	infoBC := audit.MakeSigChan()
-	infoCC := audit.MakeSigChan()
-	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, _ loop.Observable, _ loop.Recoverings) (loop.Recoverings, error) {
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	cbundle := newChannelBundle()
+	sbundle := newChannelBundle()
+	shandler := func(s loop.Sentinel, _ loop.Observable, _ loop.Recoverings) (loop.Recoverings, error) {
 		s.ObservablesDo(func(o loop.Observable) error {
 			o.Restart()
 			return nil
 		})
-		handlerC <- true
+		sbundle.donec <- true
 		return nil, nil
 	}
 
-	s := loop.GoNotifiedSentinel(handlerF, "sentinel-killing-loop-restarting-all")
-	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
-	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
-	lC := loop.Go(makeStartStopLF(infoCC), "loop", "c")
+	s := loop.GoNotifiedSentinel(shandler, "sentinel-killing-loop-restarting-all")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
+	lC := loop.Go(makeSimpleLF(cbundle), "loop", "c")
 
 	s.Observe(lA, lB, lC)
 
-	assert.Wait(infoAC, "started", stayCalm)
-	assert.Wait(infoBC, "started", stayCalm)
-	assert.Wait(infoCC, "started", stayCalm)
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
+	assert.Wait(cbundle.startedc, true, timeout)
 
-	time.Sleep(shortTimeout)
 	lB.Kill(errors.New("bang!"))
 
-	assert.Wait(handlerC, true, stayCalm)
-
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(sbundle.donec, true, timeout)
 	assert.Nil(s.Stop())
-	assert.Wait(infoBC, "stopped", stayCalm)
-	assert.Wait(infoAC, "stopped", stayCalm)
-	assert.Wait(infoCC, "stopped", stayCalm)
+	assert.Wait(abundle.donec, true, timeout)
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(cbundle.donec, true, timeout)
 
 	status, _ := s.Error()
 
@@ -428,33 +482,33 @@ func TestSentinelKillingLoopHandlerRestartAll(t *testing.T) {
 // nested sentinel.
 func TestNestedSentinelKill(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	infoAC := audit.MakeSigChan()
-	infoBC := audit.MakeSigChan()
-	handlerC := audit.MakeSigChan()
-	handlerF := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
+	abundle := newChannelBundle()
+	bbundle := newChannelBundle()
+	sbundle := newChannelBundle()
+	shandler := func(s loop.Sentinel, o loop.Observable, rs loop.Recoverings) (loop.Recoverings, error) {
 		o.Restart()
-		handlerC <- true
+		sbundle.donec <- true
 		return nil, nil
 	}
 
-	sT := loop.GoNotifiedSentinel(handlerF, "nested-sentinel-kill", "top")
-	lA := loop.Go(makeStartStopLF(infoAC), "loop", "a")
-	sN := loop.GoNotifiedSentinel(handlerF, "nested-sentinel-kill", "nested")
-	lB := loop.Go(makeStartStopLF(infoBC), "loop", "b")
+	sT := loop.GoNotifiedSentinel(shandler, "nested-sentinel-kill", "top")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
+	sN := loop.GoNotifiedSentinel(shandler, "nested-sentinel-kill", "nested")
+	lB := loop.Go(makeSimpleLF(bbundle), "loop", "b")
 
 	sT.Observe(lA, sN)
 	sN.Observe(lB)
 
-	assert.Wait(infoAC, "started", stayCalm)
-	assert.Wait(infoBC, "started", stayCalm)
+	assert.Wait(abundle.startedc, true, timeout)
+	assert.Wait(bbundle.startedc, true, timeout)
 
-	time.Sleep(shortTimeout)
 	sN.Kill(errors.New("bang!"))
-	time.Sleep(longerTimeout)
+
+	assert.Wait(sbundle.donec, true, timeout)
 
 	assert.Nil(sT.Stop())
-	assert.Wait(infoBC, "stopped", stayCalm)
-	assert.Wait(infoAC, "stopped", stayCalm)
+	assert.Wait(bbundle.donec, true, timeout)
+	assert.Wait(abundle.donec, true, timeout)
 
 	status, _ := sT.Error()
 
@@ -465,25 +519,21 @@ func TestNestedSentinelKill(t *testing.T) {
 // of a sentinel is handled correctly.
 func TestSentinelSwitch(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	infoC := audit.MakeSigChan()
+	abundle := newChannelBundle()
 
 	sA := loop.GoSentinel("sentinel-switch", "a")
 	sB := loop.GoSentinel("sentinel-switch", "b")
-
-	lA := loop.Go(makeStartStopLF(infoC), "loop", "a")
+	lA := loop.Go(makeSimpleLF(abundle), "loop", "a")
 
 	sA.Observe(lA)
 
-	assert.Wait(infoC, "started", stayCalm)
+	assert.Wait(abundle.startedc, true, timeout)
 
 	sB.Observe(lA)
 
 	assert.Nil(sA.Stop())
-	time.Sleep(longTimeout)
-	assert.Length(infoC, 0)
-
 	assert.Nil(sB.Stop())
-	assert.Wait(infoC, "stopped", stayCalm)
+	assert.Wait(abundle.donec, true, timeout)
 }
 
 //--------------------
@@ -593,9 +643,28 @@ func ExampleSentinel() {
 // HELPERS
 //--------------------
 
-func makeSimpleLF(donec chan interface{}) loop.LoopFunc {
+// channelBundle enables communication from and to loop functions.
+type channelBundle struct {
+	startedc chan interface{}
+	donec    chan interface{}
+	stopc    chan interface{}
+	errorc   chan interface{}
+}
+
+func newChannelBundle() *channelBundle {
+	return &channelBundle{
+		startedc: audit.MakeSigChan(),
+		donec:    audit.MakeSigChan(),
+		stopc:    audit.MakeSigChan(),
+		errorc:   audit.MakeSigChan(),
+	}
+}
+
+// makeSimpleLF creates a loop function doing nothing special.
+func makeSimpleLF(bundle *channelBundle) loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { donec <- true }()
+		defer func() { bundle.donec <- true }()
+		bundle.startedc <- true
 		for {
 			select {
 			case <-l.ShallStop():
@@ -605,39 +674,32 @@ func makeSimpleLF(donec chan interface{}) loop.LoopFunc {
 	}
 }
 
-func makeStartStopLF(infoc chan interface{}) loop.LoopFunc {
+// makeErrorLF creates a loop function stopping with
+// an error after receiving a signal.
+func makeErrorLF(bundle *channelBundle) loop.LoopFunc {
 	return func(l loop.Loop) error {
-		defer func() { infoc <- "stopped" }()
-		infoc <- "started"
+		defer func() { bundle.donec <- true }()
+		bundle.startedc <- true
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
+			case <-bundle.errorc:
+				return errors.New("internal loop error")
 			}
 		}
 	}
 }
 
-func makeErrorLF(donec chan interface{}) loop.LoopFunc {
-	return func(l loop.Loop) error {
-		defer func() { donec <- true }()
-		for {
-			select {
-			case <-l.ShallStop():
-				return nil
-			case <-time.After(shortTimeout):
-				return errors.New("timed out")
-			}
-		}
-	}
-}
-
-func makeDeferredErrorLF(donec chan interface{}) loop.LoopFunc {
+// makeDeferredErrorLF creates a loop function returning
+// an error in its deferred function.
+func makeDeferredErrorLF(bundle *channelBundle) loop.LoopFunc {
 	return func(l loop.Loop) (err error) {
-		defer func() { donec <- true }()
+		defer func() { bundle.donec <- true }()
 		defer func() {
 			err = errors.New("deferred error")
 		}()
+		bundle.startedc <- true
 		for {
 			select {
 			case <-l.ShallStop():
@@ -647,57 +709,70 @@ func makeDeferredErrorLF(donec chan interface{}) loop.LoopFunc {
 	}
 }
 
-func makeRecoverPanicLF() loop.LoopFunc {
+// makeRecoverPanicLF creates a loop function having a panic
+// but getting recovered.
+func makeRecoverPanicLF(bundle *channelBundle) loop.LoopFunc {
 	return func(l loop.Loop) error {
+		bundle.startedc <- true
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case <-time.After(shortTimeout):
-				panic("ouch")
+			case <-bundle.errorc:
+				panic("panic")
 			}
 		}
 	}
 }
 
-func makeRecoverErrorLF() loop.LoopFunc {
+// makeRecoverErrorLF creates a loop function having an error
+// but getting recovered.
+func makeRecoverErrorLF(bundle *channelBundle) loop.LoopFunc {
 	return func(l loop.Loop) error {
+		bundle.startedc <- true
 		for {
 			select {
 			case <-l.ShallStop():
 				return nil
-			case <-time.After(shortTimeout):
-				return errors.New("timed out")
+			case <-bundle.errorc:
+				return errors.New("error")
 			}
 		}
 	}
 }
 
-func makeRecoverNoErrorLF(donec chan interface{}) loop.LoopFunc {
+// makeRecoverNoErrorLF creates a loop function stopping
+// without an error so it won't be recovered.
+func makeRecoverNoErrorLF(bundle *channelBundle) loop.LoopFunc {
 	return func(l loop.Loop) error {
-		time.Sleep(shortTimeout)
-		donec <- true
+		bundle.startedc <- true
+		<-bundle.stopc
+		bundle.donec <- true
 		return nil
 	}
 }
 
-func makeCheckCountRF(donec chan interface{}) loop.RecoverFunc {
+// makeCheckCountRF creates a recover function stopping
+// recovering after 5 calls.
+func makeCheckCountRF(bundle *channelBundle) loop.RecoverFunc {
 	return func(rs loop.Recoverings) (loop.Recoverings, error) {
+		bundle.startedc <- true
 		if len(rs) >= 5 {
-			donec <- len(rs)
+			bundle.donec <- len(rs)
 			return nil, errors.New("too many panics")
 		}
-		donec <- true
 		return rs, nil
 	}
 }
 
-func makeCatchTimeoutRF(donec chan interface{}) loop.RecoverFunc {
+// makeCatchErrorRF creates a recover function stopping
+// recovering in case of the error "error".
+func makeCatchErrorRF(bundle *channelBundle) loop.RecoverFunc {
 	return func(rs loop.Recoverings) (loop.Recoverings, error) {
 		if len(rs) > 0 {
 			if err, ok := rs.Last().Reason.(error); ok {
-				if err.Error() == "timed out" {
-					donec <- "timed out"
+				if err.Error() == "error" {
+					bundle.donec <- "error"
 					return nil, err
 				}
 			}
@@ -706,11 +781,11 @@ func makeCatchTimeoutRF(donec chan interface{}) loop.RecoverFunc {
 	}
 }
 
-func makeIgnorePanicsRF(donec chan interface{}) loop.RecoverFunc {
+// makeIgnorePanicsRF creates a recover function always
+// recovering the paniced loop function.
+func makeIgnorePanicsRF(bundle *channelBundle) loop.RecoverFunc {
 	return func(rs loop.Recoverings) (loop.Recoverings, error) {
-		if donec != nil {
-			donec <- "recovered"
-		}
+		bundle.donec <- "recovered"
 		return nil, nil
 	}
 }
