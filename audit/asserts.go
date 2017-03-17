@@ -935,7 +935,7 @@ func ValueDescription(value interface{}) string {
 // MakeSigChan is a simple one-liner to create the buffered signal channel
 // for the wait assertion.
 func MakeSigChan() chan interface{} {
-	return make(chan interface{}, 16)
+	return make(chan interface{}, 1)
 }
 
 // lenable is an interface for the Len() mehod.

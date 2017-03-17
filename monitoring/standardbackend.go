@@ -267,7 +267,7 @@ func NewStandardBackend() Backend {
 	m := &stdBackend{
 		measuringC:             make(chan *stdMeasuring, 1024),
 		ssvChangeC:             make(chan *stdSSVChange, 1024),
-		retrieverRegistrationC: make(chan *stdRetrieverRegistration, 16),
+		retrieverRegistrationC: make(chan *stdRetrieverRegistration),
 		commandC:               make(chan *command),
 	}
 	m.backend = loop.GoRecoverable(m.backendLoop, m.checkRecovering, "monitoring backend")
