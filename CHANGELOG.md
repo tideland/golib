@@ -1,5 +1,13 @@
 # Tideland Go Library
 
+## 2017-03-xx
+
+- Fixing of races in tests in *loop* and *monitoring*
+- Added *IncrCallstackOffset()* to *audit.Assertion*
+  for correct logging in functions and packages providing
+  own test functions based on *audit*
+- Code reorganisation in *audit*
+
 ## 2017-03-13
 
 - Fixed flaky tests in *timex* package
