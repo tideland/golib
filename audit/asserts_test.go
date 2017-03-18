@@ -158,6 +158,15 @@ func TestAssertContentsPrint(t *testing.T) {
 	assert.Contents([]byte("foobar"), []byte("the quick brown ..."), "test fails but passes, just visualization")
 }
 
+// TestOffsetPrint test the correct visualization when printing
+// with offset.
+func TestOffsetPrint(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, false)
+
+	// Log should reference line below (167).
+	failWithOffset(assert, "167")
+}
+
 // TestAssertSubstring tests the Substring() assertion.
 func TestAssertSubstring(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
@@ -393,6 +402,10 @@ type metaFailer struct {
 	fail bool
 }
 
+func (f *metaFailer) IncrCallstackOffset() func() {
+	return func() {}
+}
+
 func (f *metaFailer) Logf(format string, args ...interface{}) {
 	f.t.Logf(format, args...)
 }
@@ -410,6 +423,18 @@ func (f *metaFailer) Fail(test audit.Test, obtained, expected interface{}, msgs 
 		f.t.FailNow()
 	}
 	return f.fail
+}
+
+//--------------------
+// HELPER
+//--------------------
+
+// failWithOffset checks the offset increment.
+func failWithOffset(assert audit.Assertion, line string) {
+	restore := assert.IncrCallstackOffset()
+	defer restore()
+
+	assert.Fail("should fail referencing line " + line)
 }
 
 // successfulAssertion returns an assertion which doesn't expect a failing.
