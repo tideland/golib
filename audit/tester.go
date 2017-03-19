@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 )
 
 //--------------------
@@ -64,8 +65,7 @@ func (t Tester) IsAbout(obtained, expected, extent float64) bool {
 	return low <= obtained && obtained <= high
 }
 
-// IsInRange checks, if obtained is inside the given range. In case of a
-// slice, array, or map it will check agains the length.
+// IsInRange checks for range assertions
 func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
 	// First standard types.
 	switch o := obtained.(type) {
@@ -102,6 +102,21 @@ func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
 		h, hok := high.(string)
 		if !lok && !hok {
 			return false, errors.New("low and/or high are no string")
+		}
+		return l <= o && o <= h, nil
+	case time.Time:
+		l, lok := low.(time.Time)
+		h, hok := high.(time.Time)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no time")
+		}
+		return (l.Equal(o) || l.Before(o)) &&
+			(h.After(o) || h.Equal(o)), nil
+	case time.Duration:
+		l, lok := low.(time.Duration)
+		h, hok := high.(time.Duration)
+		if !lok && !hok {
+			return false, errors.New("low and/or high are no duration")
 		}
 		return l <= o && o <= h, nil
 	}

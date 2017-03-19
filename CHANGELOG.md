@@ -7,6 +7,8 @@
   for correct logging in functions and packages providing
   own test functions based on *audit*
 - Code reorganisation in *audit*
+- Extended *Range()* assertion in *audit* by time
+  and duration
 
 ## 2017-03-13
 

@@ -101,8 +101,10 @@ type Assertion interface {
 	About(obtained, expected, extent float64, msgs ...string) bool
 
 	// Range tests if obtained is larger or equal low and lower or
-	// equal high. Allowed are byte, int and float64 for numbers, runes
-	// and strings, or as a length test array, slices, and maps.
+	// equal high. Allowed are byte, int and float64 for numbers, runes,
+	// strings, times, and duration. In case of obtained arrays,
+	// slices, and maps low and high have to be ints for testing
+	// the length.
 	Range(obtained, low, high interface{}, msgs ...string) bool
 
 	// Substring tests if obtained is a substring of the full string.
