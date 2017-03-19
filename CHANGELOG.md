@@ -2,6 +2,8 @@
 
 ## 2017-03-19
 
+- Readesigned *cache*; now individual instances with
+  user definable loaders
 - Fixing of races in tests in *loop* and *monitoring*
 - Added *IncrCallstackOffset()* to *audit.Assertion*
   for correct logging in functions and packages providing
