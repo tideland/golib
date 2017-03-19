@@ -168,30 +168,6 @@ func NewAssertion(f Failer) Assertion {
 	}
 }
 
-// NewPanicAssertion creates a new Assertion instance which panics if a test fails.
-func NewPanicAssertion() Assertion {
-	return NewAssertion(&panicFailer{})
-}
-
-// NewValidationAssertion creates a new Assertion instance which collections
-// validation failures. The returned Failures instance allows to test an access
-// them.
-func NewValidationAssertion() (Assertion, Failures) {
-	vf := &validationFailer{}
-	return NewAssertion(vf), vf
-}
-
-// NewTestingAssertion creates a new Assertion instance for use with the testing
-// package. The *testing.T has to be passed as failable, the first argument.
-// shallFail controls if a failing assertion also lets fail the Go test.
-func NewTestingAssertion(f Failable, shallFail bool) Assertion {
-	return NewAssertion(&testingFailer{
-		failable:  f,
-		offset:    2,
-		shallFail: shallFail,
-	})
-}
-
 // assertion implements the assertion interface.
 type assertion struct {
 	Tester

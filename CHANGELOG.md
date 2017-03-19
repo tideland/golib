@@ -1,6 +1,6 @@
 # Tideland Go Library
 
-## 2017-03-xx
+## 2017-03-19
 
 - Fixing of races in tests in *loop* and *monitoring*
 - Added *IncrCallstackOffset()* to *audit.Assertion*
@@ -9,6 +9,8 @@
 - Code reorganisation in *audit*
 - Extended *Range()* assertion in *audit* by time
   and duration
+- Added *FailureDetail* returned by *ValidationFailer.Details()*
+  in *audit*
 
 ## 2017-03-13
 
