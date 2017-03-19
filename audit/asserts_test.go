@@ -116,12 +116,15 @@ func TestAssertAbout(t *testing.T) {
 func TestAssertRange(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
 	failingAssert := failingAssertion(t)
+	now := time.Now()
 
 	successfulAssert.Range(byte(9), byte(1), byte(22), "byte in range")
 	successfulAssert.Range(9, 1, 22, "int in range")
 	successfulAssert.Range(9.0, 1.0, 22.0, "float64 in range")
 	successfulAssert.Range('f', 'a', 'z', "rune in range")
 	successfulAssert.Range("foo", "a", "zzzzz", "string in range")
+	successfulAssert.Range(now, now.Add(-time.Hour), now.Add(time.Hour), "time in range")
+	successfulAssert.Range(time.Minute, time.Second, time.Hour, "duration in range")
 	successfulAssert.Range([]int{1, 2, 3}, 1, 10, "slice length in range")
 	successfulAssert.Range([3]int{1, 2, 3}, 1, 10, "array length in range")
 	successfulAssert.Range(map[int]int{3: 1, 2: 2, 1: 3}, 1, 10, "map length in range")
@@ -130,6 +133,8 @@ func TestAssertRange(t *testing.T) {
 	failingAssert.Range(1.0, 10.0, 20.0, "float64 out of range")
 	failingAssert.Range('a', 'x', 'z', "rune out of range")
 	failingAssert.Range("aaa", "uuuuu", "zzzzz", "string out of range")
+	failingAssert.Range(now, now.Add(time.Minute), now.Add(time.Hour), "time out of range")
+	failingAssert.Range(time.Second, time.Minute, time.Hour, "duration in range")
 	failingAssert.Range([]int{1, 2, 3}, 5, 10, "slice length out of range")
 	failingAssert.Range([3]int{1, 2, 3}, 5, 10, "array length out of range")
 	failingAssert.Range(map[int]int{3: 1, 2: 2, 1: 3}, 5, 10, "map length out of range")
@@ -156,6 +161,15 @@ func TestAssertContentsPrint(t *testing.T) {
 	assert.Logf("printing of failing content tests")
 	assert.Contents("foobar", []byte("the quick brown fox jumps over the lazy dog"), "test fails but passes, just visualization")
 	assert.Contents([]byte("foobar"), []byte("the quick brown ..."), "test fails but passes, just visualization")
+}
+
+// TestOffsetPrint test the correct visualization when printing
+// with offset.
+func TestOffsetPrint(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, false)
+
+	// Log should reference line below (167).
+	failWithOffset(assert, "172")
 }
 
 // TestAssertSubstring tests the Substring() assertion.
@@ -382,6 +396,27 @@ func TestValidationAssertion(t *testing.T) {
 		t.Errorf("wrong number of errors")
 	}
 	t.Log(failures.Error())
+
+	if len(failures.Details()) != 2 {
+		t.Errorf("wrong number of details")
+	}
+	details := failures.Details()
+	fn, l, f := details[0].Location()
+	tt := details[0].Test()
+	if fn != "asserts_test.go" || l != 389 || f != "TestValidationAssertion" {
+		t.Errorf("wrong location of first detail")
+	}
+	if tt != audit.True {
+		t.Errorf("wrong test type of first detail")
+	}
+	fn, l, f = details[1].Location()
+	tt = details[1].Test()
+	if fn != "asserts_test.go" || l != 390 || f != "TestValidationAssertion" {
+		t.Errorf("wrong location of second detail")
+	}
+	if tt != audit.Equal {
+		t.Errorf("wrong test type of second detail")
+	}
 }
 
 //--------------------
@@ -391,6 +426,10 @@ func TestValidationAssertion(t *testing.T) {
 type metaFailer struct {
 	t    *testing.T
 	fail bool
+}
+
+func (f *metaFailer) IncrCallstackOffset() func() {
+	return func() {}
 }
 
 func (f *metaFailer) Logf(format string, args ...interface{}) {
@@ -410,6 +449,18 @@ func (f *metaFailer) Fail(test audit.Test, obtained, expected interface{}, msgs 
 		f.t.FailNow()
 	}
 	return f.fail
+}
+
+//--------------------
+// HELPER
+//--------------------
+
+// failWithOffset checks the offset increment.
+func failWithOffset(assert audit.Assertion, line string) {
+	restore := assert.IncrCallstackOffset()
+	defer restore()
+
+	assert.Fail("should fail referencing line " + line)
 }
 
 // successfulAssertion returns an assertion which doesn't expect a failing.

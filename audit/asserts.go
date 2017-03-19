@@ -12,16 +12,8 @@ package audit
 //--------------------
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	"os"
-	"path"
-	"reflect"
-	"regexp"
-	"runtime"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -32,6 +24,7 @@ import (
 // Test represents the test inside an assert.
 type Test uint
 
+// Tests provided by the assertion.
 const (
 	Invalid Test = iota + 1
 	True
@@ -60,254 +53,24 @@ const (
 	Fail
 )
 
-var testNames = []string{
-	Invalid:      "invalid",
-	True:         "true",
-	False:        "false",
-	Nil:          "nil",
-	NotNil:       "not nil",
-	Equal:        "equal",
-	Different:    "different",
-	Contents:     "contents",
-	About:        "about",
-	Range:        "range",
-	Substring:    "substring",
-	Case:         "case",
-	Match:        "match",
-	ErrorMatch:   "error match",
-	Implementor:  "implementor",
-	Assignable:   "assignable",
-	Unassignable: "unassignable",
-	Empty:        "empty",
-	NotEmpty:     "not empty",
-	Length:       "length",
-	Panics:       "panics",
-	PathExists:   "path exists",
-	Wait:         "wait",
-	Retry:        "retry",
-	Fail:         "fail",
-}
-
-func (t Test) String() string {
-	if int(t) < len(testNames) {
-		return testNames[t]
-	}
-	return "invalid"
-}
-
-//--------------------
-// PRINTER
-//--------------------
-
-// Printer allows to switch between different outputs.
-type Printer interface {
-	// Printf prints a formatted information.
-	Printf(format string, args ...interface{})
-}
-
-// printerBackend is the globally printer used during
-// the assertions.
-var (
-	printerBackend Printer = &fmtPrinter{}
-	mux            sync.Mutex
-)
-
-// fmtPrinter uses the standard fmt package for printing.
-type fmtPrinter struct{}
-
-// Printf implements the Printer interface.
-func (p *fmtPrinter) Printf(format string, args ...interface{}) {
-	fmt.Printf(format, args...)
-}
-
-// SetPrinter sets a new global printer and returns the
-// current one.
-func SetPrinter(p Printer) Printer {
-	mux.Lock()
-	defer mux.Unlock()
-	cp := printerBackend
-	printerBackend = p
-	return cp
-}
-
-// backendPrintf uses the printer backend for output. It is used
-// in the types below.
-func backendPrintf(format string, args ...interface{}) {
-	mux.Lock()
-	defer mux.Unlock()
-	printerBackend.Printf(format, args...)
-}
-
-//--------------------
-// FAILER
-//--------------------
-
-// Failer describes a type controlling how an assert
-// reacts after a failure.
-type Failer interface {
-	// Logf can be used to display useful information during testing.
-	Logf(format string, args ...interface{})
-
-	// Fail will be called if an assert fails.
-	Fail(test Test, obtained, expected interface{}, msgs ...string) bool
-}
-
-// Failures collects the collected failures
-// of a validation assertion.
-type Failures interface {
-	// HasErrors returns true, if assertion failures happened.
-	HasErrors() bool
-
-	// Errors returns the so far collected errors.
-	Errors() []error
-
-	// Error returns the collected errors as one error.
-	Error() error
-}
-
-// panicFailer reacts with a panic.
-type panicFailer struct{}
-
-// Logf implements the Failer interface.
-func (f panicFailer) Logf(format string, args ...interface{}) {
-	backendPrintf(format+"\n", args...)
-}
-
-// Fail implements the Failer interface.
-func (f panicFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
-	obex := obexString(test, obtained, expected)
-	panic(failString(test, obex, msgs...))
-}
-
-// validationFailer collects validation errors, e.g. when
-// validating form input data.
-type validationFailer struct {
-	mux  sync.Mutex
-	errs []error
-}
-
-// HasErrors implements the Failures interface.
-func (f *validationFailer) HasErrors() bool {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	return len(f.errs) > 0
-}
-
-// Errors implements the Failures interface.
-func (f *validationFailer) Errors() []error {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	return f.errs
-}
-
-// Error implements the Failures interface.
-func (f *validationFailer) Error() error {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	strs := []string{}
-	for i, err := range f.errs {
-		strs = append(strs, fmt.Sprintf("[%d] %v", i, err))
-	}
-	return errors.New(strings.Join(strs, " / "))
-}
-
-// Logf implements the Failer interface.
-func (f *validationFailer) Logf(format string, args ...interface{}) {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	backendPrintf(format+"\n", args...)
-}
-
-// Fail implements the Failer interface.
-func (f *validationFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	obex := obexString(test, obtained, expected)
-	f.errs = append(f.errs, errors.New(failString(test, obex, msgs...)))
-	return false
-}
-
-// Failable allows an assertion to signal a fail to an external instance
-// like testing.T or testing.B.
-type Failable interface {
-	FailNow()
-}
-
-// testingFailer works together with the testing package of Go and
-// may signal the fail to it.
-type testingFailer struct {
-	mux       sync.Mutex
-	failable  Failable
-	shallFail bool
-}
-
-// Logf implements the Failer interface.
-func (f *testingFailer) Logf(format string, args ...interface{}) {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	pc, file, line, _ := runtime.Caller(2)
-	_, fileName := path.Split(file)
-	funcNameParts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
-	funcNamePartsIdx := len(funcNameParts) - 1
-	funcName := funcNameParts[funcNamePartsIdx]
-	prefix := fmt.Sprintf("%s:%d %s(): ", fileName, line, funcName)
-	backendPrintf(prefix+format+"\n", args...)
-}
-
-// Fail implements the Failer interface.
-func (f *testingFailer) Fail(test Test, obtained, expected interface{}, msgs ...string) bool {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	pc, file, line, _ := runtime.Caller(2)
-	_, fileName := path.Split(file)
-	funcNameParts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
-	funcNamePartsIdx := len(funcNameParts) - 1
-	funcName := funcNameParts[funcNamePartsIdx]
-	buffer := &bytes.Buffer{}
-	fmt.Fprintf(buffer, "--------------------------------------------------------------------------------\n")
-	if test == Fail {
-		fmt.Fprintf(buffer, "%s:%d: Assert failed!\n\n", fileName, line)
-	} else {
-		fmt.Fprintf(buffer, "%s:%d: Assert '%s' failed!\n\n", fileName, line, test)
-	}
-	fmt.Fprintf(buffer, "Function...: %s()\n", funcName)
-	switch test {
-	case True, False, Nil, NotNil, Empty, NotEmpty, Panics:
-		fmt.Fprintf(buffer, "Obtained...: %v\n", obtained)
-	case Implementor, Assignable, Unassignable:
-		fmt.Fprintf(buffer, "Obtained...: %v\n", ValueDescription(obtained))
-		fmt.Fprintf(buffer, "Expected...: %v\n", ValueDescription(expected))
-	case Contents:
-		switch typedObtained := obtained.(type) {
-		case string:
-			fmt.Fprintf(buffer, "Part.......: %s\n", typedObtained)
-			fmt.Fprintf(buffer, "Full.......: %s\n", expected)
-		default:
-			fmt.Fprintf(buffer, "Part.......: %v\n", obtained)
-			fmt.Fprintf(buffer, "Full.......: %v\n", expected)
-		}
-	case Fail:
-	default:
-		fmt.Fprintf(buffer, "Obtained...: %v\n", obtained)
-		fmt.Fprintf(buffer, "Expected...: %v\n", expected)
-	}
-	if len(msgs) > 0 {
-		fmt.Fprintf(buffer, "Description: %s\n", strings.Join(msgs, "\n             "))
-	}
-	fmt.Fprintf(buffer, "--------------------------------------------------------------------------------\n")
-	backendPrintf(buffer.String())
-	if f.shallFail {
-		f.failable.FailNow()
-	}
-	return false
-}
-
 //--------------------
 // ASSERTION
 //--------------------
 
+// MakeSigChan is a simple one-liner to create the buffered signal channel
+// for the wait assertion.
+func MakeSigChan() chan interface{} {
+	return make(chan interface{}, 1)
+}
+
 // Assertion defines the available test methods.
 type Assertion interface {
+	// IncrCallstackOffset allows test libraries using the audit
+	// package internally to adjust the callstack offset. This
+	// way test output shows the correct location. Deferring
+	// the returned function restores the former offset.
+	IncrCallstackOffset() func()
+
 	// Logf can be used to display useful information during testing.
 	Logf(format string, args ...interface{})
 
@@ -338,8 +101,10 @@ type Assertion interface {
 	About(obtained, expected, extent float64, msgs ...string) bool
 
 	// Range tests if obtained is larger or equal low and lower or
-	// equal high. Allowed are byte, int and float64 for numbers, runes
-	// and strings, or as a length test array, slices, and maps.
+	// equal high. Allowed are byte, int and float64 for numbers, runes,
+	// strings, times, and duration. In case of obtained arrays,
+	// slices, and maps low and high have to be ints for testing
+	// the length.
 	Range(obtained, low, high interface{}, msgs ...string) bool
 
 	// Substring tests if obtained is a substring of the full string.
@@ -403,33 +168,15 @@ func NewAssertion(f Failer) Assertion {
 	}
 }
 
-// NewPanicAssertion creates a new Assertion instance which panics if a test fails.
-func NewPanicAssertion() Assertion {
-	return NewAssertion(&panicFailer{})
-}
-
-// NewValidationAssertion creates a new Assertion instance which collections
-// validation failures. The returned Failures instance allows to test an access
-// them.
-func NewValidationAssertion() (Assertion, Failures) {
-	vf := &validationFailer{}
-	return NewAssertion(vf), vf
-}
-
-// NewTestingAssertion creates a new Assertion instance for use with the testing
-// package. The *testing.T has to be passed as failable, the first argument.
-// shallFail controls if a failing assertion also lets fail the Go test.
-func NewTestingAssertion(f Failable, shallFail bool) Assertion {
-	return NewAssertion(&testingFailer{
-		failable:  f,
-		shallFail: shallFail,
-	})
-}
-
 // assertion implements the assertion interface.
 type assertion struct {
 	Tester
 	failer Failer
+}
+
+// Logf implements the Assertion interface.
+func (a *assertion) IncrCallstackOffset() func() {
+	return a.failer.IncrCallstackOffset()
 }
 
 // Logf implements the Assertion interface.
@@ -683,228 +430,6 @@ func (a *assertion) Fail(msgs ...string) bool {
 }
 
 //--------------------
-// TESTER
-//--------------------
-
-// Tester is a helper which can be used in own Assertion implementations.
-type Tester struct{}
-
-// IsTrue checks if obtained is true.
-func (t Tester) IsTrue(obtained bool) bool {
-	return obtained == true
-}
-
-// IsNil checks if obtained is nil in a safe way.
-func (t Tester) IsNil(obtained interface{}) bool {
-	if obtained == nil {
-		// Standard test.
-		return true
-	}
-	// Some types have to be tested via reflection.
-	value := reflect.ValueOf(obtained)
-	kind := value.Kind()
-	switch kind {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-		return value.IsNil()
-	}
-	return false
-}
-
-// IsEqual checks if obtained and expected are equal.
-func (t Tester) IsEqual(obtained, expected interface{}) bool {
-	return reflect.DeepEqual(obtained, expected)
-}
-
-// IsAbout checks if obtained and expected are to a given extent almost equal.
-func (t Tester) IsAbout(obtained, expected, extent float64) bool {
-	if extent < 0.0 {
-		extent = extent * (-1)
-	}
-	low := expected - extent
-	high := expected + extent
-	return low <= obtained && obtained <= high
-}
-
-// IsInRange checks, if obtained is inside the given range. In case of a
-// slice, array, or map it will check agains the length.
-func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
-	// First standard types.
-	switch o := obtained.(type) {
-	case byte:
-		l, lok := low.(byte)
-		h, hok := high.(byte)
-		if !lok && !hok {
-			return false, errors.New("low and/or high are no byte")
-		}
-		return l <= o && o <= h, nil
-	case int:
-		l, lok := low.(int)
-		h, hok := high.(int)
-		if !lok && !hok {
-			return false, errors.New("low and/or high are no int")
-		}
-		return l <= o && o <= h, nil
-	case float64:
-		l, lok := low.(float64)
-		h, hok := high.(float64)
-		if !lok && !hok {
-			return false, errors.New("low and/or high are no float64")
-		}
-		return l <= o && o <= h, nil
-	case rune:
-		l, lok := low.(rune)
-		h, hok := high.(rune)
-		if !lok && !hok {
-			return false, errors.New("low and/or high are no rune")
-		}
-		return l <= o && o <= h, nil
-	case string:
-		l, lok := low.(string)
-		h, hok := high.(string)
-		if !lok && !hok {
-			return false, errors.New("low and/or high are no string")
-		}
-		return l <= o && o <= h, nil
-	}
-	// Now check the collection types.
-	ol, err := t.Len(obtained)
-	if err != nil {
-		return false, errors.New("no valid type with a length")
-	}
-	l, lok := low.(int)
-	h, hok := high.(int)
-	if !lok && !hok {
-		return false, errors.New("low and/or high are no int")
-	}
-	return l <= ol && ol <= h, nil
-}
-
-// Contains checks if the part type is matching to the full type and
-// if the full data containes the part data.
-func (t Tester) Contains(part, full interface{}) (bool, error) {
-	switch fullValue := full.(type) {
-	case string:
-		// Content of a string.
-		switch partValue := part.(type) {
-		case string:
-			return strings.Contains(fullValue, partValue), nil
-		case []byte:
-			return strings.Contains(fullValue, string(partValue)), nil
-		default:
-			partString := fmt.Sprintf("%v", partValue)
-			return strings.Contains(fullValue, partString), nil
-		}
-	case []byte:
-		// Content of a byte slice.
-		switch partValue := part.(type) {
-		case string:
-			return bytes.Contains(fullValue, []byte(partValue)), nil
-		case []byte:
-			return bytes.Contains(fullValue, partValue), nil
-		default:
-			partBytes := []byte(fmt.Sprintf("%v", partValue))
-			return bytes.Contains(fullValue, partBytes), nil
-		}
-	default:
-		// Content of any array or slice, use reflection.
-		value := reflect.ValueOf(full)
-		kind := value.Kind()
-		if kind == reflect.Array || kind == reflect.Slice {
-			length := value.Len()
-			for i := 0; i < length; i++ {
-				current := value.Index(i)
-				if reflect.DeepEqual(part, current.Interface()) {
-					return true, nil
-				}
-			}
-			return false, nil
-		}
-	}
-	return false, errors.New("full value is no string, array, or slice")
-}
-
-// IsSubstring checks if obtained is a substring of the full string.
-func (t Tester) IsSubstring(obtained, full string) bool {
-	return strings.Contains(full, obtained)
-}
-
-// IsCase checks if the obtained string is uppercase or lowercase.
-func (t Tester) IsCase(obtained string, upperCase bool) bool {
-	if upperCase {
-		return obtained == strings.ToUpper(obtained)
-	}
-	return obtained == strings.ToLower(obtained)
-}
-
-// IsMatching checks if the obtained string matches a regular expression.
-func (t Tester) IsMatching(obtained, regex string) (bool, error) {
-	return regexp.MatchString("^"+regex+"$", obtained)
-}
-
-// IsImplementor checks if obtained implements the expected interface variable pointer.
-func (t Tester) IsImplementor(obtained, expected interface{}) (bool, error) {
-	obtainedValue := reflect.ValueOf(obtained)
-	expectedValue := reflect.ValueOf(expected)
-	if !obtainedValue.IsValid() {
-		return false, fmt.Errorf("obtained value is invalid: %v", obtained)
-	}
-	if !expectedValue.IsValid() || expectedValue.Kind() != reflect.Ptr || expectedValue.Elem().Kind() != reflect.Interface {
-		return false, fmt.Errorf("expected value is no interface variable pointer: %v", expected)
-	}
-	return obtainedValue.Type().Implements(expectedValue.Elem().Type()), nil
-}
-
-// IsAssignable checks if the types of obtained and expected are assignable.
-func (t Tester) IsAssignable(obtained, expected interface{}) bool {
-	obtainedValue := reflect.ValueOf(obtained)
-	expectedValue := reflect.ValueOf(expected)
-	return obtainedValue.Type().AssignableTo(expectedValue.Type())
-}
-
-// Length checks the len of the obtained string, array, slice, map or channel.
-func (t Tester) Len(obtained interface{}) (int, error) {
-	// Check using the lenable interface.
-	if l, ok := obtained.(lenable); ok {
-		return l.Len(), nil
-	}
-	// Check the standard types.
-	obtainedValue := reflect.ValueOf(obtained)
-	obtainedKind := obtainedValue.Kind()
-	switch obtainedKind {
-	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
-		return obtainedValue.Len(), nil
-	default:
-		descr := ValueDescription(obtained)
-		return 0, fmt.Errorf("obtained %s is no array, chan, map, slice, string or understands Len()", descr)
-	}
-}
-
-// HasPanic checks if the passed function panics.
-func (t Tester) HasPanic(pf func()) (ok bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			// Panic, that's ok!
-			ok = true
-		}
-	}()
-	pf()
-	return false
-}
-
-// IsValidPath checks if the given directory or
-// file path exists.
-func (t Tester) IsValidPath(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return true, err
-}
-
-//--------------------
 // HELPER
 //--------------------
 
@@ -912,30 +437,6 @@ func (t Tester) IsValidPath(path string) (bool, error) {
 type lowHigh struct {
 	low  interface{}
 	high interface{}
-}
-
-// ValueDescription returns a description of a value as string.
-func ValueDescription(value interface{}) string {
-	rvalue := reflect.ValueOf(value)
-	kind := rvalue.Kind()
-	switch kind {
-	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice:
-		return kind.String() + " of " + rvalue.Type().Elem().String()
-	case reflect.Func:
-		return kind.String() + " " + rvalue.Type().Name() + "()"
-	case reflect.Interface, reflect.Struct:
-		return kind.String() + " " + rvalue.Type().Name()
-	case reflect.Ptr:
-		return kind.String() + " to " + rvalue.Type().Elem().String()
-	}
-	// Default.
-	return kind.String()
-}
-
-// MakeSigChan is a simple one-liner to create the buffered signal channel
-// for the wait assertion.
-func MakeSigChan() chan interface{} {
-	return make(chan interface{}, 1)
 }
 
 // lenable is an interface for the Len() mehod.
