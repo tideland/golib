@@ -9,12 +9,13 @@ for different purposes.
 at [https://github.com/tideland/gocells](https://github.com/tideland/gocells).
 
 **ATTENTION:** The `web` package is now deprecated. It has been migrated
-and extended into the repository 
+and extended into the repository
 [https://github.com/tideland/gorest](https://github.com/tideland/gorest).
 
 I hope you like them. ;)
 
 [![Sourcegraph](https://sourcegraph.com/github.com/tideland/golib/-/badge.svg)](https://sourcegraph.com/github.com/tideland/golib?badge)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tideland/golib)](https://goreportcard.com/report/github.com/tideland/golib)
 
 ## Version
 
