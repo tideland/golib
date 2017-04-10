@@ -120,7 +120,7 @@ func TestTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []interface{}{"foo", "bar"})
-	list, err = tree.FindFirst(func(v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(v interface{}) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
@@ -320,7 +320,7 @@ func TestStringTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []string{"foo", "bar"})
-	list, err = tree.FindFirst(func(v string) (bool, error) {
+	_, err = tree.FindFirst(func(v string) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
@@ -527,7 +527,7 @@ func TestKeyValueTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []collections.KeyValue{{"foo", "bar"}, {"bar", "foo"}})
-	list, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
@@ -749,7 +749,7 @@ func TestKeyStringValueTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []collections.KeyStringValue{{"foo", "bar"}, {"bar", "foo"}})
-	list, err = tree.FindFirst(func(k, v string) (bool, error) {
+	_, err = tree.FindFirst(func(k, v string) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
