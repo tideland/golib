@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections - Stacks - Unit Tests
 //
-// Copyright (C) 2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -61,7 +61,7 @@ func TestStackPushPop(t *testing.T) {
 	assert.Length(sb, 0)
 
 	// Popping the last one returns an error.
-	v, err = sb.Pop()
+	_, err = sb.Pop()
 	assert.ErrorMatch(err, ".*collection is empty")
 
 	// And now deflate the first one.
@@ -119,7 +119,7 @@ func TestStringStackPushPop(t *testing.T) {
 	assert.Length(sb, 0)
 
 	// Popping the last one returns an error.
-	v, err = sb.Pop()
+	_, err = sb.Pop()
 	assert.ErrorMatch(err, ".*collection is empty")
 
 	// And now deflate the first one.

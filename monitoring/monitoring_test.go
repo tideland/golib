@@ -98,7 +98,7 @@ func TestDSRMonitor(t *testing.T) {
 	dsv, err = monitoring.ReadStatus("dsr:b")
 	assert.Nil(err, "no error expected")
 	assert.Equal(dsv, "4711", "status value should be correct")
-	dsv, err = monitoring.ReadStatus("dsr:d")
+	_, err = monitoring.ReadStatus("dsr:d")
 	assert.NotNil(err, "error should be returned")
 	assert.ErrorMatch(err, `.* monitoring backend panicked`)
 }

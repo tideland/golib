@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections - Tree - Unit Tests
 //
-// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -124,7 +124,7 @@ func TestTreeFind(t *testing.T) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(v interface{}) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -324,7 +324,7 @@ func TestStringTreeFind(t *testing.T) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(v string) (bool, error) {
+	_, err = tree.FindFirst(func(v string) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -531,7 +531,7 @@ func TestKeyValueTreeFind(t *testing.T) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -753,7 +753,7 @@ func TestKeyStringValueTreeFind(t *testing.T) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(k, v string) (bool, error) {
+	_, err = tree.FindFirst(func(k, v string) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
