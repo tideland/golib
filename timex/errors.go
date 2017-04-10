@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the timex package.
 const (
 	ErrCrontabCannotBeRecovered = iota + 1
 	ErrRetriedTooLong

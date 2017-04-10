@@ -1,6 +1,6 @@
 // Tideland Go Library - RSS Feed
 //
-// Copyright (C) 2012-2014 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -26,8 +26,12 @@ import (
 // CONST
 //--------------------
 
+// Version of the RSS.
 const (
-	Version   = "2.0"
+	Version = "2.0"
+)
+
+const (
 	rssDate   = "Mon, 02 Jan 2006 15:04 MST"
 	rssDateV1 = "Mon, 02 Jan 2006 15:04:05 MST"
 	rssDateV2 = "02 Jan 2006 15:04 MST"

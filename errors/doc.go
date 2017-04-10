@@ -1,11 +1,11 @@
 // Tideland Go Library - Errors
 //
-// Copyright (C) 2013-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The Tideland Go Library errors package allows to create more
+// Package errors of the Tideland Go Library allows to create more
 // detailed errors than with errors.New() or fmt.Errorf().  When trying
 // to differentiate between different errors or to carry helpful
 // payload own types are needed.

@@ -51,7 +51,7 @@ func OsFatalExiter() {
 	os.Exit(-1)
 }
 
-// PanacFatalExiter exits the application with a panic.
+// PanicFatalExiter exits the application with a panic.
 func PanicFatalExiter() {
 	panic("program aborted after fatal situation, see log")
 }

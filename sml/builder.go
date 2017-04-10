@@ -1,6 +1,6 @@
 // Tideland Go Library - Simple Markup Language - Builder
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -119,7 +119,7 @@ type KeyStringValueTreeBuilder struct {
 	done  bool
 }
 
-// NewNodeBuilder return a new nnode builder.
+// NewKeyStringValueTreeBuilder return a new nnode builder.
 func NewKeyStringValueTreeBuilder() *KeyStringValueTreeBuilder {
 	return &KeyStringValueTreeBuilder{}
 }
@@ -187,7 +187,7 @@ func (tb *KeyStringValueTreeBuilder) RawNode(raw string) error {
 	return tb.TextNode(raw)
 }
 
-// Comment implements the Builder interface.
+// CommentNode implements the Builder interface.
 func (tb *KeyStringValueTreeBuilder) CommentNode(comment string) error {
 	if tb.done {
 		return errors.New(ErrBuilder, errorMessages, "building is already done")

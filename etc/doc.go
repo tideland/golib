@@ -5,7 +5,7 @@
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The Tideland Go Library etc configuration package provides the reading,
+// Package etc of the Tideland Go Library package provides the reading,
 // parsing, and accessing of configuration data. Different readers
 // can be passed as sources for the SML formatted input.
 //

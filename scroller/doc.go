@@ -1,11 +1,11 @@
 // Tideland Go Library - Scroller
 //
-// Copyright (C) 2014-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2014-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The Tideland Go Library scroller packages helps analyzing a continuously
+// Package scroller of the Tideland Go Library helps analyzing a continuously
 // written line by line content, e.g. at the monitoring of log files.
 // Here the Scroller is working in the background and allows to read out of
 // any ReadSeeker (which may be a File) from beginning, end or a given number

@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the etc package.
 const (
 	ErrIllegalSourceFormat = iota + 1
 	ErrIllegalConfigSource

@@ -132,6 +132,7 @@ func WeekdayInRange(t time.Time, minWeekday, maxWeekday time.Weekday) bool {
 // UnitOfTime describes whose begin/end is wanted.
 type UnitOfTime int
 
+// Different units of time.
 const (
 	Second UnitOfTime = iota + 1
 	Minute
