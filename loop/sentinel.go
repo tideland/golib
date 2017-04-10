@@ -184,7 +184,7 @@ func (s *sentinel) backendLoop(l Loop) error {
 			if o == s {
 				return err
 			}
-			// Recieve notification about observable
+			// Receive notification about observable
 			// with error.
 			if s.handlerF != nil {
 				// Try to handle the notification.

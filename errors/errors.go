@@ -222,7 +222,7 @@ func IsDeprecatedError(err error) bool {
 //--------------------
 
 // callInfo bundles the info about the call environment
-// when a logging statement occured.
+// when a logging statement occurred.
 type callInfo struct {
 	packageName string
 	packagePart string

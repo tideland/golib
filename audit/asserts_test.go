@@ -386,7 +386,7 @@ func TestValidationAssertion(t *testing.T) {
 	assert, failures := audit.NewValidationAssertion()
 
 	assert.True(true, "should not fail")
-	assert.True(false, "sould fail")
+	assert.True(false, "should fail")
 	assert.Equal(1, 2, "should fail")
 
 	if !failures.HasErrors() {

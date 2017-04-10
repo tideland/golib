@@ -55,7 +55,7 @@ const (
 	wait
 )
 
-// envelope contains information transfered between client and scene.
+// envelope contains information transferred between client and scene.
 type envelope struct {
 	kind      int
 	box       *box

@@ -1,6 +1,6 @@
 // Tideland Go Library - Monitoring
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -46,7 +46,7 @@ const (
 // monitorings with the filter returning true will be done.
 type IDFilter func(id string) bool
 
-// Measuring defines one execution time measuring containg the ID and
+// Measuring defines one execution time measuring containing the ID and
 // the starting time of the measuring and able to pass this data after
 // the end of the measuring to its backend.
 type Measuring interface {

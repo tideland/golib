@@ -1,4 +1,4 @@
-// Tideland Go Libary - Scroller
+// Tideland Go Library - Scroller
 //
 // Copyright (C) 2014-2015 Frank Mueller / Tideland / Oldenburg / Germany
 //

@@ -1,6 +1,6 @@
 // Tideland Go Library - Simple Markup Language - Unit Tests
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -96,7 +96,7 @@ func TestWriterProcessing(t *testing.T) {
 // TestPositiveNodeReading checks the successful reading of nodes.
 func TestPositiveNodeReading(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	text := "Before!   {foo:main {bar:1:first Yadda ^{Test^} 1} {! Raw: }} { ! ^^^ !}  {inbetween}  {bar:2:last Yadda {Test ^^} 2}}   After!"
+	text := "Before!   {foo:main {bar:1:first Yadda ^{Test^} 1} {! Raw: }} { ! ^^^ !}  {between}  {bar:2:last Yadda {Test ^^} 2}}   After!"
 	builder := sml.NewNodeBuilder()
 	err := sml.ReadSML(strings.NewReader(text), builder)
 	assert.Nil(err)

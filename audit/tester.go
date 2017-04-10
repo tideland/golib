@@ -134,7 +134,7 @@ func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
 }
 
 // Contains checks if the part type is matching to the full type and
-// if the full data containes the part data.
+// if the full data contains the part data.
 func (t Tester) Contains(part, full interface{}) (bool, error) {
 	switch fullValue := full.(type) {
 	case string:

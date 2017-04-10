@@ -219,7 +219,7 @@ type Link struct {
 	Type     string `xml:"type,attr,omitempty"`
 	HRefLang string `xml:"hreflang,attr,omitempty"`
 	Title    string `xml:"title,attr,omitempty"`
-	Length   int    `xml:"lenght,attr,omitempty"`
+	Length   int    `xml:"length,attr,omitempty"`
 }
 
 // Validate checks if the feed link is valid.

@@ -1,6 +1,6 @@
 // Tideland Go Library - Identifier
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -62,14 +62,14 @@ func SepIdentifier(sep string, parts ...interface{}) string {
 	return LimitedSepIdentifier(sep, true, parts...)
 }
 
-// Identifier works like SepIdentifier but the seperator
+// Identifier works like SepIdentifier but the separator
 // is set to be a colon.
 func Identifier(parts ...interface{}) string {
 	return SepIdentifier(":", parts...)
 }
 
 // JoinedIdentifier builds a new identifier, joinded with the
-// colon as the seperator.
+// colon as the separator.
 func JoinedIdentifier(identifiers ...string) string {
 	return strings.Join(identifiers, ":")
 }

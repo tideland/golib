@@ -315,7 +315,7 @@ func TestTimes(t *testing.T) {
 		sleep := gen.SleepOneOf(sleeps[1], sleeps[2], sleeps[3], sleeps[4], sleeps[5])
 		s := int(sleep) / 1000000
 		_, ok := sleeps[s]
-		assert.True(ok, "Choosen duration is one the arguments")
+		assert.True(ok, "Chosen duration is one the arguments")
 	}
 }
 

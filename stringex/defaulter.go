@@ -1,6 +1,6 @@
 // Tideland Go Library - String Extensions - Defaulter
 //
-// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -36,11 +36,11 @@ type Defaulter interface {
 	AsString(v Valuer, dv string) string
 
 	// AsStringSlice returns the value as slice of strings
-	// separated by the passed seperator.
+	// separated by the passed separator.
 	AsStringSlice(v Valuer, sep string, dv []string) []string
 
 	// AsStringMap returns the value as map of strings to strings.
-	// The rows are seperated by the rsep, the key/values per
+	// The rows are separated by the rsep, the key/values per
 	// row with kvsep.
 	AsStringMap(v Valuer, rsep, kvsep string, dv map[string]string) map[string]string
 

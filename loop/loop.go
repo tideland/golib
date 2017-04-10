@@ -314,7 +314,7 @@ func (l *loop) run() {
 		}()
 		l.checkTermination(l.loopF(l))
 	}
-	// Now start runnung the loop wrappr.
+	// Now start running the loop wrappr.
 	l.startedC <- struct{}{}
 	for l.status == Running {
 		loopWrapper()

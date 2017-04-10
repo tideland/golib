@@ -1,6 +1,6 @@
 // Tideland Go Library - Logger
 //
-// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -227,7 +227,7 @@ func Criticalf(format string, args ...interface{}) {
 	}
 }
 
-// Fatalf logs a message independant of any level. After
+// Fatalf logs a message independent of any level. After
 // logging the message the functions calls the fatal exiter
 // function, which by default means exiting the application
 // with error code -1.
@@ -390,7 +390,7 @@ func (gl *GoLogger) Fatal(info, msg string) {
 //--------------------
 
 // callInfo bundles the info about the call environment
-// when a logging statement occured.
+// when a logging statement occurred.
 type callInfo struct {
 	packageName string
 	fileName    string
