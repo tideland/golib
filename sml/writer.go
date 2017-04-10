@@ -206,7 +206,7 @@ type standardSMLWriter struct {
 	context *WriterContext
 }
 
-// NewStandardMSLWriter creates a new writer for a ML
+// NewStandardSMLWriter creates a new writer for a ML
 // document in standard notation.
 func NewStandardSMLWriter() WriterProcessor {
 	return &standardSMLWriter{}

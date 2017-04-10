@@ -1,6 +1,6 @@
 // Tideland Go Library - Atom Feed
 //
-// Copyright (C) 2012-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -29,6 +29,7 @@ import (
 // CONST
 //--------------------
 
+// Attributes of Atom XML documents.
 const (
 	Version = "1.0"
 	XMLNS   = "http://www.w3.org/2005/Atom"
@@ -366,7 +367,7 @@ type Source struct {
 	Contributors []*Contributor `xml:"contributor,omitempty"`
 	Generator    *Generator     `xml:"generator,omitempty"`
 	Icon         string         `xml:"icon,omitempty"`
-	Id           string         `xml:"id",omitempty`
+	Id           string         `xml:"id,omitempty"`
 	Link         *Link          `xml:"link,omitempty"`
 	Logo         string         `xml:"logo,omitempty"`
 	Rights       *Text          `xml:"rights,omitempty"`

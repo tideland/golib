@@ -1,6 +1,6 @@
 // Tideland Go Library - Monitoring - Unit Tests
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -109,7 +109,7 @@ func TestInternalPanic(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	monitoring.SetBackend(monitoring.NewStandardBackend())
 	// Register monitoring func with panic.
-	monitoring.Register("panic", func() (string, error) { panic("ouch"); return "panic", nil })
+	monitoring.Register("panic", func() (string, error) { panic("ouch") })
 	// Need some time to let that backend catch up queued registering.
 	time.Sleep(time.Millisecond)
 	// Asserts.

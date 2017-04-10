@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the atom feed package.
 const (
 	ErrValidation = iota + 1
 	ErrParsing

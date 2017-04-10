@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the scroller package.
 const (
 	ErrNoSource = iota + 1
 	ErrNoTarget

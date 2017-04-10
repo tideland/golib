@@ -1,6 +1,6 @@
 // Tideland Go Library - Errors
 //
-// Copyright (C) 2013-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -30,7 +30,7 @@ type Messages map[int]string
 func (m Messages) Format(code int, args ...interface{}) string {
 	if m == nil || m[code] == "" {
 		if len(args) == 0 {
-			return fmt.Sprintf("[ERRORS:999] invalid error code '%d'")
+			return fmt.Sprintf("[ERRORS:999] invalid error code '%d'", code)
 		}
 		format := fmt.Sprintf("%v", args[0])
 		return fmt.Sprintf(format, args[1:]...)

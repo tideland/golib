@@ -1,11 +1,11 @@
 // Tideland Go Library - Scene
 //
-// Copyright (C) 2014-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2014-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The Tideland Go Library scene package provides a shared access to common
+// Package scene of the Tideland Go Library provides a shared access to common
 // used data in a larger context.
 //
 // By definition a scene is a sequence of continuous action in a play,

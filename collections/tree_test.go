@@ -580,7 +580,7 @@ func TestKeyValueTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(keyValues, 12)
-	for k, _ := range keyValues {
+	for k := range keyValues {
 		ksv := strings.Split(k, " = ")
 		assert.Length(ksv, 2)
 		ks := strings.Split(ksv[0], "/")
@@ -803,7 +803,7 @@ func TestKeyStringValueTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(keyValues, 12)
-	for k, _ := range keyValues {
+	for k := range keyValues {
 		ksv := strings.Split(k, " = ")
 		assert.Length(ksv, 2)
 		ks := strings.Split(ksv[0], "/")

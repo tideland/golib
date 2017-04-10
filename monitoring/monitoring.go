@@ -395,7 +395,7 @@ func DynamicStatusValuesPrintAll() error {
 	return DynamicStatusValuesWrite(os.Stdout, func(dsv DynamicStatusValue) bool { return true })
 }
 
-// SetMeasuringFilter sets the new filter for measurings
+// SetMeasuringsFilter sets the new filter for measurings
 // and returns the current one.
 func SetMeasuringsFilter(f IDFilter) IDFilter {
 	monitor.RLock()
@@ -403,7 +403,7 @@ func SetMeasuringsFilter(f IDFilter) IDFilter {
 	return monitor.backend().SetMeasuringsFilter(f)
 }
 
-// SetMeasuringFilter sets the new filter for variables
+// SetVariablesFilter sets the new filter for variables
 // and returns the current one.
 func SetVariablesFilter(f IDFilter) IDFilter {
 	monitor.RLock()
