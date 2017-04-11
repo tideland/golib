@@ -104,7 +104,7 @@ func (rs Recoverings) Trim(l int) Recoverings {
 	return rs[len(rs)-l:]
 }
 
-// Last returns the last recovering.
+// First returns the first recovering.
 func (rs Recoverings) First() *Recovering {
 	if len(rs) > 0 {
 		return rs[0]

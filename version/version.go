@@ -30,6 +30,7 @@ type Precedence int
 // from an other.
 type Level string
 
+// Separator, precedences, and part identifiers.
 const (
 	Metadata = "+"
 

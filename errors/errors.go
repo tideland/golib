@@ -43,6 +43,7 @@ func (m Messages) Format(code int, args ...interface{}) string {
 // CONSTANTS
 //--------------------
 
+// Error codes of the errors package.
 const (
 	ErrInvalidErrorType = iota + 1
 	ErrNotYetImplemented
