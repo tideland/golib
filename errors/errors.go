@@ -1,6 +1,6 @@
 // Tideland Go Library - Errors
 //
-// Copyright (C) 2013-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2013-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -30,7 +30,7 @@ type Messages map[int]string
 func (m Messages) Format(code int, args ...interface{}) string {
 	if m == nil || m[code] == "" {
 		if len(args) == 0 {
-			return fmt.Sprintf("[ERRORS:999] invalid error code '%d'")
+			return fmt.Sprintf("[ERRORS:999] invalid error code '%d'", code)
 		}
 		format := fmt.Sprintf("%v", args[0])
 		return fmt.Sprintf(format, args[1:]...)
@@ -43,6 +43,7 @@ func (m Messages) Format(code int, args ...interface{}) string {
 // CONSTANTS
 //--------------------
 
+// Error codes of the errors package.
 const (
 	ErrInvalidErrorType = iota + 1
 	ErrNotYetImplemented
@@ -222,7 +223,7 @@ func IsDeprecatedError(err error) bool {
 //--------------------
 
 // callInfo bundles the info about the call environment
-// when a logging statement occured.
+// when a logging statement occurred.
 type callInfo struct {
 	packageName string
 	packagePart string

@@ -43,7 +43,7 @@ type Failer interface {
 
 // FailureDetail contains detailed information of a failure.
 type FailureDetail interface {
-	// TImestamp tells when the failure has happend.
+	// TImestamp tells when the failure has happened.
 	Timestamp() time.Time
 
 	// Locations returns file name, line number, and

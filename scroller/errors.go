@@ -1,6 +1,6 @@
-// Tideland Go Libary - Scroller
+// Tideland Go Library - Scroller
 //
-// Copyright (C) 2014-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2014-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the scroller package.
 const (
 	ErrNoSource = iota + 1
 	ErrNoTarget

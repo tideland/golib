@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections
 //
-// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.

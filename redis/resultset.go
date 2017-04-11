@@ -1,6 +1,6 @@
 // Tideland Go Library - Redis Client - Result Set
 //
-// Copyright (C) 2009-2016 Frank Mueller / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.

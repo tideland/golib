@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the loop package.
 const (
 	ErrLoopPanicked = iota + 1
 	ErrHandlingFailed

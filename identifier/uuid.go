@@ -1,6 +1,6 @@
 // Tideland Go Library - Identifier - UUID
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -28,6 +28,7 @@ import (
 // UUID
 //--------------------
 
+// UUID versions and variants.
 const (
 	UUIDv1 byte = 1
 	UUIDv3 byte = 3

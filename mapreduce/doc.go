@@ -1,11 +1,11 @@
 // Tideland Go Library - Map/Reduce
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The Tideland Go Library mapreduce package implements the Map/Reduce
+// Package mapreduce of the Tideland Go Library implements the Map/Reduce
 // algorithm for the processing and aggregation mass data.
 //
 // A type implementing the MapReducer interface has to be implemented

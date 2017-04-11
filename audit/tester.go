@@ -134,7 +134,7 @@ func (t Tester) IsInRange(obtained, low, high interface{}) (bool, error) {
 }
 
 // Contains checks if the part type is matching to the full type and
-// if the full data containes the part data.
+// if the full data contains the part data.
 func (t Tester) Contains(part, full interface{}) (bool, error) {
 	switch fullValue := full.(type) {
 	case string:
@@ -215,7 +215,7 @@ func (t Tester) IsAssignable(obtained, expected interface{}) bool {
 	return obtainedValue.Type().AssignableTo(expectedValue.Type())
 }
 
-// Length checks the len of the obtained string, array, slice, map or channel.
+// Len checks the length of the obtained string, array, slice, map or channel.
 func (t Tester) Len(obtained interface{}) (int, error) {
 	// Check using the lenable interface.
 	if l, ok := obtained.(lenable); ok {

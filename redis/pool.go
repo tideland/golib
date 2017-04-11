@@ -1,6 +1,6 @@
 // Tideland Go Library - Redis Client - resp Pool
 //
-// Copyright (C) 2009-2016 Frank Mueller / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -73,21 +73,20 @@ func newPool(db *Database) *pool {
 func (p *pool) pull(forced bool) (*resp, error) {
 	if forced {
 		return p.do(forcedPullRequest, nil)
-	} else {
-		wait := 5 * time.Millisecond
-		for i := 0; i < 5; i++ {
-			resp, err := p.do(unforcedPullRequest, nil)
-			if err != nil {
-				return nil, err
-			}
-			if resp != nil {
-				return resp, nil
-			}
-			time.Sleep(wait)
-			wait = wait * 2
-		}
-		return nil, errors.New(ErrPoolLimitReached, errorMessages, p.database.poolsize)
 	}
+	wait := 5 * time.Millisecond
+	for i := 0; i < 5; i++ {
+		resp, err := p.do(unforcedPullRequest, nil)
+		if err != nil {
+			return nil, err
+		}
+		if resp != nil {
+			return resp, nil
+		}
+		time.Sleep(wait)
+		wait = wait * 2
+	}
+	return nil, errors.New(ErrPoolLimitReached, errorMessages, p.database.poolsize)
 }
 
 // push returns a protocol back into the pool.

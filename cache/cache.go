@@ -118,7 +118,7 @@ func TTL(d time.Duration) Option {
 // INFO
 //--------------------
 
-// Info containes statistical information about the Cache.
+// Info contains statistical information about the Cache.
 type Info struct {
 	ID       string
 	Interval time.Duration
@@ -135,7 +135,7 @@ type Cache interface {
 	// Load returns a Cacheable from memory or source.
 	Load(id string, timeout time.Duration) (Cacheable, error)
 
-	// Discard explicitely removes a Cacheable from Cache. Normally
+	// Discard explicitly removes a Cacheable from Cache. Normally
 	// done automatically.
 	Discard(id string) error
 

@@ -1,6 +1,6 @@
 // Tideland Go Library - Collections - Tree - Unit Tests
 //
-// Copyright (C) 2015-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2015-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -120,11 +120,11 @@ func TestTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []interface{}{"foo", "bar"})
-	list, err = tree.FindFirst(func(v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(v interface{}) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(v interface{}) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -320,11 +320,11 @@ func TestStringTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []string{"foo", "bar"})
-	list, err = tree.FindFirst(func(v string) (bool, error) {
+	_, err = tree.FindFirst(func(v string) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(v string) (bool, error) {
+	_, err = tree.FindFirst(func(v string) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -527,11 +527,11 @@ func TestKeyValueTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []collections.KeyValue{{"foo", "bar"}, {"bar", "foo"}})
-	list, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
+	_, err = tree.FindFirst(func(k string, v interface{}) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -580,7 +580,7 @@ func TestKeyValueTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(keyValues, 12)
-	for k, _ := range keyValues {
+	for k := range keyValues {
 		ksv := strings.Split(k, " = ")
 		assert.Length(ksv, 2)
 		ks := strings.Split(ksv[0], "/")
@@ -749,11 +749,11 @@ func TestKeyStringValueTreeFind(t *testing.T) {
 	}).List()
 	assert.Nil(err)
 	assert.Equal(list, []collections.KeyStringValue{{"foo", "bar"}, {"bar", "foo"}})
-	list, err = tree.FindFirst(func(k, v string) (bool, error) {
+	_, err = tree.FindFirst(func(k, v string) (bool, error) {
 		return false, nil
 	}).List()
 	assert.ErrorMatch(err, ".* node not found")
-	list, err = tree.FindFirst(func(k, v string) (bool, error) {
+	_, err = tree.FindFirst(func(k, v string) (bool, error) {
 		return false, errors.New("ouch")
 	}).List()
 	assert.ErrorMatch(err, ".* cannot find first node: ouch")
@@ -803,7 +803,7 @@ func TestKeyStringValueTreeDo(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Length(keyValues, 12)
-	for k, _ := range keyValues {
+	for k := range keyValues {
 		ksv := strings.Split(k, " = ")
 		assert.Length(ksv, 2)
 		ks := strings.Split(ksv[0], "/")

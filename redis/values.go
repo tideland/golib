@@ -1,6 +1,6 @@
 // Tideland Go Library - Redis Client - Values
 //
-// Copyright (C) 2009-2016 Frank Mueller / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -99,12 +99,12 @@ func (v Value) Bytes() []byte {
 	return []byte(v)
 }
 
-// StringSlice returns the value as slice of strings when seperated by CRLF.
+// StringSlice returns the value as slice of strings when separated by CRLF.
 func (v Value) StringSlice() []string {
 	return strings.Split(v.String(), "\r\n")
 }
 
-// StringMap returns the value as a map of strings when seperated by CRLF
+// StringMap returns the value as a map of strings when separated by CRLF
 // and colons between key and value.
 func (v Value) StringMap() map[string]string {
 	tmp := v.StringSlice()

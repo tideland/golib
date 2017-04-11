@@ -1,6 +1,6 @@
 // Tideland Go Library - Numerics
 //
-// Copyright (C) 2009-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -239,7 +239,7 @@ func SubVectors(a, b *Vector) *Vector {
 	return NewVector(a.x-b.x, a.y-b.y)
 }
 
-// ScaleVectors multiplies a vector with a float and returns
+// ScaleVector multiplies a vector with a float and returns
 // the new vector.
 func ScaleVector(v *Vector, s float64) *Vector {
 	return NewVector(v.x*s, v.y*s)

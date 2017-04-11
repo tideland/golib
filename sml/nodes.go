@@ -1,6 +1,6 @@
 // Tideland Go Library - Simple Markup Language - Nodes
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -241,7 +241,7 @@ func init() {
 	}
 }
 
-// validateTag checks if a tag is valid. Only
+// ValidateTag checks if a tag is valid. Only
 // the chars 'a' to 'z', '0' to '9', '-' and ':' are
 // accepted. It also transforms it to lowercase
 // and splits the parts at the colons.

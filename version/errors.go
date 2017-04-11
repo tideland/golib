@@ -1,6 +1,6 @@
 // Tideland Go Library - Version - Errors
 //
-// Copyright (C) 2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2016-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -19,6 +19,7 @@ import (
 // CONSTANTS
 //--------------------
 
+// Error codes of the version package.
 const (
 	ErrIllegalVersionFormat = iota + 1
 )

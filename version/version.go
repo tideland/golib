@@ -1,6 +1,6 @@
 // Tideland Go Library - Version
 //
-// Copyright (C) 2014-2015 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2014-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -30,6 +30,7 @@ type Precedence int
 // from an other.
 type Level string
 
+// Separator, precedences, and part identifiers.
 const (
 	Metadata = "+"
 
@@ -288,7 +289,7 @@ func validID(id string, numeric bool) string {
 	return string(out)
 }
 
-// splitVersionString seperates the version string into numbers,
+// splitVersionString separates the version string into numbers,
 // pre-release, and metadata strings.
 func splitVersionString(vsnstr string) ([]string, error) {
 	npXm := strings.SplitN(vsnstr, Metadata, 2)

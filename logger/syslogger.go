@@ -1,6 +1,6 @@
 // Tideland Go Library - Logger - SysLogger
 //
-// Copyright (C) 2012-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2012-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -28,7 +28,7 @@ type SysLogger struct {
 	writer *syslog.Writer
 }
 
-// NewGoLogger returns a logger implementation using the
+// NewSysLogger returns a logger implementation using the
 // Go syslog package.
 func NewSysLogger(tag string) (Logger, error) {
 	writer, err := syslog.New(syslog.LOG_DEBUG|syslog.LOG_LOCAL0, tag)

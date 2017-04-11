@@ -5,8 +5,8 @@
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-// The Tideland Go Library loop package is intended to support
-// the developer implementing the typical Go idiom for
+// Package loop of the Tideland Go Library supports the
+// developer implementing the typical Go idiom for
 // concurrent applications running in a loop in the background
 // and doing a select on one or more channels. Stopping those
 // loops or getting aware of internal errors requires extra

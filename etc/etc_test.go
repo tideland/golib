@@ -75,7 +75,7 @@ func TestReadFile(t *testing.T) {
 	v = cfg.ValueAsString("bar", "Y")
 	assert.Equal(v, "24")
 
-	_, err = etc.ReadFile("some-not-existing-configuration-file-due-to-wierd-name")
+	_, err = etc.ReadFile("some-not-existing-configuration-file-due-to-weird-name")
 	assert.ErrorMatch(err, `.* cannot read configuration file .*`)
 }
 

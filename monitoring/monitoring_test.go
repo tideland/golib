@@ -1,6 +1,6 @@
 // Tideland Go Library - Monitoring - Unit Tests
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -98,7 +98,7 @@ func TestDSRMonitor(t *testing.T) {
 	dsv, err = monitoring.ReadStatus("dsr:b")
 	assert.Nil(err, "no error expected")
 	assert.Equal(dsv, "4711", "status value should be correct")
-	dsv, err = monitoring.ReadStatus("dsr:d")
+	_, err = monitoring.ReadStatus("dsr:d")
 	assert.NotNil(err, "error should be returned")
 	assert.ErrorMatch(err, `.* monitoring backend panicked`)
 }
@@ -109,7 +109,7 @@ func TestInternalPanic(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	monitoring.SetBackend(monitoring.NewStandardBackend())
 	// Register monitoring func with panic.
-	monitoring.Register("panic", func() (string, error) { panic("ouch"); return "panic", nil })
+	monitoring.Register("panic", func() (string, error) { panic("ouch") })
 	// Need some time to let that backend catch up queued registering.
 	time.Sleep(time.Millisecond)
 	// Asserts.

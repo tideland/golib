@@ -1,6 +1,6 @@
 // Tideland Go Library - Monitoring
 //
-// Copyright (C) 2009-2016 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2009-2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
@@ -46,7 +46,7 @@ const (
 // monitorings with the filter returning true will be done.
 type IDFilter func(id string) bool
 
-// Measuring defines one execution time measuring containg the ID and
+// Measuring defines one execution time measuring containing the ID and
 // the starting time of the measuring and able to pass this data after
 // the end of the measuring to its backend.
 type Measuring interface {
@@ -395,7 +395,7 @@ func DynamicStatusValuesPrintAll() error {
 	return DynamicStatusValuesWrite(os.Stdout, func(dsv DynamicStatusValue) bool { return true })
 }
 
-// SetMeasuringFilter sets the new filter for measurings
+// SetMeasuringsFilter sets the new filter for measurings
 // and returns the current one.
 func SetMeasuringsFilter(f IDFilter) IDFilter {
 	monitor.RLock()
@@ -403,7 +403,7 @@ func SetMeasuringsFilter(f IDFilter) IDFilter {
 	return monitor.backend().SetMeasuringsFilter(f)
 }
 
-// SetMeasuringFilter sets the new filter for variables
+// SetVariablesFilter sets the new filter for variables
 // and returns the current one.
 func SetVariablesFilter(f IDFilter) IDFilter {
 	monitor.RLock()
