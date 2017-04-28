@@ -29,20 +29,20 @@ type Document interface {
 // document implements Document.
 type document struct {
 	separator string
-	content   interface{}
+	root      node
 }
 
 // Parse reads a raw document and returns it as
 // accessable document.
 func Parse(data []byte, separator string) (Document, error) {
-	var content interface{}
-	err := json.Unmarshal(data, &content)
+	var raw interface{}
+	err := json.Unmarshal(data, &raw)
 	if err != nil {
 		return nil, err
 	}
 	return &document{
 		separator: separator,
-		content:   content,
+		root:      buildTree(raw),
 	}, nil
 }
 
@@ -51,15 +51,43 @@ func (d *document) ValueAsString(path, dv string) string {
 	return ""
 }
 
-// splitPath splits the path by the separator.
-func (d *document) splitPath(path string) []string {
-	return strings.Split(path, d.separator)
-}
-
 // resolvePath tries to resolve the given path and
 // returns the found object.
-func (d *document) resolvePath(pathParts []string) (interface{}, error) {
+func (d *document) resolvePath(node[string]interface{}, pathParts []string) (interface{}, error) {
 	return nil, nil
+}
+
+//--------------------
+// HELPER
+//--------------------
+
+// value represents a JSON value but also may be a node
+// or array. 
+type value interface{}
+
+// isNode checks if the value is a node, which is a
+func (v value) isNode() (node, bool) {
+	switch vt := v.(type) {
+	case map[string]interface{}:
+		return node(vt), true
+	case []interface{}:
+		n := node{}
+		for i, v := range vt {
+			n[strconv.Itoa(i)] = v
+		}
+		return n, true
+	default:
+		return nil, false
+	}
+}
+
+// node represents one JSON object or array.
+type node map[string]value
+
+// buildTree conerts the raw document into a
+// better accessable tree of nodes.
+func buildTree(raw value} node {
+	return nil
 }
 
 // EOF
