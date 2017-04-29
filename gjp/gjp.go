@@ -49,7 +49,34 @@ func Parse(data []byte, separator string) (Document, error) {
 
 // ValueAsString implements Document.
 func (d *document) ValueAsString(path, dv string) string {
-	return ""
+	v, ok := d.valueAt(path)
+	if !ok {
+		return dv
+	}
+	switch vv := v.(type) {
+	case string:
+		return vv
+	case float64:
+	case bool:
+	}
+	return dv
+}
+
+// valueAt retrieves the value at a given path.
+func (d *document) valueAt(path string) (value, bool) {
+	pathParts := strings.Split(path, d.separator)
+	n, ok := d.root.isNode()
+	if !ok && len(pathParts) == 0 {
+		// Special case: root is searched value.
+		return value(root), true
+	}
+	nr, ok := n.at(pathParts)
+	if !ok {
+		// Not found.
+		return nil, false
+	}
+	// Found our value.
+	return value(nr), true
 }
 
 //--------------------
