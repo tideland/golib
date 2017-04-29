@@ -14,7 +14,9 @@ package gjp
 import (
 	"encoding/json"
 	"strconv"
-	"strings"
+
+	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/stringex"
 )
 
 //--------------------
@@ -39,7 +41,7 @@ func Parse(data []byte, separator string) (Document, error) {
 	var raw interface{}
 	err := json.Unmarshal(data, &raw)
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotate(err, ErrUnmarshalling, errorMessages)
 	}
 	return &document{
 		separator: separator,
@@ -62,25 +64,30 @@ func (d *document) ValueAsString(path, dv string) string {
 	return dv
 }
 
-// valueAt retrieves the value at a given path.
-func (d *document) valueAt(path string) (value, bool) {
-	pathParts := strings.Split(path, d.separator)
+// valueAt retrieves the data at a given path.
+func (d *document) valueAt(path string) (interface{}, bool) {
+	parts := stringex.SplitMap(path, d.separator, func(p string) (string, bool) {
+		if p == "" {
+			return "", false
+		}
+		return p, true
+	})
 	n, ok := d.root.isNode()
-	if !ok && len(pathParts) == 0 {
+	if !ok && len(parts) == 0 {
 		// Special case: root is searched value.
-		return value(root), true
+		return d.root.value(), true
 	}
-	nr, ok := n.at(pathParts)
+	nr, ok := n.at(parts)
 	if !ok {
 		// Not found.
 		return nil, false
 	}
 	// Found our value.
-	return value(nr), true
+	return nr.value(), true
 }
 
 //--------------------
-// NODE AND VALUE
+// NODE AND LEAF
 //--------------------
 
 // noder lets a value or node tell if it is a node.
@@ -89,25 +96,31 @@ type noder interface {
 	// returns it type-safe. Otherwise nil and false
 	// are returned.
 	isNode() (node, bool)
+
+	// value returns the raw value of a node.
+	value() interface{}
 }
 
-// value represents a JSON value.
-type value interface{}
+// leaf represents a leaf in a JSON document tree.It
+// contains the value.
+type leaf struct {
+	raw interface{}
+}
 
 // isNode implements noder.
-func (v value) isNode() (node, bool) {
-	switch vt := v.(type) {
+func (l leaf) isNode() (node, bool) {
+	switch rt := l.raw.(type) {
 	case node:
-		return vt, true
+		return rt, true
 	case map[string]interface{}:
 		n := node{}
-		for k, v := range vt {
+		for k, v := range rt {
 			n[k] = rawToNoder(v)
 		}
 		return n, true
 	case []interface{}:
 		n := node{}
-		for i, v := range vt {
+		for i, v := range rt {
 			n[strconv.Itoa(i)] = rawToNoder(v)
 		}
 		return n, true
@@ -116,12 +129,22 @@ func (v value) isNode() (node, bool) {
 	}
 }
 
+// value implements noder.
+func (l leaf) value() interface{} {
+	return l.raw
+}
+
 // node represents one JSON object or array.
 type node map[string]noder
 
 // isNode implements noder.
 func (n node) isNode() (node, bool) {
 	return n, true
+}
+
+// value implements noder.
+func (n node) value() interface{} {
+	return n
 }
 
 // at returns the noder at the given path or
@@ -151,13 +174,13 @@ func (n node) at(path []string) (noder, bool) {
 }
 
 // rawToNoder conerts the raw interface into a
-// noder which may be a node or a value. 
-func rawToNoder(raw interface{}} noder {
-	v := value(raw)
-	if n, ok := v.isNode(); ok {
+// noder which may be a node or a value.
+func rawToNoder(raw interface{}) noder {
+	l := leaf{raw}
+	if n, ok := l.isNode(); ok {
 		return n
 	}
-	return v
+	return l
 }
 
 // EOF
