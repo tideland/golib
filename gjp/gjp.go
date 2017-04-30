@@ -25,6 +25,9 @@ import (
 
 // Document represents one JSON document.
 type Document interface {
+	// Length returns the number of elements for the given path.
+	Length(path string) int
+
 	// ValueAsString returns the addressed value as string.
 	ValueAsString(path, dv string) string
 }
@@ -49,6 +52,21 @@ func Parse(data []byte, separator string) (Document, error) {
 	}, nil
 }
 
+// Length implements Document.
+func (d *document) Length(path string) int {
+	nr, ok := d.noderAt(path)
+	if !ok {
+		// Noder not found.
+		return -1
+	}
+	// Check if node or value.
+	n, ok := nr.isNode()
+	if ok {
+		return len(n)
+	}
+	return 1
+}
+
 // ValueAsString implements Document.
 func (d *document) ValueAsString(path, dv string) string {
 	v, ok := d.valueAt(path)
@@ -66,24 +84,44 @@ func (d *document) ValueAsString(path, dv string) string {
 
 // valueAt retrieves the data at a given path.
 func (d *document) valueAt(path string) (interface{}, bool) {
+	nr, ok := d.noderAt(path)
+	if !ok {
+		// Noder not found.
+		return nil, false
+	}
+	_, ok = nr.isNode()
+	if ok {
+		// We need a value.
+		return nil, false
+	}
+	// Found our value.
+	return nr.value(), true
+}
+
+// noderAt retrieves the noder at a given path.
+func (d *document) noderAt(path string) (noder, bool) {
 	parts := stringex.SplitMap(path, d.separator, func(p string) (string, bool) {
 		if p == "" {
 			return "", false
 		}
 		return p, true
 	})
+	if len(parts) == 0 {
+		// Root is all we need.
+		return d.root, true
+	}
 	n, ok := d.root.isNode()
-	if !ok && len(parts) == 0 {
-		// Special case: root is searched value.
-		return d.root.value(), true
+	if !ok {
+		// No node, but path needs it.
+		return nil, false
 	}
 	nr, ok := n.at(parts)
 	if !ok {
 		// Not found.
 		return nil, false
 	}
-	// Found our value.
-	return nr.value(), true
+	// Found noder.
+	return nr, true
 }
 
 //--------------------

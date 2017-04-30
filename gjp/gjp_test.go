@@ -24,6 +24,26 @@ import (
 // TESTS
 //--------------------
 
+// TestLength tests retrieving values as strings.
+func TestLength(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	// Slash as separator, once even starting with it.
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	l := doc.Length("X")
+	assert.Equal(l, -1)
+	l = doc.Length("")
+	assert.Equal(l, 4)
+	l = doc.Length("B")
+	assert.Equal(l, 3)
+	l = doc.Length("B/2")
+	assert.Equal(l, 4)
+	l = doc.Length("B/2/D")
+	assert.Equal(l, 2)
+}
+
 // TestStrings tests retrieving values as strings.
 func TestStrings(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
