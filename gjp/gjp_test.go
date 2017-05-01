@@ -38,7 +38,7 @@ func TestLength(t *testing.T) {
 	l = doc.Length("B")
 	assert.Equal(l, 3)
 	l = doc.Length("B/2")
-	assert.Equal(l, 4)
+	assert.Equal(l, 5)
 	l = doc.Length("/B/2/D")
 	assert.Equal(l, 2)
 	l = doc.Length("/B/1/S")
@@ -71,6 +71,23 @@ func TestSeparator(t *testing.T) {
 	assert.Equal(sv, lo.B[0].A)
 	sv = doc.ValueAsString("B::1::D::A", "illegal")
 	assert.Equal(sv, lo.B[1].D.A)
+}
+
+// TestString tests retrieving values as strings.
+func TestString(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	sv := doc.ValueAsString("A", "illegal")
+	assert.Equal(sv, "Level One")
+	sv = doc.ValueAsString("B/0/B", "illegal")
+	assert.Equal(sv, "100")
+	sv = doc.ValueAsString("B/0/C", "illegal")
+	assert.Equal(sv, "true")
+	sv = doc.ValueAsString("B/0/D/B", "illegal")
+	assert.Equal(sv, "10.1")
 }
 
 //--------------------
