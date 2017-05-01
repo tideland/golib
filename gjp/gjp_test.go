@@ -29,7 +29,6 @@ func TestLength(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	bs, _ := createDocument(assert)
 
-	// Slash as separator, once even starting with it.
 	doc, err := gjp.Parse(bs, "/")
 	assert.Nil(err)
 	l := doc.Length("X")
@@ -40,12 +39,16 @@ func TestLength(t *testing.T) {
 	assert.Equal(l, 3)
 	l = doc.Length("B/2")
 	assert.Equal(l, 4)
-	l = doc.Length("B/2/D")
+	l = doc.Length("/B/2/D")
 	assert.Equal(l, 2)
+	l = doc.Length("/B/1/S")
+	assert.Equal(l, 3)
+	l = doc.Length("/B/1/S/0")
+	assert.Equal(l, 1)
 }
 
-// TestStrings tests retrieving values as strings.
-func TestStrings(t *testing.T) {
+// TestSeparator tests using different separators.
+func TestSeparator(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	bs, lo := createDocument(assert)
 
@@ -84,6 +87,7 @@ type levelTwo struct {
 	B int
 	C bool
 	D *levelThree
+	S []string
 }
 
 type levelOne struct {
@@ -105,6 +109,10 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 					A: "Level Three",
 					B: 10.1,
 				},
+				S: []string{
+					"red",
+					"green",
+				},
 			},
 			&levelTwo{
 				A: "Level Two - B",
@@ -113,6 +121,11 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 				D: &levelThree{
 					A: "Level Three",
 					B: 20.2,
+				},
+				S: []string{
+					"orange",
+					"blue",
+					"white",
 				},
 			},
 			&levelTwo{

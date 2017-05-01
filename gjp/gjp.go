@@ -73,11 +73,15 @@ func (d *document) ValueAsString(path, dv string) string {
 	if !ok {
 		return dv
 	}
-	switch vv := v.(type) {
+	switch tv := v.(type) {
 	case string:
-		return vv
+		return tv
+	case int:
+		return strconv.Itoa(tv)
 	case float64:
+		return strconv.FormatFloat(tv, 'f', -1, 64)
 	case bool:
+		return strconv.FormatBool(tv)
 	}
 	return dv
 }
