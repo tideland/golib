@@ -90,6 +90,25 @@ func TestString(t *testing.T) {
 	assert.Equal(sv, "10.1")
 }
 
+// TestInt tests retrieving values as ints.
+func TestInts(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	iv := doc.ValueAsInt("A", -1)
+	assert.Equal(iv, -1)
+	iv = doc.ValueAsInt("B/0/B", -1)
+	assert.Equal(iv, 100)
+	iv = doc.ValueAsInt("B/0/C", -1)
+	assert.Equal(iv, 1)
+	iv = doc.ValueAsInt("B/0/S/2", -1)
+	assert.Equal(iv, 1)
+	iv = doc.ValueAsInt("B/0/D/B", -1)
+	assert.Equal(iv, 10)
+}
+
 //--------------------
 // HELPERS
 //--------------------
@@ -129,6 +148,9 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 				S: []string{
 					"red",
 					"green",
+					"1",
+					"2.2",
+					"true",
 				},
 			},
 			&levelTwo{

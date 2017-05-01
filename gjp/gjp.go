@@ -30,6 +30,9 @@ type Document interface {
 
 	// ValueAsString returns the addressed value as string.
 	ValueAsString(path, dv string) string
+
+	// ValueAsInt returns the addressed value as int.
+	ValueAsInt(path string, dv int) int
 }
 
 // document implements Document.
@@ -82,6 +85,32 @@ func (d *document) ValueAsString(path, dv string) string {
 		return strconv.FormatFloat(tv, 'f', -1, 64)
 	case bool:
 		return strconv.FormatBool(tv)
+	}
+	return dv
+}
+
+// ValueAsInt implements Document.
+func (d *document) ValueAsInt(path string, dv int) int {
+	v, ok := d.valueAt(path)
+	if !ok {
+		return dv
+	}
+	switch tv := v.(type) {
+	case string:
+		i, err := strconv.Atoi(tv)
+		if err != nil {
+			return dv
+		}
+		return i
+	case int:
+		return tv
+	case float64:
+		return int(tv)
+	case bool:
+		if tv {
+			return 1
+		}
+		return 0
 	}
 	return dv
 }
