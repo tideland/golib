@@ -91,7 +91,7 @@ func TestString(t *testing.T) {
 }
 
 // TestInt tests retrieving values as ints.
-func TestInts(t *testing.T) {
+func TestInt(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	bs, _ := createDocument(assert)
 
@@ -107,6 +107,25 @@ func TestInts(t *testing.T) {
 	assert.Equal(iv, 1)
 	iv = doc.ValueAsInt("B/0/D/B", -1)
 	assert.Equal(iv, 10)
+}
+
+// TestFloat64 tests retrieving values as float64.
+func TestFloat64(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	fv := doc.ValueAsFloat64("A", -1.0)
+	assert.Equal(fv, -1.0)
+	fv = doc.ValueAsFloat64("B/1/B", -1.0)
+	assert.Equal(fv, 200.0)
+	fv = doc.ValueAsFloat64("B/0/C", -99)
+	assert.Equal(fv, 1.0)
+	fv = doc.ValueAsFloat64("B/0/S/3", -1.0)
+	assert.Equal(fv, 2.2)
+	fv = doc.ValueAsFloat64("B/1/D/B", -1.0)
+	assert.Equal(fv, 20.2)
 }
 
 //--------------------

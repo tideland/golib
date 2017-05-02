@@ -33,6 +33,9 @@ type Document interface {
 
 	// ValueAsInt returns the addressed value as int.
 	ValueAsInt(path string, dv int) int
+
+	// ValueAsFloat64 returns the addressed value as float64.
+	ValueAsFloat64(path string, dv float64) float64
 }
 
 // document implements Document.
@@ -111,6 +114,32 @@ func (d *document) ValueAsInt(path string, dv int) int {
 			return 1
 		}
 		return 0
+	}
+	return dv
+}
+
+// ValueAsFloat64 implements Document.
+func (d *document) ValueAsFloat64(path string, dv float64) float64 {
+	v, ok := d.valueAt(path)
+	if !ok {
+		return dv
+	}
+	switch tv := v.(type) {
+	case string:
+		f, err := strconv.ParseFloat(tv, 64)
+		if err != nil {
+			return dv
+		}
+		return f
+	case int:
+		return float64(tv)
+	case float64:
+		return tv
+	case bool:
+		if tv {
+			return 1.0
+		}
+		return 0.0
 	}
 	return dv
 }
