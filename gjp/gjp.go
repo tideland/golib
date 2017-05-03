@@ -36,6 +36,9 @@ type Document interface {
 
 	// ValueAsFloat64 returns the addressed value as float64.
 	ValueAsFloat64(path string, dv float64) float64
+
+	// ValueAsBool returns the addressed value as bool.
+	ValueAsBool(path string, dv bool) bool
 }
 
 // document implements Document.
@@ -140,6 +143,29 @@ func (d *document) ValueAsFloat64(path string, dv float64) float64 {
 			return 1.0
 		}
 		return 0.0
+	}
+	return dv
+}
+
+// ValueAsBool implements Document.
+func (d *document) ValueAsBool(path string, dv bool) bool {
+	v, ok := d.valueAt(path)
+	if !ok {
+		return dv
+	}
+	switch tv := v.(type) {
+	case string:
+		b, err := strconv.ParseBool(tv)
+		if err != nil {
+			return dv
+		}
+		return b
+	case int:
+		return tv == 1
+	case float64:
+		return tv == 1.0
+	case bool:
+		return tv
 	}
 	return dv
 }

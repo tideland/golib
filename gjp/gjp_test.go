@@ -61,6 +61,8 @@ func TestSeparator(t *testing.T) {
 	assert.Equal(sv, lo.B[0].A)
 	sv = doc.ValueAsString("/B/1/D/A", "illegal")
 	assert.Equal(sv, lo.B[1].D.A)
+	sv = doc.ValueAsString("/B/2/S", "illegal")
+	assert.Equal(sv, "illegal")
 
 	// Now two colons.
 	doc, err = gjp.Parse(bs, "::")
@@ -126,6 +128,25 @@ func TestFloat64(t *testing.T) {
 	assert.Equal(fv, 2.2)
 	fv = doc.ValueAsFloat64("B/1/D/B", -1.0)
 	assert.Equal(fv, 20.2)
+}
+
+// TestBool tests retrieving values as bool.
+func TestBool(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	bv := doc.ValueAsBool("A", false)
+	assert.Equal(bv, false)
+	bv = doc.ValueAsBool("B/0/C", false)
+	assert.Equal(bv, true)
+	bv = doc.ValueAsBool("B/0/S/0", false)
+	assert.Equal(bv, false)
+	bv = doc.ValueAsBool("B/0/S/2", false)
+	assert.Equal(bv, true)
+	bv = doc.ValueAsBool("B/0/S/4", false)
+	assert.Equal(bv, true)
 }
 
 //--------------------
