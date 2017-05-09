@@ -28,17 +28,8 @@ type Document interface {
 	// Length returns the number of elements for the given path.
 	Length(path string) int
 
-	// ValueAsString returns the addressed value as string.
-	ValueAsString(path, dv string) string
-
-	// ValueAsInt returns the addressed value as int.
-	ValueAsInt(path string, dv int) int
-
-	// ValueAsFloat64 returns the addressed value as float64.
-	ValueAsFloat64(path string, dv float64) float64
-
-	// ValueAsBool returns the addressed value as bool.
-	ValueAsBool(path string, dv bool) bool
+	// Value returns the addressed value.
+	Value(path string) Value
 }
 
 // document implements Document.
@@ -76,98 +67,10 @@ func (d *document) Length(path string) int {
 	return 1
 }
 
-// ValueAsString implements Document.
-func (d *document) ValueAsString(path, dv string) string {
-	v, ok := d.valueAt(path)
-	if !ok {
-		return dv
-	}
-	switch tv := v.(type) {
-	case string:
-		return tv
-	case int:
-		return strconv.Itoa(tv)
-	case float64:
-		return strconv.FormatFloat(tv, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(tv)
-	}
-	return dv
-}
-
-// ValueAsInt implements Document.
-func (d *document) ValueAsInt(path string, dv int) int {
-	v, ok := d.valueAt(path)
-	if !ok {
-		return dv
-	}
-	switch tv := v.(type) {
-	case string:
-		i, err := strconv.Atoi(tv)
-		if err != nil {
-			return dv
-		}
-		return i
-	case int:
-		return tv
-	case float64:
-		return int(tv)
-	case bool:
-		if tv {
-			return 1
-		}
-		return 0
-	}
-	return dv
-}
-
-// ValueAsFloat64 implements Document.
-func (d *document) ValueAsFloat64(path string, dv float64) float64 {
-	v, ok := d.valueAt(path)
-	if !ok {
-		return dv
-	}
-	switch tv := v.(type) {
-	case string:
-		f, err := strconv.ParseFloat(tv, 64)
-		if err != nil {
-			return dv
-		}
-		return f
-	case int:
-		return float64(tv)
-	case float64:
-		return tv
-	case bool:
-		if tv {
-			return 1.0
-		}
-		return 0.0
-	}
-	return dv
-}
-
-// ValueAsBool implements Document.
-func (d *document) ValueAsBool(path string, dv bool) bool {
-	v, ok := d.valueAt(path)
-	if !ok {
-		return dv
-	}
-	switch tv := v.(type) {
-	case string:
-		b, err := strconv.ParseBool(tv)
-		if err != nil {
-			return dv
-		}
-		return b
-	case int:
-		return tv == 1
-	case float64:
-		return tv == 1.0
-	case bool:
-		return tv
-	}
-	return dv
+// Value implements Document.
+func (d *document) Value(path string) Value {
+	raw, ok := d.valueAt(path)
+	return &value{raw, ok}
 }
 
 // valueAt retrieves the data at a given path.
