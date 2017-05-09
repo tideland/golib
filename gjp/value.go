@@ -21,6 +21,9 @@ import (
 
 // Value contains one JSON value.
 type Value interface {
+	// IsOK returns if it a valid value.
+	IsOK() bool
+
 	// AsString returns the value as string.
 	AsString(dv string) string
 
@@ -38,6 +41,11 @@ type Value interface {
 type value struct {
 	raw interface{}
 	ok  bool
+}
+
+// IsOK implements Value.
+func (v *value) IsOK() bool {
+	return v.ok
 }
 
 // AsString implements Value.

@@ -73,6 +73,10 @@ func TestSeparator(t *testing.T) {
 	assert.Equal(sv, lo.B[0].A)
 	sv = doc.Value("B::1::D::A").AsString("illegal")
 	assert.Equal(sv, lo.B[1].D.A)
+
+	// Check IsOK().
+	v := doc.Value("you-wont-find-me")
+	assert.False(v.IsOK())
 }
 
 // TestString tests retrieving values as strings.
