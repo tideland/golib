@@ -74,9 +74,9 @@ func TestSeparator(t *testing.T) {
 	sv = doc.Value("B::1::D::A").AsString("illegal")
 	assert.Equal(sv, lo.B[1].D.A)
 
-	// Check IsOK().
+	// Check if is undefined.
 	v := doc.Value("you-wont-find-me")
-	assert.False(v.IsOK())
+	assert.True(v.IsUndefined())
 }
 
 // TestString tests retrieving values as strings.

@@ -21,8 +21,8 @@ import (
 
 // Value contains one JSON value.
 type Value interface {
-	// IsOK returns if it a valid value.
-	IsOK() bool
+	// IsUndefined returns if this value is undefined.
+	IsUndefined() bool
 
 	// AsString returns the value as string.
 	AsString(dv string) string
@@ -43,14 +43,14 @@ type value struct {
 	ok  bool
 }
 
-// IsOK implements Value.
-func (v *value) IsOK() bool {
-	return v.ok
+// IsUndefined implements Value.
+func (v *value) IsUndefined() bool {
+	return !v.ok
 }
 
 // AsString implements Value.
 func (v *value) AsString(dv string) string {
-	if !v.ok {
+	if v.IsUndefined() {
 		return dv
 	}
 	switch tv := v.raw.(type) {
@@ -68,7 +68,7 @@ func (v *value) AsString(dv string) string {
 
 // AsInt implements Value.
 func (v *value) AsInt(dv int) int {
-	if !v.ok {
+	if v.IsUndefined() {
 		return dv
 	}
 	switch tv := v.raw.(type) {
@@ -93,7 +93,7 @@ func (v *value) AsInt(dv int) int {
 
 // AsFloat64 implements Value.
 func (v *value) AsFloat64(dv float64) float64 {
-	if !v.ok {
+	if v.IsUndefined() {
 		return dv
 	}
 	switch tv := v.raw.(type) {
@@ -118,7 +118,7 @@ func (v *value) AsFloat64(dv float64) float64 {
 
 // AsBool implements Value.
 func (v *value) AsBool(dv bool) bool {
-	if !v.ok {
+	if v.IsUndefined() {
 		return dv
 	}
 	switch tv := v.raw.(type) {
