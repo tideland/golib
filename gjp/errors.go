@@ -22,10 +22,12 @@ import (
 // Error codes of the etc package.
 const (
 	ErrUnmarshalling = iota + 1
+	ErrProcessing
 )
 
 var errorMessages = errors.Messages{
 	ErrUnmarshalling: "cannot unmarshal document",
+	ErrProcessing:    "failed processing the node '%s'",
 }
 
 // EOF

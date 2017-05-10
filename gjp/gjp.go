@@ -13,8 +13,8 @@ package gjp
 
 import (
 	"encoding/json"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/tideland/golib/errors"
 	"github.com/tideland/golib/stringex"
@@ -197,6 +197,19 @@ func (n node) isNode() (node, bool) {
 // value implements noder.
 func (n node) value() interface{} {
 	return n
+}
+
+// process implements noder.
+func (n node) process(path []string, separator string, processor ValueProcessor) error {
+	for nk, nn := range n {
+		np := append(path, nk)
+		err := nn.process(np, separator, processor)
+		if err != nil {
+			ps := strings.Join(np, separator)
+			return errors.Annotate(err, ErrProcessing, errorMessages, ps)
+		}
+	}
+	return nil
 }
 
 // at returns the noder at the given path or

@@ -47,6 +47,24 @@ func TestLength(t *testing.T) {
 	assert.Equal(l, 1)
 }
 
+// TestProcessing tests the processing of adocument.
+func TestProcessing(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+	count := 0
+	processor := func(path string, value gjp.Value) error {
+		count++
+		assert.Logf("path %d) %q = %q", count, path, value.AsString("undefined"))
+		return nil
+	}
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	err = doc.Process(processor)
+	assert.Nil(err)
+	assert.Equal(count, 27)
+}
+
 // TestSeparator tests using different separators.
 func TestSeparator(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
