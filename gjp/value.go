@@ -138,4 +138,18 @@ func (v *value) AsBool(dv bool) bool {
 	return dv
 }
 
+//--------------------
+// VALUES
+//--------------------
+
+// Values contains the first and the second value of a
+// difference at a given path.
+type Values interface {
+	// FirstValue returns the value of the first document passed to Diff().
+	FirstValue() Value
+
+	// FirstValue returns the value of the second document passed to Diff().
+	SecondValue() Value
+}
+
 // EOF

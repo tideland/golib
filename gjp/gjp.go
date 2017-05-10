@@ -13,6 +13,7 @@ package gjp
 
 import (
 	"encoding/json"
+	"strings"
 	"strconv"
 
 	"github.com/tideland/golib/errors"
@@ -23,13 +24,22 @@ import (
 // DOCUMENT
 //--------------------
 
+// ValueProcessor describes a function for the processing of
+// values while iterating over a document.
+type ValueProcessor func(path string, value Value) error
+
 // Document represents one JSON document.
 type Document interface {
 	// Length returns the number of elements for the given path.
 	Length(path string) int
 
-	// Value returns the addressed value.
-	Value(path string) Value
+	// ValueAt returns the addressed value.
+	ValueAt(path string) Value
+
+	// Process iterates over a document and processes its values.
+	// There's no order, so nesting into an embedded document or
+	// list may come earlier than higher level paths.
+	Process(processor ValueProcessor) error
 }
 
 // document implements Document.
@@ -67,10 +77,15 @@ func (d *document) Length(path string) int {
 	return 1
 }
 
-// Value implements Document.
-func (d *document) Value(path string) Value {
+// ValueAt implements Document.
+func (d *document) ValueAt(path string) Value {
 	raw, ok := d.valueAt(path)
 	return &value{raw, ok}
+}
+
+// Process implements Document.
+func (d *document) Process(processor ValueProcessor) error {
+	return d.root.process([]string{}, d.separator, processor)
 }
 
 // valueAt retrieves the data at a given path.
@@ -128,6 +143,9 @@ type noder interface {
 
 	// value returns the raw value of a node.
 	value() interface{}
+
+	// process processes one leaf or node.
+	process(path []string, separator string, processor ValueProcessor) error
 }
 
 // leaf represents a leaf in a JSON document tree.It
@@ -161,6 +179,11 @@ func (l leaf) isNode() (node, bool) {
 // value implements noder.
 func (l leaf) value() interface{} {
 	return l.raw
+}
+
+// process implements noder.
+func (l leaf) process(path []string, separator string, processor ValueProcessor) error {
+	return processor(strings.Join(path, separator), &value{l.raw, true})
 }
 
 // node represents one JSON object or array.

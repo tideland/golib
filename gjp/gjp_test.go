@@ -55,27 +55,27 @@ func TestSeparator(t *testing.T) {
 	// Slash as separator, once even starting with it.
 	doc, err := gjp.Parse(bs, "/")
 	assert.Nil(err)
-	sv := doc.Value("A").AsString("illegal")
+	sv := doc.ValueAt("A").AsString("illegal")
 	assert.Equal(sv, lo.A)
-	sv = doc.Value("B/0/A").AsString("illegal")
+	sv = doc.ValueAt("B/0/A").AsString("illegal")
 	assert.Equal(sv, lo.B[0].A)
-	sv = doc.Value("/B/1/D/A").AsString("illegal")
+	sv = doc.ValueAt("/B/1/D/A").AsString("illegal")
 	assert.Equal(sv, lo.B[1].D.A)
-	sv = doc.Value("/B/2/S").AsString("illegal")
+	sv = doc.ValueAt("/B/2/S").AsString("illegal")
 	assert.Equal(sv, "illegal")
 
 	// Now two colons.
 	doc, err = gjp.Parse(bs, "::")
 	assert.Nil(err)
-	sv = doc.Value("A").AsString("illegal")
+	sv = doc.ValueAt("A").AsString("illegal")
 	assert.Equal(sv, lo.A)
-	sv = doc.Value("B::0::A").AsString("illegal")
+	sv = doc.ValueAt("B::0::A").AsString("illegal")
 	assert.Equal(sv, lo.B[0].A)
-	sv = doc.Value("B::1::D::A").AsString("illegal")
+	sv = doc.ValueAt("B::1::D::A").AsString("illegal")
 	assert.Equal(sv, lo.B[1].D.A)
 
 	// Check if is undefined.
-	v := doc.Value("you-wont-find-me")
+	v := doc.ValueAt("you-wont-find-me")
 	assert.True(v.IsUndefined())
 }
 
@@ -86,13 +86,13 @@ func TestString(t *testing.T) {
 
 	doc, err := gjp.Parse(bs, "/")
 	assert.Nil(err)
-	sv := doc.Value("A").AsString("illegal")
+	sv := doc.ValueAt("A").AsString("illegal")
 	assert.Equal(sv, "Level One")
-	sv = doc.Value("B/0/B").AsString("illegal")
+	sv = doc.ValueAt("B/0/B").AsString("illegal")
 	assert.Equal(sv, "100")
-	sv = doc.Value("B/0/C").AsString("illegal")
+	sv = doc.ValueAt("B/0/C").AsString("illegal")
 	assert.Equal(sv, "true")
-	sv = doc.Value("B/0/D/B").AsString("illegal")
+	sv = doc.ValueAt("B/0/D/B").AsString("illegal")
 	assert.Equal(sv, "10.1")
 }
 
@@ -103,15 +103,15 @@ func TestInt(t *testing.T) {
 
 	doc, err := gjp.Parse(bs, "/")
 	assert.Nil(err)
-	iv := doc.Value("A").AsInt(-1)
+	iv := doc.ValueAt("A").AsInt(-1)
 	assert.Equal(iv, -1)
-	iv = doc.Value("B/0/B").AsInt(-1)
+	iv = doc.ValueAt("B/0/B").AsInt(-1)
 	assert.Equal(iv, 100)
-	iv = doc.Value("B/0/C").AsInt(-1)
+	iv = doc.ValueAt("B/0/C").AsInt(-1)
 	assert.Equal(iv, 1)
-	iv = doc.Value("B/0/S/2").AsInt(-1)
+	iv = doc.ValueAt("B/0/S/2").AsInt(-1)
 	assert.Equal(iv, 1)
-	iv = doc.Value("B/0/D/B").AsInt(-1)
+	iv = doc.ValueAt("B/0/D/B").AsInt(-1)
 	assert.Equal(iv, 10)
 }
 
@@ -122,15 +122,15 @@ func TestFloat64(t *testing.T) {
 
 	doc, err := gjp.Parse(bs, "/")
 	assert.Nil(err)
-	fv := doc.Value("A").AsFloat64(-1.0)
+	fv := doc.ValueAt("A").AsFloat64(-1.0)
 	assert.Equal(fv, -1.0)
-	fv = doc.Value("B/1/B").AsFloat64(-1.0)
+	fv = doc.ValueAt("B/1/B").AsFloat64(-1.0)
 	assert.Equal(fv, 200.0)
-	fv = doc.Value("B/0/C").AsFloat64(-99)
+	fv = doc.ValueAt("B/0/C").AsFloat64(-99)
 	assert.Equal(fv, 1.0)
-	fv = doc.Value("B/0/S/3").AsFloat64(-1.0)
+	fv = doc.ValueAt("B/0/S/3").AsFloat64(-1.0)
 	assert.Equal(fv, 2.2)
-	fv = doc.Value("B/1/D/B").AsFloat64(-1.0)
+	fv = doc.ValueAt("B/1/D/B").AsFloat64(-1.0)
 	assert.Equal(fv, 20.2)
 }
 
@@ -141,15 +141,15 @@ func TestBool(t *testing.T) {
 
 	doc, err := gjp.Parse(bs, "/")
 	assert.Nil(err)
-	bv := doc.Value("A").AsBool(false)
+	bv := doc.ValueAt("A").AsBool(false)
 	assert.Equal(bv, false)
-	bv = doc.Value("B/0/C").AsBool(false)
+	bv = doc.ValueAt("B/0/C").AsBool(false)
 	assert.Equal(bv, true)
-	bv = doc.Value("B/0/S/0").AsBool(false)
+	bv = doc.ValueAt("B/0/S/0").AsBool(false)
 	assert.Equal(bv, false)
-	bv = doc.Value("B/0/S/2").AsBool(false)
+	bv = doc.ValueAt("B/0/S/2").AsBool(false)
 	assert.Equal(bv, true)
-	bv = doc.Value("B/0/S/4").AsBool(false)
+	bv = doc.ValueAt("B/0/S/4").AsBool(false)
 	assert.Equal(bv, true)
 }
 
