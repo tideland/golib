@@ -70,7 +70,7 @@ func (d *diff) SecondDocument() Document {
 }
 
 func (d *diff) Differences() []string {
-	return nil
+	return d.paths
 }
 
 func (d *diff) DifferenceAt(path string) (Values, error) {
@@ -78,8 +78,28 @@ func (d *diff) DifferenceAt(path string) (Values, error) {
 }
 
 func (d *diff) compare() error {
-	return nil
-
+	firstPaths := map[string]struct{}{}
+	firstProcessor := func(path string, value Value) error {
+		firstPaths[path] = struct{}{}
+		if !value.Equals(d.second.ValueAt(path)) {
+			d.paths = append(d.paths, path)
+		}
+		return nil
+	}
+	err := d.first.Process(firstProcessor)
+	if err != nil {
+		return err
+	}
+	secondProcessor := func(path string, value Value) error {
+		_, ok := firstPaths[path]
+		if ok {
+			// Been there, done that.
+			return nil
+		}
+		d.paths = append(d.paths, path)
+		return nil
+	}
+	return d.second.Process(secondProcessor)
 }
 
 // EOF

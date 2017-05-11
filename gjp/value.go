@@ -35,6 +35,9 @@ type Value interface {
 
 	// AsBool returns the value as bool.
 	AsBool(dv bool) bool
+
+	// Equals compares a value with the passed one.
+	Equals(to Value) bool
 }
 
 // value implements Value.
@@ -136,6 +139,18 @@ func (v *value) AsBool(dv bool) bool {
 		return tv
 	}
 	return dv
+}
+
+// Equals implements Value.
+func (v *value)	Equals(to Value) bool {
+	vto, ok := to.(*value)
+	if !ok {
+		return false
+	}
+	if v.ok != vto.ok {
+		return false
+	}
+	return v.raw == vto.raw
 }
 
 //--------------------

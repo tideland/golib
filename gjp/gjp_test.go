@@ -54,7 +54,7 @@ func TestProcessing(t *testing.T) {
 	count := 0
 	processor := func(path string, value gjp.Value) error {
 		count++
-		assert.Logf("path %d) %q = %q", count, path, value.AsString("undefined"))
+		assert.Logf("path %d  =>  %q = %q", count, path, value.AsString("undefined"))
 		return nil
 	}
 
@@ -95,6 +95,17 @@ func TestSeparator(t *testing.T) {
 	// Check if is undefined.
 	v := doc.ValueAt("you-wont-find-me")
 	assert.True(v.IsUndefined())
+}
+
+// TestCompare tests comparing two documents.
+func TestCompare(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	first, _ := createDocument(assert)
+	second := createCompareDocument(assert)
+
+	diff, err := gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Logf("diffs  =>  %v", diff.Differences())
 }
 
 // TestString tests retrieving values as strings.
@@ -247,4 +258,47 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 	return bs, lo
 }
 
+func createCompareDocument(assert audit.Assertion) []byte {
+	lo := &levelOne{
+		A: "Level One",
+		B: []*levelTwo{
+			&levelTwo{
+				A: "Level Two - A",
+				B: 100,
+				C: true,
+				D: &levelThree{
+					A: "Level Three",
+					B: 10.1,
+				},
+				S: []string{
+					"red",
+					"green",
+					"0",
+					"2.2",
+					"false",
+				},
+			},
+			&levelTwo{
+				A: "Level Two - B",
+				B: 300,
+				C: false,
+				D: &levelThree{
+					A: "Level Three",
+					B: 99.9,
+				},
+				S: []string{
+					"orange",
+					"blue",
+					"white",
+					"red",
+				},
+			},
+		},
+		D: 10 * time.Second,
+		T: time.Date(2017, time.April, 29, 20, 59, 0, 0, time.UTC),
+	}
+	bs, err := json.Marshal(lo)
+	assert.Nil(err)
+	return bs
+}
 // EOF
