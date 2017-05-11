@@ -8,12 +8,6 @@
 package gjp
 
 //--------------------
-// IMPORTS
-//--------------------
-
-import ()
-
-//--------------------
 // DIFFERENCE
 //--------------------
 
@@ -29,8 +23,9 @@ type Diff interface {
 	// have different content.
 	Differences() []string
 
-	// DifferenceAt returns the differences at the given path.
-	DifferenceAt(path string) (Values, error)
+	// DifferenceAt returns the differences at the given path by
+	// returning the first and the second value.
+	DifferenceAt(path string) (Value, Value)
 }
 
 // diff implements Diff.
@@ -73,8 +68,10 @@ func (d *diff) Differences() []string {
 	return d.paths
 }
 
-func (d *diff) DifferenceAt(path string) (Values, error) {
-	return nil, nil
+func (d *diff) DifferenceAt(path string) (Value, Value) {
+	firstValue := d.first.ValueAt(path)
+	secondValue := d.second.ValueAt(path)
+	return firstValue, secondValue
 }
 
 func (d *diff) compare() error {

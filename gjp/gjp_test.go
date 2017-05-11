@@ -54,7 +54,7 @@ func TestProcessing(t *testing.T) {
 	count := 0
 	processor := func(path string, value gjp.Value) error {
 		count++
-		assert.Logf("path %d  =>  %q = %q", count, path, value.AsString("undefined"))
+		assert.Logf("path %d  =>  %q = %q", count, path, value.AsString("<undefined>"))
 		return nil
 	}
 
@@ -105,7 +105,13 @@ func TestCompare(t *testing.T) {
 
 	diff, err := gjp.Compare(first, second, "/")
 	assert.Nil(err)
-	assert.Logf("diffs  =>  %v", diff.Differences())
+
+	for i, path := range diff.Differences() {
+		fv, sv := diff.DifferenceAt(path)
+		fvs := fv.AsString("<undefined>")
+		svs := sv.AsString("<undefined>")
+		assert.Logf("difference %d  =>  path %q  ::  %q <> %q", i, path, fvs, svs)
+	}
 }
 
 // TestString tests retrieving values as strings.
