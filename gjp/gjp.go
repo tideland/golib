@@ -80,7 +80,7 @@ func (d *document) Length(path string) int {
 // ValueAt implements Document.
 func (d *document) ValueAt(path string) Value {
 	raw, ok := d.valueAt(path)
-	return &value{raw, ok}
+	return &value{raw, ok && raw != nil}
 }
 
 // Process implements Document.
@@ -183,7 +183,7 @@ func (l leaf) value() interface{} {
 
 // process implements noder.
 func (l leaf) process(path []string, separator string, processor ValueProcessor) error {
-	return processor(strings.Join(path, separator), &value{l.raw, true})
+	return processor(strings.Join(path, separator), &value{l.raw, l.raw != nil})
 }
 
 // node represents one JSON object or array.

@@ -103,14 +103,19 @@ func TestCompare(t *testing.T) {
 	first, _ := createDocument(assert)
 	second := createCompareDocument(assert)
 
-	diff, err := gjp.Compare(first, second, "/")
+	diff, err := gjp.Compare(first, first, "/")
 	assert.Nil(err)
+	assert.Length(diff.Differences(), 0)
 
-	for i, path := range diff.Differences() {
+	diff, err = gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 12)
+
+	for _, path := range diff.Differences() {
 		fv, sv := diff.DifferenceAt(path)
 		fvs := fv.AsString("<undefined>")
 		svs := sv.AsString("<undefined>")
-		assert.Logf("difference %d  =>  path %q  ::  %q <> %q", i, path, fvs, svs)
+		assert.Different(fvs, svs, path)
 	}
 }
 
