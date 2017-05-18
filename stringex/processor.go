@@ -68,7 +68,7 @@ func NewProcessorChain(processors ...Processor) ProcessorFunc {
 
 // NewSplitMapProcessor creates a processor splitting the input and
 // mapping the parts.
-func NewSplitMapProcessor(sep string, m ProcessorFunc) Processor {
+func NewSplitMapProcessor(sep string, m ProcessorFunc) ProcessorFunc {
 	pf := func(in string) (string, bool) {
 		parts := strings.Split(in, sep)
 		out := []string{}
@@ -78,6 +78,40 @@ func NewSplitMapProcessor(sep string, m ProcessorFunc) Processor {
 			}
 		}
 		return strings.Join(out, sep), true
+	}
+	return ProcessorFunc(pf)
+}
+
+// NewTrimPrefixProcessor returns a processor trimming a prefix of
+// the input as long as it can find it.
+func NewTrimPrefixProcessor(prefix string) ProcessorFunc {
+	pf := func(in string) (string, bool) {
+		out := in
+		for {
+			tmp := strings.TrimPrefix(out, prefix)
+			if tmp == out {
+				// Done.
+				return out, true
+			}
+			out = tmp
+		}
+	}
+	return ProcessorFunc(pf)
+}
+
+// NewTrimSuffixProcessor returns a processor trimming a prefix of
+// the input as long as it can find it.
+func NewTrimSuffixProcessor(prefix string) ProcessorFunc {
+	pf := func(in string) (string, bool) {
+		out := in
+		for {
+			tmp := strings.TrimSuffix(out, prefix)
+			if tmp == out {
+				// Done.
+				return out, true
+			}
+			out = tmp
+		}
 	}
 	return ProcessorFunc(pf)
 }
