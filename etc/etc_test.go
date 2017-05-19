@@ -14,6 +14,7 @@ package etc_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -188,6 +189,46 @@ func TestHasPath(t *testing.T) {
 
 	assert.False(cfg.HasPath("b"))
 	assert.False(cfg.HasPath("sub/b"))
+}
+
+// TestDo tests the iteration over the nodes.
+func TestDo(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	source := "{etc {a Hello}{sub-a {a World}{b here}{c I}{d am}}{sub-b {a Tester}}}"
+	cfg, err := etc.Read(strings.NewReader(source))
+	assert.Nil(err)
+
+	paths := []string{}
+	err = cfg.Do("", func(path string) error {
+		paths = append(paths, path)
+		return nil
+	})
+	assert.Nil(err)
+	assert.Length(paths, 3)
+	assert.Equal(paths, []string{"a", "sub-a", "sub-b"})
+
+	paths = []string{}
+	err = cfg.Do("sub-a", func(path string) error {
+		paths = append(paths, path)
+		return nil
+	})
+	assert.Nil(err)
+	assert.Length(paths, 4)
+	assert.Equal(paths, []string{"sub-a/a", "sub-a/b", "sub-a/c", "sub-a/d"})
+
+	sentence := ""
+	err = cfg.Do("sub-a", func(path string) error {
+		sentence += " " + cfg.ValueAsString(path, "X")
+		return nil
+	})
+	assert.Nil(err)
+	assert.Equal(sentence, " World here I am")
+
+	err = cfg.Do("", func(path string) error {
+		return errors.New(path)
+	})
+	assert.ErrorMatch(err, "a")
 }
 
 // TestValueSuccess tests the successful retrieval of values.

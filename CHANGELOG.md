@@ -1,5 +1,10 @@
 # Tideland Go Library
 
+## 2017-05-xx
+
+- Added generic JSON parser package *gjp*
+- Added iterator method *Do()* to *etc.Etc*
+
 ## 2017-03-19
 
 - Readesigned *cache*; now individual instances with

@@ -55,7 +55,7 @@ type value struct {
 func (v *value) Value() (string, error) {
 	sv, err := v.changer.Value()
 	if err != nil {
-		return "", errors.New(ErrInvalidPath, errorMessages, pathToString(v.path))
+		return "", errors.New(ErrInvalidPath, errorMessages, fullPathToString(v.path))
 	}
 	return sv, nil
 }
@@ -77,6 +77,10 @@ type Etc interface {
 	// HasPath checks if the configurations has the defined path
 	// regardles of the value or possible subconfigurations.
 	HasPath(path string) bool
+
+	// Do iterates over the children of the given path and executes
+	// the function f with that path.
+	Do(path string, f func(p string) error) error
 
 	// ValueAsString retrieves the string value at a given path. If it
 	// doesn't exist the default value dv is returned.
@@ -175,6 +179,27 @@ func (e *etc) HasPath(path string) bool {
 	fullPath := makeFullPath(path)
 	changer := e.values.At(fullPath...)
 	return changer.Error() == nil
+}
+
+// Do implements the Etc interface.
+func (e *etc) Do(path string, f func(p string) error) error {
+	fullPath := makeFullPath(path)
+	changer := e.values.At(fullPath...)
+	if changer.Error() != nil {
+		return changer.Error()
+	}
+	kvs, err := changer.List()
+	if err != nil {
+		return err
+	}
+	for _, kv := range kvs {
+		p := pathToString(append(fullPath, kv.Key))
+		err := f(p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ValueAsString implements the Etc interface.
@@ -392,9 +417,15 @@ func makeFullPath(path string) []string {
 	return append(etcRoot, parts...)
 }
 
-// pathToString returns the path in a filesystem like notation.
-func pathToString(path []string) string {
+// fullPathToString returns the path in a filesystem like notation.
+func fullPathToString(path []string) string {
 	return "/" + strings.Join(path, "/")
+}
+
+// pathToString returns the path in a filesystem like notation but
+// with the leading slash and 'etc'.
+func pathToString(path []string) string {
+	return strings.Join(path[1:], "/")
 }
 
 // EOF
