@@ -51,8 +51,8 @@ func WrapProcessorFunc(f func(fin string) string) ProcessorFunc {
 // FACTORIES
 //--------------------
 
-// NewProcessorChain returns a function chaning the passed processors.
-func NewProcessorChain(processors ...Processor) ProcessorFunc {
+// NewChainProcessor creates a processor chaning the passed processors.
+func NewChainProcessor(processors ...Processor) ProcessorFunc {
 	return func(in string) (string, bool) {
 		out := in
 		ok := true
@@ -66,26 +66,38 @@ func NewProcessorChain(processors ...Processor) ProcessorFunc {
 	}
 }
 
+// NewSwitchProcessor creates a processor taking the first processor function
+// for creating a temporary result and the decision if to pass it to the
+// trueBranch or the falseBranch.
+func NewSwitchProcessor(decider, trueBranch, falseBranch ProcessorFunc) ProcessorFunc {
+	return func(in string) (string, bool) {
+		temp, ok := decider.Process(in)
+		if ok {
+			return trueBranch.Process(temp)
+		}
+		return falseBranch.Process(temp)
+	}
+}
+
 // NewSplitMapProcessor creates a processor splitting the input and
 // mapping the parts.
-func NewSplitMapProcessor(sep string, m ProcessorFunc) ProcessorFunc {
-	pf := func(in string) (string, bool) {
+func NewSplitMapProcessor(sep string, mapper Processor) ProcessorFunc {
+	return func(in string) (string, bool) {
 		parts := strings.Split(in, sep)
 		out := []string{}
 		for _, part := range parts {
-			if mp, ok := m(part); ok {
+			if mp, ok := mapper.Process(part); ok {
 				out = append(out, mp)
 			}
 		}
 		return strings.Join(out, sep), true
 	}
-	return ProcessorFunc(pf)
 }
 
 // NewTrimPrefixProcessor returns a processor trimming a prefix of
 // the input as long as it can find it.
 func NewTrimPrefixProcessor(prefix string) ProcessorFunc {
-	pf := func(in string) (string, bool) {
+	return func(in string) (string, bool) {
 		out := in
 		for {
 			tmp := strings.TrimPrefix(out, prefix)
@@ -96,13 +108,12 @@ func NewTrimPrefixProcessor(prefix string) ProcessorFunc {
 			out = tmp
 		}
 	}
-	return ProcessorFunc(pf)
 }
 
 // NewTrimSuffixProcessor returns a processor trimming a prefix of
 // the input as long as it can find it.
 func NewTrimSuffixProcessor(prefix string) ProcessorFunc {
-	pf := func(in string) (string, bool) {
+	return func(in string) (string, bool) {
 		out := in
 		for {
 			tmp := strings.TrimSuffix(out, prefix)
@@ -113,7 +124,6 @@ func NewTrimSuffixProcessor(prefix string) ProcessorFunc {
 			out = tmp
 		}
 	}
-	return ProcessorFunc(pf)
 }
 
 // EOF
