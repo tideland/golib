@@ -107,6 +107,12 @@ func NewSplitMapProcessor(sep string, mapper Processor) ProcessorFunc {
 	}
 }
 
+func NewTrimFuncProcessor(f func(r rune) bool) ProcessorFunc {
+	return func(in string) (string, bool) {
+		return strings.TrimFunc(in, f), true
+	}
+}
+
 // NewTrimPrefixProcessor returns a processor trimming a prefix of
 // the input as long as it can find it.
 func NewTrimPrefixProcessor(prefix string) ProcessorFunc {

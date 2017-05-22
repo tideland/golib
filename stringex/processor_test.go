@@ -88,11 +88,8 @@ func TestTrimmingProcessors(t *testing.T) {
 func TestScenario(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	in := "/+++++one+++/-----two--/+-+-three-+-+/four"
-	prefixDecider := stringex.ProcessorFunc(func(in string) (string, bool) {
-		return in, strings.HasPrefix("+") || strings.HasPrefix("-")
-	})
-	prefixer := stringex.NewLoopProcessor(prefixDecider, func(in string) (string, bool) {
-
+	trimmer := stringex.NewTrimFuncProcessor(func(r rune) bool {
+		return r == "+" || r == "-"
 	})
 	bracer := stringex.ProcessorFunc(func(in string) (string, bool) {
 		if in == "" {
@@ -100,7 +97,7 @@ func TestScenario(t *testing.T) {
 		}
 		return "(" + in + ")", true
 	})
-	updater := stringex.NewChainProcessor(prefixer, suffixer, bracer)
+	updater := stringex.NewChainProcessor(trimmer, bracer)
 	fullUpdater := stringex.NewSplitMapProcessor("/", updater)
 
 	value, ok := fullUpdater(in)
