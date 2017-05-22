@@ -45,6 +45,45 @@ func TestSplitMapProcessor(t *testing.T) {
 	assert.Equal(value, "the QUICK BROWN FOX JUMPS OVER the LAZY DOG")
 }
 
+// TestTrimmingProcessors tests the trimming.
+func TestTrimmingProcessors(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	in := "+++++foo+++"
+
+	// Prefix.
+	plusPreTrimProcessor := stringex.NewTrimPrefixProcessor("+")
+	plusPlusPreTrimProcessor := stringex.NewTrimPrefixProcessor("++")
+
+	value, ok := plusPreTrimProcessor(in)
+	assert.True(ok)
+	assert.Equal(value, "foo+++")
+	value, ok = plusPlusPreTrimProcessor(in)
+	assert.True(ok)
+	assert.Equal(value, "+foo+++")
+
+	// Suffix.
+	plusSufTrimProcessor := stringex.NewTrimSuffixProcessor("+")
+	plusPlusSufTrimProcessor := stringex.NewTrimSuffixProcessor("++")
+
+	value, ok = plusSufTrimProcessor(in)
+	assert.True(ok)
+	assert.Equal(value, "+++++foo")
+	value, ok = plusPlusSufTrimProcessor(in)
+	assert.True(ok)
+	assert.Equal(value, "+++++foo+")
+
+	// Chaining.
+	plusTrimProcessor := stringex.NewChainProcessor(plusPreTrimProcessor, plusSufTrimProcessor)
+	plusPlusTrimProcessor := stringex.NewChainProcessor(plusPlusPreTrimProcessor, plusPlusSufTrimProcessor)
+
+	value, ok = plusTrimProcessor(in)
+	assert.True(ok)
+	assert.Equal(value, "foo")
+	value, ok = plusPlusTrimProcessor(in)
+	assert.True(ok)
+	assert.Equal(value, "+foo+")
+}
+
 //--------------------
 // HELPERS
 //--------------------
