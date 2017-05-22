@@ -26,9 +26,9 @@ import (
 // TestWrapping tests wrapping a standard function to a processor.
 func TestWrapping(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	upperProcessor := stringex.WrapProcessorFunc(strings.ToUpper)
+	upperCaser := stringex.WrapProcessorFunc(strings.ToUpper)
 
-	value, ok := upperProcessor("test")
+	value, ok := upperCaser("test")
 	assert.True(ok)
 	assert.Equal(value, "TEST")
 }
@@ -37,10 +37,10 @@ func TestWrapping(t *testing.T) {
 func TestSplitMapProcessor(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	sep := "the"
-	upperProcessor := stringex.WrapProcessorFunc(strings.ToUpper)
-	splitMapProcessor := stringex.NewSplitMapProcessor(sep, upperProcessor)
+	upperCaser := stringex.WrapProcessorFunc(strings.ToUpper)
+	splitMapper := stringex.NewSplitMapProcessor(sep, upperCaser)
 
-	value, ok := splitMapProcessor("the quick brown fox jumps over the lazy dog")
+	value, ok := splitMapper("the quick brown fox jumps over the lazy dog")
 	assert.True(ok)
 	assert.Equal(value, "the QUICK BROWN FOX JUMPS OVER the LAZY DOG")
 }
@@ -51,35 +51,35 @@ func TestTrimmingProcessors(t *testing.T) {
 	in := "+++++foo+++"
 
 	// Prefix.
-	plusPreTrimProcessor := stringex.NewTrimPrefixProcessor("+")
-	plusPlusPreTrimProcessor := stringex.NewTrimPrefixProcessor("++")
+	plusPreTrimmer := stringex.NewTrimPrefixProcessor("+")
+	plusPlusPreTrimmer := stringex.NewTrimPrefixProcessor("++")
 
-	value, ok := plusPreTrimProcessor(in)
+	value, ok := plusPreTrimmer(in)
 	assert.True(ok)
 	assert.Equal(value, "foo+++")
-	value, ok = plusPlusPreTrimProcessor(in)
+	value, ok = plusPlusPreTrimmer(in)
 	assert.True(ok)
 	assert.Equal(value, "+foo+++")
 
 	// Suffix.
-	plusSufTrimProcessor := stringex.NewTrimSuffixProcessor("+")
-	plusPlusSufTrimProcessor := stringex.NewTrimSuffixProcessor("++")
+	plusSufTrimmer := stringex.NewTrimSuffixProcessor("+")
+	plusPlusSufTrimmer := stringex.NewTrimSuffixProcessor("++")
 
-	value, ok = plusSufTrimProcessor(in)
+	value, ok = plusSufTrimmer(in)
 	assert.True(ok)
 	assert.Equal(value, "+++++foo")
-	value, ok = plusPlusSufTrimProcessor(in)
+	value, ok = plusPlusSufTrimmer(in)
 	assert.True(ok)
 	assert.Equal(value, "+++++foo+")
 
 	// Chaining.
-	plusTrimProcessor := stringex.NewChainProcessor(plusPreTrimProcessor, plusSufTrimProcessor)
-	plusPlusTrimProcessor := stringex.NewChainProcessor(plusPlusPreTrimProcessor, plusPlusSufTrimProcessor)
+	plusTrimmer := stringex.NewChainProcessor(plusPreTrimmer, plusSufTrimmer)
+	plusPlusTrimmer := stringex.NewChainProcessor(plusPlusPreTrimmer, plusPlusSufTrimmer)
 
-	value, ok = plusTrimProcessor(in)
+	value, ok = plusTrimmer(in)
 	assert.True(ok)
 	assert.Equal(value, "foo")
-	value, ok = plusPlusTrimProcessor(in)
+	value, ok = plusPlusTrimmer(in)
 	assert.True(ok)
 	assert.Equal(value, "+foo+")
 }

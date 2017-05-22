@@ -79,6 +79,19 @@ func NewSwitchProcessor(decider, trueBranch, falseBranch ProcessorFunc) Processo
 	}
 }
 
+// NewLoopProcessor creates a processor letting the processor function
+// work on the input until it returns false (aka while true). Itself then
+// will return the processed sting and always true.
+func NewLoopProcessor(processor Processor) ProcessorFunc {
+	return func(in string) (string, bool) {
+		temp, ok := processor.Process(in)
+		for ok {
+			temp, ok = processor.Process(temp)
+		}
+		return temp, true
+	}
+}
+
 // NewSplitMapProcessor creates a processor splitting the input and
 // mapping the parts.
 func NewSplitMapProcessor(sep string, mapper Processor) ProcessorFunc {
@@ -97,33 +110,21 @@ func NewSplitMapProcessor(sep string, mapper Processor) ProcessorFunc {
 // NewTrimPrefixProcessor returns a processor trimming a prefix of
 // the input as long as it can find it.
 func NewTrimPrefixProcessor(prefix string) ProcessorFunc {
-	return func(in string) (string, bool) {
-		out := in
-		for {
-			tmp := strings.TrimPrefix(out, prefix)
-			if tmp == out {
-				// Done.
-				return out, true
-			}
-			out = tmp
-		}
+	prefixTrimmer := func(in string) (string, bool) {
+		out := strings.TrimPrefix(in, prefix)
+		return out, out != in
 	}
+	return NewLoopProcessor(ProcessorFunc(prefixTrimmer))
 }
 
 // NewTrimSuffixProcessor returns a processor trimming a prefix of
 // the input as long as it can find it.
 func NewTrimSuffixProcessor(prefix string) ProcessorFunc {
-	return func(in string) (string, bool) {
-		out := in
-		for {
-			tmp := strings.TrimSuffix(out, prefix)
-			if tmp == out {
-				// Done.
-				return out, true
-			}
-			out = tmp
-		}
+	suffixTrimmer := func(in string) (string, bool) {
+		out := strings.TrimSuffix(in, prefix)
+		return out, out != in
 	}
+	return NewLoopProcessor(ProcessorFunc(suffixTrimmer))
 }
 
 // EOF
