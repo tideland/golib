@@ -84,8 +84,28 @@ func TestTrimmingProcessors(t *testing.T) {
 	assert.Equal(value, "+foo+")
 }
 
-//--------------------
-// HELPERS
-//--------------------
+// TestScenario tests the combination of multiple processors.
+func TestScenario(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	in := "/+++++one+++/-----two--/+-+-three-+-+/four"
+	prefixDecider := stringex.ProcessorFunc(func(in string) (string, bool) {
+		return in, strings.HasPrefix("+") || strings.HasPrefix("-")
+	})
+	prefixer := stringex.NewLoopProcessor(prefixDecider, func(in string) (string, bool) {
+
+	})
+	bracer := stringex.ProcessorFunc(func(in string) (string, bool) {
+		if in == "" {
+			return "", true
+		}
+		return "(" + in + ")", true
+	})
+	updater := stringex.NewChainProcessor(prefixer, suffixer, bracer)
+	fullUpdater := stringex.NewSplitMapProcessor("/", updater)
+
+	value, ok := fullUpdater(in)
+	assert.True(ok)
+	assert.Equal(value, "/(one)/(two)/(three)/(four)")
+}
 
 // EOF

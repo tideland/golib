@@ -66,16 +66,16 @@ func NewChainProcessor(processors ...Processor) ProcessorFunc {
 	}
 }
 
-// NewSwitchProcessor creates a processor taking the first processor function
-// for creating a temporary result and the decision if to pass it to the
-// trueBranch or the falseBranch.
-func NewSwitchProcessor(decider, trueBranch, falseBranch ProcessorFunc) ProcessorFunc {
+// NewConditionProcessor creates a processor taking the first processor
+// for creating a temporary result and a decision. Based on the decision
+// the temporary result is passed to an affirmer or a negater.
+func NewConditionProcessor(decider, affirmer, negater Processor) ProcessorFunc {
 	return func(in string) (string, bool) {
 		temp, ok := decider.Process(in)
 		if ok {
-			return trueBranch.Process(temp)
+			return affirmer.Process(temp)
 		}
-		return falseBranch.Process(temp)
+		return negater.Process(temp)
 	}
 }
 
