@@ -12,6 +12,8 @@ package stringex
 //--------------------
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -44,6 +46,14 @@ func (pf ProcessorFunc) Process(in string) (string, bool) {
 func WrapProcessorFunc(f func(fin string) string) ProcessorFunc {
 	return func(in string) (string, bool) {
 		return f(in), true
+	}
+}
+
+// errorProcessorFunc returns a processor func used in case of failing
+// preparation steps.
+func errorProcessorFunc(err error) ProcessorFunc {
+	return func(in string) (string, bool) {
+		return fmt.Sprintf("error processing '%s': %v", in, err), false
 	}
 }
 
@@ -93,7 +103,9 @@ func NewLoopProcessor(processor Processor) ProcessorFunc {
 }
 
 // NewSplitMapProcessor creates a processor splitting the input and
-// mapping the parts.
+// mapping the parts. It will only contain those where the mapper
+// returns true. So it can be used as a filter too. Afterwards the
+// collected mapped parts are joined again.
 func NewSplitMapProcessor(sep string, mapper Processor) ProcessorFunc {
 	return func(in string) (string, bool) {
 		parts := strings.Split(in, sep)
@@ -125,6 +137,19 @@ func NewSubstringProcessor(index, length int) ProcessorFunc {
 			length = len(out)
 		}
 		return out[:length], true
+	}
+}
+
+// NewMatchProcessor returns a processor evaluating the input
+// against a given pattern and returns the input and true
+// when it is matching.
+func NewMatchProcessor(pattern string) ProcessorFunc {
+	r, err := regexp.Compile(pattern)
+	if err != nil {
+		return errorProcessorFunc(err)
+	}
+	return func(in string) (string, bool) {
+		return in, r.MatchString(in)
 	}
 }
 
