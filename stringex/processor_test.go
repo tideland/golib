@@ -119,11 +119,12 @@ func TestScenario(t *testing.T) {
 		return r == '+' || r == '-'
 	})
 	substringer := stringex.NewSubstringProcessor(0, 4)
+	omatcher := stringex.NewMatchProcessor("o+")
+	uppercaser := stringex.WrapProcessorFunc(strings.ToUpper)
 	bracer := stringex.ProcessorFunc(func(in string) (string, bool) {
 		return "(" + in + ")", true
 	})
-	uppercaser := stringex.WrapProcessorFunc(strings.ToUpper)
-	updater := stringex.NewChainProcessor(trimmer, substringer, uppercaser, bracer)
+	updater := stringex.NewChainProcessor(trimmer, substringer, omatcher, uppercaser, bracer)
 	allUpdater := stringex.NewSplitMapProcessor("/", updater)
 	replacer := stringex.ProcessorFunc(func(in string) (string, bool) {
 		return strings.Replace(in, "/", "::", -1), true
@@ -132,7 +133,7 @@ func TestScenario(t *testing.T) {
 
 	value, ok := fullUpdater(in)
 	assert.True(ok)
-	assert.Equal(value, "(YADD)::(FOOB)::(TEST)::(OUT)")
+	assert.Equal(value, "(FOOB)::(OUT)")
 }
 
 // EOF
