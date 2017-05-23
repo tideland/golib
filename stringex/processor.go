@@ -107,6 +107,30 @@ func NewSplitMapProcessor(sep string, mapper Processor) ProcessorFunc {
 	}
 }
 
+// NewSubstringProcessor returns a processor slicing the input
+// based on the index and length.
+func NewSubstringProcessor(index, length int) ProcessorFunc {
+	return func(in string) (string, bool) {
+		if length < 1 {
+			return "", false
+		}
+		if index < 0 {
+			index = 0
+		}
+		if index >= len(in) {
+			return "", true
+		}
+		out := in[index:]
+		if length > len(out) {
+			length = len(out)
+		}
+		return out[:length], true
+	}
+}
+
+// NewTrimFuncProcessor returns a processor trimming prefix and
+// suffix of the input based on the return value of the passed
+// function checking each rune.
 func NewTrimFuncProcessor(f func(r rune) bool) ProcessorFunc {
 	return func(in string) (string, bool) {
 		return strings.TrimFunc(in, f), true
