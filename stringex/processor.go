@@ -182,4 +182,16 @@ func NewTrimSuffixProcessor(prefix string) ProcessorFunc {
 	return NewLoopProcessor(ProcessorFunc(suffixTrimmer))
 }
 
+// NewUpperProcessor returns a processor converting the
+// input to upper-case.
+func NewUpperProcessor() ProcessorFunc {
+	return WrapProcessorFunc(strings.ToUpper)
+}
+
+// NewLowerProcessor returns a processor converting the
+// input to lower-case.
+func NewLowerProcessor() ProcessorFunc {
+	return WrapProcessorFunc(strings.ToLower)
+}
+
 // EOF

@@ -63,10 +63,30 @@ func TestSubstringProcessor(t *testing.T) {
 		{-1, 10, "yadda", "yadda", true},
 		{0, 0, "yadda", "", false},
 	}
-
 	for _, test := range tests {
 		substringer := stringex.NewSubstringProcessor(test.index, test.length)
 		out, ok := substringer(test.in)
+		assert.Equal(ok, test.ok)
+		assert.Equal(out, test.out)
+	}
+}
+
+// TestMatchProcessor tests the matching of patterns.
+func TestMatchProcessor(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tests := []struct {
+		pattern string
+		in      string
+		out     string
+		ok      bool
+	}{
+		{"[0-9]+", "+++12345+++", "+++12345+++", true},
+		{"^[0-9]+", "+++12345+++", "+++12345+++", false},
+		{"[", "+++12345+++", "error processing '+++12345+++': error parsing regexp: missing closing ]: `[`", false},
+	}
+	for _, test := range tests {
+		matcher := stringex.NewMatchProcessor(test.pattern)
+		out, ok := matcher(test.in)
 		assert.Equal(ok, test.ok)
 		assert.Equal(out, test.out)
 	}
@@ -111,20 +131,37 @@ func TestTrimmingProcessors(t *testing.T) {
 	assert.Equal(value, "+foo+")
 }
 
-// TestScenario tests the combination of multiple processors.
-func TestScenario(t *testing.T) {
+// TestUpperLowerProcessor tests converting strings to upper- or lowe-case.
+func TestUpperLowerProcessor(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	in := "+++++yadda+++/-----foobar--/+-+-testing-+-+/out"
+	in := "this IS in UPPER & lower cAsE"
+	uppercaser := stringex.NewUpperProcessor()
+	lowercaser := stringex.NewLowerProcessor()
+
+	value, ok := uppercaser(in)
+	assert.True(ok)
+	assert.Equal(value, "THIS IS IN UPPER & LOWER CASE")
+	value, ok = lowercaser(in)
+	assert.True(ok)
+	assert.Equal(value, "this is in upper & lower case")
+}
+
+// TestProcessorScenario tests the combination of multiple processors.
+func TestProcessorScenario(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	in := "+++++Yadda+++/-----Foobar--/+-+-Testing-+-+/Out"
 	trimmer := stringex.NewTrimFuncProcessor(func(r rune) bool {
 		return r == '+' || r == '-'
 	})
 	substringer := stringex.NewSubstringProcessor(0, 4)
-	omatcher := stringex.NewMatchProcessor("o+")
-	uppercaser := stringex.WrapProcessorFunc(strings.ToUpper)
+	omatcher := stringex.NewMatchProcessor("[Oo]+")
+	uppercaser := stringex.NewUpperProcessor()
+	lowercaser := stringex.NewLowerProcessor()
+	matchcaser := stringex.NewConditionProcessor(omatcher, uppercaser, lowercaser)
 	bracer := stringex.ProcessorFunc(func(in string) (string, bool) {
 		return "(" + in + ")", true
 	})
-	updater := stringex.NewChainProcessor(trimmer, substringer, omatcher, uppercaser, bracer)
+	updater := stringex.NewChainProcessor(trimmer, substringer, matchcaser, bracer)
 	allUpdater := stringex.NewSplitMapProcessor("/", updater)
 	replacer := stringex.ProcessorFunc(func(in string) (string, bool) {
 		return strings.Replace(in, "/", "::", -1), true
@@ -133,7 +170,7 @@ func TestScenario(t *testing.T) {
 
 	value, ok := fullUpdater(in)
 	assert.True(ok)
-	assert.Equal(value, "(FOOB)::(OUT)")
+	assert.Equal(value, "(yadd)::(FOOB)::(test)::(OUT)")
 }
 
 // EOF
