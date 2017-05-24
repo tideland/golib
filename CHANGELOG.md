@@ -1,5 +1,16 @@
 # Tideland Go Library
 
+## 2017-05-24
+
+- Added generic JSON parser package *gjp*
+- Added iterator method *Do()* to *etc.Etc*
+- Added interface *Processor* as well as the type
+  *ProcessorFunc* which implements this interface to
+  *stringex*
+- Multiple functions in *stringex* construct different
+  parametrized processors which can be used in chains,
+  conditions, and loops
+
 ## 2017-03-19
 
 - Readesigned *cache*; now individual instances with
