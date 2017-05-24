@@ -52,8 +52,8 @@ Atom and RSS feed client.
 
 ### Generic JSON Parser
 
-Instead a unmarshalling a JSON into a struct parse it and provide access
-to the content by path.
+Instead of unmarshalling a JSON into a struct parse it and provide access
+to the content by path and value converters to native types.
 
 ### Identifier
 
@@ -103,7 +103,8 @@ Parallel Quicksort.
 
 ### Stringex
 
-Helpful functions around strings extending the original `strings` package.
+Helpful functions around strings extending the original `strings` package and
+help processing strings.
 
 ### Timex
 
