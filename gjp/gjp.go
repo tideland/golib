@@ -49,7 +49,7 @@ type document struct {
 }
 
 // Parse reads a raw document and returns it as
-// accessable document.
+// accessible document.
 func Parse(data []byte, separator string) (Document, error) {
 	var raw interface{}
 	err := json.Unmarshal(data, &raw)
