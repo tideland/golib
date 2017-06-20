@@ -49,6 +49,7 @@ const (
 	Panics
 	PathExists
 	Wait
+	WaitTested
 	Retry
 	Fail
 )
@@ -152,6 +153,11 @@ type Assertion interface {
 	// Wait until a received signal or a timeout. The signal has
 	// to be the expected value.
 	Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool
+
+	// WaitTested wait until a received signal or a timeout. The signal then
+	// is tested by the passed function which has to return nil for a successful
+	// assert.
+	WaitTested(sigc <-chan interface{}, tester func(interface{}) error, timeout time.Duration, msgs ...string) bool
 
 	// Retry calls the passed function and expects it to return true. Otherwise
 	// it pauses for the given duration and retries the call the defined number.
@@ -405,6 +411,17 @@ func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout 
 			return a.failer.Fail(Wait, obtained, expected, msgs...)
 		}
 		return true
+	case <-time.After(timeout):
+		return a.failer.Fail(Wait, "timeout "+timeout.String(), "signal true", msgs...)
+	}
+}
+
+// WaitTested implements the Assertion interface.
+func (a *assertion) WaitTested(sigc <-chan interface{}, tester func(interface{}) error, timeout time.Duration, msgs ...string) bool {
+	select {
+	case obtained := <-sigc:
+		err := tester(obtained)
+		return a.Nil(err, msgs...)
 	case <-time.After(timeout):
 		return a.failer.Fail(Wait, "timeout "+timeout.String(), "signal true", msgs...)
 	}

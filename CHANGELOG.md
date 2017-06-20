@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2017-06-XX
+
+- Added *WaitTested()* to *audit.Assertion*
+
 ## 2017-05-24
 
 - Added generic JSON parser package *gjp*

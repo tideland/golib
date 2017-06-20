@@ -331,6 +331,38 @@ func TestAssertWait(t *testing.T) {
 	failingAssert.Wait(sigc, true, 100*time.Millisecond, "should timeout")
 }
 
+// TestAssertWaitTested tests the wait tested testing.
+func TestAssertWaitTested(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+	tester := func(v interface{}) error {
+		b, ok := v.(bool)
+		if !ok || b == false {
+			return errors.New("illegal value")
+		}
+		return nil
+	}
+
+	sigc := audit.MakeSigChan()
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		sigc <- true
+	}()
+	successfulAssert.WaitTested(sigc, tester, 100*time.Millisecond, "should be true")
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		sigc <- false
+	}()
+	failingAssert.WaitTested(sigc, tester, 100*time.Millisecond, "should be false")
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		sigc <- true
+	}()
+	failingAssert.WaitTested(sigc, tester, 100*time.Millisecond, "should timeout")
+}
+
 // TestAssertRetry tests the retry testing.
 func TestAssertRetry(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
