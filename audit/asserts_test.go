@@ -261,7 +261,7 @@ func TestAssertEmpty(t *testing.T) {
 }
 
 // TestAssertNotEmpty tests the NotEmpty() assertion.
-func TestAsserNotEmpty(t *testing.T) {
+func TestAssertNotEmpty(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
 	failingAssert := failingAssertion(t)
 
@@ -435,19 +435,19 @@ func TestValidationAssertion(t *testing.T) {
 	details := failures.Details()
 	fn, l, f := details[0].Location()
 	tt := details[0].Test()
-	if fn != "asserts_test.go" || l != 389 || f != "TestValidationAssertion" {
-		t.Errorf("wrong location of first detail")
+	if fn != "asserts_test.go" || l != 421 || f != "TestValidationAssertion" {
+		t.Errorf("wrong location of first detail: %d", l)
 	}
 	if tt != audit.True {
-		t.Errorf("wrong test type of first detail")
+		t.Errorf("wrong test type of first detail: %v", tt)
 	}
 	fn, l, f = details[1].Location()
 	tt = details[1].Test()
-	if fn != "asserts_test.go" || l != 390 || f != "TestValidationAssertion" {
-		t.Errorf("wrong location of second detail")
+	if fn != "asserts_test.go" || l != 422 || f != "TestValidationAssertion" {
+		t.Errorf("wrong location of second detail: %d", l)
 	}
 	if tt != audit.Equal {
-		t.Errorf("wrong test type of second detail")
+		t.Errorf("wrong test type of second detail: %v", tt)
 	}
 }
 
