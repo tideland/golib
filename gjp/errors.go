@@ -23,15 +23,21 @@ import (
 const (
 	ErrUnmarshalling = iota + 1
 	ErrSetting
+	ErrLeafToNode
+	ErrNodeToLeaf
+	ErrUnsupportedType
 	ErrCorrupting
 	ErrProcessing
 )
 
 var errorMessages = errors.Messages{
-	ErrUnmarshalling: "cannot unmarshal document",
-	ErrSetting:       "failed setting the node '%s'",
-	ErrCorrupting:    "setting a value on a node would corrupt the document",
-	ErrProcessing:    "failed processing the node '%s'",
+	ErrUnmarshalling:   "cannot unmarshal document",
+	ErrSetting:         "failed setting the node '%s'",
+	ErrLeafToNode:      "cannot convert leaf to node",
+	ErrNodeToLeaf:      "cannot convert node to leaf",
+	ErrUnsupportedType: "builder does not support type: %v",
+	ErrCorrupting:      "setting a value on a node would corrupt the document",
+	ErrProcessing:      "failed processing the node '%s'",
 }
 
 // EOF

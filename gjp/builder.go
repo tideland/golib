@@ -24,6 +24,9 @@ type Builder interface {
 
 	// Clear removes the so far build document data.
 	Clear()
+
+	// Document returns the built document.
+	Document() Document
 }
 
 // builder implements Builder.
@@ -46,6 +49,13 @@ func (b *builder) SetValue(path string, value interface{}) error {
 // Clear implements Builder.
 func (b *builder) Clear() {
 	b.root = newRoot(b.root.separator, nil)
+}
+
+// Document implements Builder.
+func (b *builder) Document() Document {
+	return &document{
+		root: b.root,
+	}
 }
 
 // EOF

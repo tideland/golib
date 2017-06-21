@@ -12,6 +12,7 @@ package gjp
 //--------------------
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -40,17 +41,15 @@ func newRoot(separator string, data noder) *root {
 
 // setValueAt sets a value at a given path. If needed it's created.
 func (r *root) setValueAt(path string, value interface{}) error {
-	nr, ok := r.createNoderAt(path)
-	if !ok {
-		return errors.New(ErrSetting, errorMessages, path)
+	nr, err := r.ensureNoderAt(path)
+	if err != nil {
+		return errors.Annotate(err, ErrSetting, errorMessages, path)
 	}
-	_, ok = nr.isNode()
-	if ok {
-		// The path points to an already existing node.
-		// We need a value.
-		return errors.New(ErrSetting, errorMessages, path)
+	err = nr.setValue(value)
+	if err != nil {
+		return errors.Annotate(err, ErrSetting, errorMessages, path)
 	}
-	return nr.setValue(value)
+	return nil
 }
 
 // valueAt retrieves the data at a given path.
@@ -69,10 +68,24 @@ func (r *root) valueAt(path string) (interface{}, bool) {
 	return nr.value(), true
 }
 
-// createNoderAt creates and returns a new noder at
-// a given path.
-func (r *root) createNoderAt(path string) (noder, bool) {
-	return nil, false
+// ensureNoderAt ensures and returns a noder at a given path.
+func (r *root) ensureNoderAt(path string) (noder, error) {
+	parts := stringex.SplitMap(path, r.separator, func(p string) (string, bool) {
+		if p == "" {
+			return "", false
+		}
+		return p, true
+	})
+	// Check if data has been initialized.
+	if r.data == nil {
+		if len(parts) == 0 {
+			r.data = &leaf{}
+		} else {
+			r.data = node{}
+		}
+	}
+	// Now let the data handle the parts.
+	return r.data.ensureNoderAt(parts...)
 }
 
 // noderAt retrieves the noder at a given path.
@@ -121,6 +134,10 @@ type noder interface {
 	// are returned.
 	isNode() (node, bool)
 
+	// ensureNoderAt ensures that the passed parts
+	// exist as noder.
+	ensureNoderAt(parts ...string) (noder, error)
+
 	// setValue sets the value of the node.
 	setValue(value interface{}) error
 
@@ -138,7 +155,7 @@ type leaf struct {
 }
 
 // isNode implements noder.
-func (l leaf) isNode() (node, bool) {
+func (l *leaf) isNode() (node, bool) {
 	switch rt := l.raw.(type) {
 	case node:
 		return rt, true
@@ -159,19 +176,45 @@ func (l leaf) isNode() (node, bool) {
 	}
 }
 
+// ensureNoderAt ensures the existing of a leaf noder
+// based on the path parts. It has to be the last one,
+// so the length of parts has to be 0 for a positive
+// answer.
+func (l *leaf) ensureNoderAt(parts ...string) (noder, error) {
+	if len(parts) == 0 {
+		return l, nil
+	}
+	return nil, errors.New(ErrLeafToNode, errorMessages)
+}
+
 // setValue implements noder.
-func (l leaf) setValue(value interface{}) error {
+func (l *leaf) setValue(value interface{}) error {
+	if value == nil {
+		l.raw = nil
+		return nil
+	}
+	switch tv := value.(type) {
+	case string, int, float64, bool:
+		l.raw = tv
+	default:
+		return errors.New(ErrUnsupportedType, errorMessages, value)
+	}
 	return nil
 }
 
 // value implements noder.
-func (l leaf) value() interface{} {
+func (l *leaf) value() interface{} {
 	return l.raw
 }
 
 // process implements noder.
-func (l leaf) process(path []string, separator string, processor ValueProcessor) error {
+func (l *leaf) process(path []string, separator string, processor ValueProcessor) error {
 	return processor(strings.Join(path, separator), &value{l.raw, l.raw != nil})
+}
+
+// String implements fmt.Stringer.
+func (l *leaf) String() string {
+	return fmt.Sprintf("l(%v)", l.raw)
 }
 
 // node represents one JSON object or array.
@@ -180,6 +223,30 @@ type node map[string]noder
 // isNode implements noder.
 func (n node) isNode() (node, bool) {
 	return n, true
+}
+
+// ensureNoderAt ensures the existing of a leaf noder
+// based on the path parts.
+func (n node) ensureNoderAt(parts ...string) (noder, error) {
+	switch len(parts) {
+	case 0:
+		// Addressing this node.
+		return nil, errors.New(ErrNodeToLeaf, errorMessages)
+	case 1:
+		// Last part.
+		pnoder := n[parts[0]]
+		if pnoder == nil {
+			n[parts[0]] = &leaf{}
+		}
+		return n[parts[0]], nil
+	default:
+		// More to come.
+		pnoder := n[parts[0]]
+		if pnoder == nil {
+			n[parts[0]] = node{}
+		}
+		return n[parts[0]].ensureNoderAt(parts[1:]...)
+	}
 }
 
 // setValue implements noder.
@@ -231,10 +298,15 @@ func (n node) at(path []string) (noder, bool) {
 	return nr, true
 }
 
+// String implements fmt.Stringer.
+func (n node) String() string {
+	return fmt.Sprintf("n(%v)", n)
+}
+
 // rawToNoder conerts the raw interface into a
 // noder which may be a node or a value.
 func rawToNoder(raw interface{}) noder {
-	l := leaf{raw}
+	l := &leaf{raw}
 	if n, ok := l.isNode(); ok {
 		return n
 	}

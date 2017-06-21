@@ -193,6 +193,40 @@ func TestBool(t *testing.T) {
 	assert.Equal(bv, true)
 }
 
+// TestBuilderSimple tests the simple creation of documents.
+func TestBuilderSimple(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	builder := gjp.NewBuilder("/")
+
+	// Positive cases.
+	err := builder.SetValue("/a/b/x", 1)
+	assert.Nil(err)
+	err = builder.SetValue("/a/b/y", true)
+	assert.Nil(err)
+	err = builder.SetValue("/a/c", "quick brown fox")
+	assert.Nil(err)
+	err = builder.SetValue("/a/d/1/z", 47.11)
+	assert.Nil(err)
+
+	doc := builder.Document()
+	iv := doc.ValueAt("a/b/x").AsInt(0)
+	assert.Equal(iv, 1)
+	bv := doc.ValueAt("a/b/y").AsBool(false)
+	assert.Equal(bv, true)
+	sv := doc.ValueAt("a/c").AsString("")
+	assert.Equal(sv, "quick brown fox")
+	fv := doc.ValueAt("a/d/1/z").AsFloat64(8.15)
+	assert.Equal(fv, 47.11)
+
+	// Now provoke errors.
+	err = builder.SetValue("a", "stupid")
+	assert.Logf("test error 1: %v", err)
+	assert.ErrorMatch(err, ".*corrupt.*")
+	err = builder.SetValue("a/b/x/y", "stupid")
+	assert.Logf("test error 2: %v", err)
+	assert.ErrorMatch(err, ".*leaf to node.*")
+}
+
 //--------------------
 // HELPERS
 //--------------------
@@ -312,4 +346,5 @@ func createCompareDocument(assert audit.Assertion) []byte {
 	assert.Nil(err)
 	return bs
 }
+
 // EOF
