@@ -196,27 +196,40 @@ func TestBool(t *testing.T) {
 // TestBuilderSimple tests the simple creation of documents.
 func TestBuilderSimple(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
+
+	// Most simple document.
 	builder := gjp.NewBuilder("/")
+	err := builder.SetValue("", "foo")
+	assert.Nil(err)
+
+	doc := builder.Document()
+	sv := doc.ValueAt("").AsString("bar")
+	assert.Equal(sv, "foo")
 
 	// Positive cases.
-	err := builder.SetValue("/a/b/x", 1)
+	builder = gjp.NewBuilder("/")
+	err = builder.SetValue("/a/b/x", 1)
 	assert.Nil(err)
 	err = builder.SetValue("/a/b/y", true)
 	assert.Nil(err)
 	err = builder.SetValue("/a/c", "quick brown fox")
 	assert.Nil(err)
-	err = builder.SetValue("/a/d/1/z", 47.11)
+	err = builder.SetValue("/a/d/0/z", 47.11)
+	assert.Nil(err)
+	err = builder.SetValue("/a/d/1/z", nil)
 	assert.Nil(err)
 
-	doc := builder.Document()
+	doc = builder.Document()
 	iv := doc.ValueAt("a/b/x").AsInt(0)
 	assert.Equal(iv, 1)
 	bv := doc.ValueAt("a/b/y").AsBool(false)
 	assert.Equal(bv, true)
-	sv := doc.ValueAt("a/c").AsString("")
+	sv = doc.ValueAt("a/c").AsString("")
 	assert.Equal(sv, "quick brown fox")
-	fv := doc.ValueAt("a/d/1/z").AsFloat64(8.15)
+	fv := doc.ValueAt("a/d/0/z").AsFloat64(8.15)
 	assert.Equal(fv, 47.11)
+	nv := doc.ValueAt("a/d/1/z").IsUndefined()
+	assert.True(nv)
 
 	// Now provoke errors.
 	err = builder.SetValue("a", "stupid")
@@ -225,6 +238,13 @@ func TestBuilderSimple(t *testing.T) {
 	err = builder.SetValue("a/b/x/y", "stupid")
 	assert.Logf("test error 2: %v", err)
 	assert.ErrorMatch(err, ".*leaf to node.*")
+
+	// Legally change values.
+	err = builder.SetValue("/a/b/x", 2)
+	assert.Nil(err)
+	doc = builder.Document()
+	iv = doc.ValueAt("a/b/x").AsInt(0)
+	assert.Equal(iv, 2)
 }
 
 //--------------------

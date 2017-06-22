@@ -3,6 +3,7 @@
 ## 2017-06-XX
 
 - Added *WaitTested()* to *audit.Assertion*
+- Added *Builder* to *gjp*
 
 ## 2017-05-24
 
