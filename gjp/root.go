@@ -12,7 +12,6 @@ package gjp
 //--------------------
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -141,8 +140,11 @@ type noder interface {
 	// setValue sets the value of the node.
 	setValue(value interface{}) error
 
-	// value returns the raw value of a node.
+	// value returns the value of a node.
 	value() interface{}
+
+	// rawValue returns the raw value of a node for marshalling.
+	rawValue() interface{}
 
 	// process processes one leaf or node.
 	process(path []string, separator string, processor ValueProcessor) error
@@ -207,14 +209,14 @@ func (l *leaf) value() interface{} {
 	return l.raw
 }
 
+// rawValue implements noder.
+func (l *leaf) rawValue() interface{} {
+	return l.raw
+}
+
 // process implements noder.
 func (l *leaf) process(path []string, separator string, processor ValueProcessor) error {
 	return processor(strings.Join(path, separator), &value{l.raw, l.raw != nil})
-}
-
-// String implements fmt.Stringer.
-func (l *leaf) String() string {
-	return fmt.Sprintf("l(%v)", l.raw)
 }
 
 // node represents one JSON object or array.
@@ -259,6 +261,46 @@ func (n node) value() interface{} {
 	return n
 }
 
+// rawValue implements noder.
+func (n node) rawValue() interface{} {
+	isArray := func() (int, bool) {
+		max := -1
+		for key := range n {
+			idx, err := strconv.Atoi(key)
+			if err != nil {
+				return 0, false
+			}
+			if idx > max {
+				max = idx
+			}
+		}
+		return max, true
+	}
+	// Check for array or object.
+	max, ok := isArray()
+	if ok {
+		raw := []interface{}{}
+		for i := 0; i <= max; i++ {
+			key := strconv.Itoa(i)
+			value, ok := n[key]
+			if ok {
+				// Value is set.
+				raw = append(raw, value.rawValue())
+			} else {
+				// Value is unset.
+				raw = append(raw, nil)
+			}
+		}
+		return raw
+	}
+	// Standard json object.
+	raw := map[string]interface{}{}
+	for key, value := range n {
+		raw[key] = value.rawValue()
+	}
+	return raw
+}
+
 // process implements noder.
 func (n node) process(path []string, separator string, processor ValueProcessor) error {
 	for nk, nn := range n {
@@ -298,11 +340,6 @@ func (n node) at(path []string) (noder, bool) {
 	return nr, true
 }
 
-// String implements fmt.Stringer.
-func (n node) String() string {
-	return fmt.Sprintf("n(%v)", n)
-}
-
 // rawToNoder conerts the raw interface into a
 // noder which may be a node or a value.
 func rawToNoder(raw interface{}) noder {
@@ -311,6 +348,12 @@ func rawToNoder(raw interface{}) noder {
 		return n
 	}
 	return l
+}
+
+// noderToRaw creates a marshable structure
+// out of a noder.
+func noderToRaw(nr noder) interface{} {
+	return nr.rawValue()
 }
 
 // EOF

@@ -27,6 +27,8 @@ type ValueProcessor func(path string, value Value) error
 
 // Document represents one JSON document.
 type Document interface {
+	json.Marshaler
+
 	// Length returns the number of elements for the given path.
 	Length(path string) int
 
@@ -81,6 +83,11 @@ func (d *document) ValueAt(path string) Value {
 // Process implements Document.
 func (d *document) Process(processor ValueProcessor) error {
 	return d.root.process([]string{}, processor)
+}
+
+// MarshalJSON implements json.Marshaler.
+func (d *document) MarshalJSON() ([]byte, error) {
+	return []byte{}, nil
 }
 
 // EOF
