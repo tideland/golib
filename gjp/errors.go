@@ -22,6 +22,7 @@ import (
 // Error codes of the etc package.
 const (
 	ErrUnmarshalling = iota + 1
+	ErrInvalidDocument
 	ErrSetting
 	ErrLeafToNode
 	ErrNodeToLeaf
@@ -32,6 +33,7 @@ const (
 
 var errorMessages = errors.Messages{
 	ErrUnmarshalling:   "cannot unmarshal document",
+	ErrInvalidDocument: "invalid %s document, no internal implementation",
 	ErrSetting:         "failed setting the node '%s'",
 	ErrLeafToNode:      "cannot convert leaf to node",
 	ErrNodeToLeaf:      "cannot convert node to leaf",

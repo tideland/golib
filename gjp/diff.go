@@ -8,6 +8,14 @@
 package gjp
 
 //--------------------
+// IMPORTS
+//--------------------
+
+import (
+	"github.com/tideland/golib/errors"
+)
+
+//--------------------
 // DIFFERENCE
 //--------------------
 
@@ -46,10 +54,33 @@ func Compare(first, second []byte, separator string) (Diff, error) {
 		return nil, err
 	}
 	d := &diff{
-		first: fd,
+		first:  fd,
 		second: sd,
 	}
 	err = d.compare()
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// CompareDocuments compares the documents and returns their differences.
+func CompareDocuments(first, second Document, separator string) (Diff, error) {
+	fd, ok := first.(*document)
+	if !ok {
+		return nil, errors.New(ErrInvalidDocument, errorMessages, "first")
+	}
+	fd.root.separator = separator
+	sd, ok := second.(*document)
+	if !ok {
+		return nil, errors.New(ErrInvalidDocument, errorMessages, "second")
+	}
+	sd.root.separator = separator
+	d := &diff{
+		first:  fd,
+		second: sd,
+	}
+	err := d.compare()
 	if err != nil {
 		return nil, err
 	}

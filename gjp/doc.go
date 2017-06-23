@@ -28,7 +28,8 @@
 //
 //     diff, err := gjp.Compare(firstDoc, secondDoc, "/")
 //
-// privides a gjp.Diff instance with access helpers for the comparison.
+// privides a gjp.Diff instance which helps to compare individual
+// paths of the two document.
 package gjp
 
 // EOF
