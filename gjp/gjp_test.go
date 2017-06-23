@@ -247,6 +247,18 @@ func TestBuilderSimple(t *testing.T) {
 	assert.Equal(iv, 2)
 }
 
+// TestMarshalJSON tests building a JSON document again.
+func TestMarshalJSON(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bsIn, _ := createDocument(assert)
+	doc, err := gjp.Parse(bsIn, "/")
+	assert.Nil(err)
+
+	bsOut, err := doc.MarshalJSON()
+	assert.Nil(err)
+	assert.Equal(bsOut, bsIn)
+}
+
 //--------------------
 // HELPERS
 //--------------------

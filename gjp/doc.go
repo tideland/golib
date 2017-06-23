@@ -17,8 +17,18 @@
 //     name := doc.ValueAsString("name", "")
 //     street := doc.ValueAsString("address/street", "unknown")
 //
-// After reading this from a file, reader, or string the number of users
-// can be retrieved with a default value of 10 by calling
+// Additionally values of the document can be processed using
+//
+//     err := doc.Process(func(path string, value gjp.Value) error {
+//         ...
+//     })
+//
+// Sometimes one is more interested in the differences between two
+// documents. Here
+//
+//     diff, err := gjp.Compare(firstDoc, secondDoc, "/")
+//
+// privides a gjp.Diff instance with access helpers for the comparison.
 package gjp
 
 // EOF

@@ -87,7 +87,8 @@ func (d *document) Process(processor ValueProcessor) error {
 
 // MarshalJSON implements json.Marshaler.
 func (d *document) MarshalJSON() ([]byte, error) {
-	return []byte{}, nil
+	raw := noderToRaw(d.root.data)
+	return json.Marshal(raw)
 }
 
 // EOF
