@@ -193,33 +193,31 @@ func TestBool(t *testing.T) {
 	assert.Equal(bv, true)
 }
 
-// TestBuilderSimple tests the simple creation of documents.
-func TestBuilderSimple(t *testing.T) {
+// TestBuilding tests the creation of documents.
+func TestBuilding(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 
 	// Most simple document.
-	builder := gjp.NewBuilder("/")
-	err := builder.SetValue("", "foo")
+	doc := gjp.NewDocument("/")
+	err := doc.SetValueAt("", "foo")
 	assert.Nil(err)
 
-	doc := builder.Document()
 	sv := doc.ValueAt("").AsString("bar")
 	assert.Equal(sv, "foo")
 
 	// Positive cases.
-	builder = gjp.NewBuilder("/")
-	err = builder.SetValue("/a/b/x", 1)
+	doc = gjp.NewDocument("/")
+	err = doc.SetValueAt("/a/b/x", 1)
 	assert.Nil(err)
-	err = builder.SetValue("/a/b/y", true)
+	err = doc.SetValueAt("/a/b/y", true)
 	assert.Nil(err)
-	err = builder.SetValue("/a/c", "quick brown fox")
+	err = doc.SetValueAt("/a/c", "quick brown fox")
 	assert.Nil(err)
-	err = builder.SetValue("/a/d/0/z", 47.11)
+	err = doc.SetValueAt("/a/d/0/z", 47.11)
 	assert.Nil(err)
-	err = builder.SetValue("/a/d/1/z", nil)
+	err = doc.SetValueAt("/a/d/1/z", nil)
 	assert.Nil(err)
 
-	doc = builder.Document()
 	iv := doc.ValueAt("a/b/x").AsInt(0)
 	assert.Equal(iv, 1)
 	bv := doc.ValueAt("a/b/y").AsBool(false)
@@ -232,17 +230,16 @@ func TestBuilderSimple(t *testing.T) {
 	assert.True(nv)
 
 	// Now provoke errors.
-	err = builder.SetValue("a", "stupid")
+	err = doc.SetValueAt("a", "stupid")
 	assert.Logf("test error 1: %v", err)
 	assert.ErrorMatch(err, ".*corrupt.*")
-	err = builder.SetValue("a/b/x/y", "stupid")
+	err = doc.SetValueAt("a/b/x/y", "stupid")
 	assert.Logf("test error 2: %v", err)
 	assert.ErrorMatch(err, ".*leaf to node.*")
 
 	// Legally change values.
-	err = builder.SetValue("/a/b/x", 2)
+	err = doc.SetValueAt("/a/b/x", 2)
 	assert.Nil(err)
-	doc = builder.Document()
 	iv = doc.ValueAt("a/b/x").AsInt(0)
 	assert.Equal(iv, 2)
 }
@@ -250,11 +247,23 @@ func TestBuilderSimple(t *testing.T) {
 // TestMarshalJSON tests building a JSON document again.
 func TestMarshalJSON(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	bsIn, _ := createDocument(assert)
-	doc, err := gjp.Parse(bsIn, "/")
-	assert.Nil(err)
 
-	bsOut, err := doc.MarshalJSON()
+	// Compare input and output.
+	bsIn, _ := createDocument(assert)
+	parsedDoc, err := gjp.Parse(bsIn, "/")
+	assert.Nil(err)
+	bsOut, err := parsedDoc.MarshalJSON()
+	assert.Nil(err)
+	assert.Equal(bsOut, bsIn)
+
+	// Now create a built one.
+	builtDoc := gjp.NewDocument("/")
+	err = builtDoc.SetValueAt("/a/2/x", 1)
+	assert.Nil(err)
+	err = builtDoc.SetValueAt("/a/4/y", true)
+	assert.Nil(err)
+	bsIn = []byte(`{"a":[null,null,{"x":1},null,{"y":true}]}`)
+	bsOut, err = builtDoc.MarshalJSON()
 	assert.Nil(err)
 	assert.Equal(bsOut, bsIn)
 }

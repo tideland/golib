@@ -32,8 +32,14 @@ type Document interface {
 	// Length returns the number of elements for the given path.
 	Length(path string) int
 
+	// SetValueAt sets the value at the given path.
+	SetValueAt(path string, value interface{}) error
+
 	// ValueAt returns the addressed value.
 	ValueAt(path string) Value
+
+	// Clear removes the so far build document data.
+	Clear()
 
 	// Process iterates over a document and processes its values.
 	// There's no order, so nesting into an embedded document or
@@ -59,6 +65,13 @@ func Parse(data []byte, separator string) (Document, error) {
 	}, nil
 }
 
+// NewDocument creates a new empty document.
+func NewDocument(separator string) Document {
+	return &document{
+		root: newRoot(separator, nil),
+	}
+}
+
 // Length implements Document.
 func (d *document) Length(path string) int {
 	nr, ok := d.root.noderAt(path)
@@ -74,10 +87,20 @@ func (d *document) Length(path string) int {
 	return 1
 }
 
+// SetValueAt implements Document.
+func (d *document) SetValueAt(path string, value interface{}) error {
+	return d.root.setValueAt(path, value)
+}
+
 // ValueAt implements Document.
 func (d *document) ValueAt(path string) Value {
 	raw, ok := d.root.valueAt(path)
 	return &value{raw, ok && raw != nil}
+}
+
+// Clear implements Document.
+func (d *document) Clear() {
+	d.root = newRoot(d.root.separator, nil)
 }
 
 // Process implements Document.
