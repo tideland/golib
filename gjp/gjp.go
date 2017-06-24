@@ -21,6 +21,15 @@ import (
 // DOCUMENT
 //--------------------
 
+// PathValue is the combination of path and value.
+type PathValue struct {
+	Path  string
+	Value Value
+}
+
+// PathValues contains a number of path/value combinations.
+type PathValues []PathValue
+
 // ValueProcessor describes a function for the processing of
 // values while iterating over a document.
 type ValueProcessor func(path string, value Value) error
@@ -40,6 +49,9 @@ type Document interface {
 
 	// Clear removes the so far build document data.
 	Clear()
+
+	// Query allows to find pathes matching a given pattern.
+	Query(pattern string) (PathValues, error)
 
 	// Process iterates over a document and processes its values.
 	// There's no order, so nesting into an embedded document or
@@ -101,6 +113,11 @@ func (d *document) ValueAt(path string) Value {
 // Clear implements Document.
 func (d *document) Clear() {
 	d.root = newRoot(d.root.separator, nil)
+}
+
+// Query implements Document.
+func (d *document) Query(pattern string) (PathValues, error) {
+	return nil, nil
 }
 
 // Process implements Document.
