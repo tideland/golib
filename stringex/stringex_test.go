@@ -218,6 +218,18 @@ func TestMatches(t *testing.T) {
 			"quick * fox",
 			false,
 			false,
+		}, {
+			"matching pattern with escape",
+			"quick \\* f\\[o\\]x",
+			"quick * f[o]x",
+			true,
+			true,
+		}, {
+			"not-matching pattern with escape",
+			"quick \\* f\\[o\\]x",
+			"quick brown fox",
+			true,
+			false,
 		},
 	}
 	for i, test := range tests {
