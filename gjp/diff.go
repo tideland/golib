@@ -70,12 +70,12 @@ func CompareDocuments(first, second Document, separator string) (Diff, error) {
 	if !ok {
 		return nil, errors.New(ErrInvalidDocument, errorMessages, "first")
 	}
-	fd.root.separator = separator
+	fd.separator = separator
 	sd, ok := second.(*document)
 	if !ok {
 		return nil, errors.New(ErrInvalidDocument, errorMessages, "second")
 	}
-	sd.root.separator = separator
+	sd.separator = separator
 	d := &diff{
 		first:  fd,
 		second: sd,

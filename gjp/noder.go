@@ -1,4 +1,4 @@
-// Tideland Go Library - Generic JSON Parser - Root
+// Tideland Go Library - Generic JSON Parser - Noder
 //
 // Copyright (C) 2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
@@ -16,117 +16,13 @@ import (
 	"strings"
 
 	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/stringex"
 )
-
-//--------------------
-// ROOT
-//--------------------
-
-// root manages the document structure starting at
-// its root.
-type root struct {
-	separator string
-	data      noder
-}
-
-// newRoot creates a document root.
-func newRoot(separator string, data noder) *root {
-	return &root{
-		separator: separator,
-		data:      data,
-	}
-}
-
-// setValueAt sets a value at a given path. If needed it's created.
-func (r *root) setValueAt(path string, value interface{}) error {
-	nr, err := r.ensureNoderAt(path)
-	if err != nil {
-		return errors.Annotate(err, ErrSetting, errorMessages, path)
-	}
-	err = nr.setValue(value)
-	if err != nil {
-		return errors.Annotate(err, ErrSetting, errorMessages, path)
-	}
-	return nil
-}
-
-// valueAt retrieves the data at a given path.
-func (r *root) valueAt(path string) (interface{}, bool) {
-	nr, ok := r.noderAt(path)
-	if !ok {
-		// Noder not found.
-		return nil, false
-	}
-	_, ok = nr.isNode()
-	if ok {
-		// We need a value.
-		return nil, false
-	}
-	// Found our value.
-	return nr.value(), true
-}
-
-// ensureNoderAt ensures and returns a noder at a given path.
-func (r *root) ensureNoderAt(path string) (noder, error) {
-	parts := stringex.SplitMap(path, r.separator, func(p string) (string, bool) {
-		if p == "" {
-			return "", false
-		}
-		return p, true
-	})
-	// Check if data has been initialized.
-	if r.data == nil {
-		if len(parts) == 0 {
-			r.data = &leaf{}
-		} else {
-			r.data = node{}
-		}
-	}
-	// Now let the data handle the parts.
-	return r.data.ensureNoderAt(parts...)
-}
-
-// noderAt retrieves the noder at a given path.
-func (r *root) noderAt(path string) (noder, bool) {
-	if r.data == nil {
-		// No data yet.
-		return nil, false
-	}
-	parts := stringex.SplitMap(path, r.separator, func(p string) (string, bool) {
-		if p == "" {
-			return "", false
-		}
-		return p, true
-	})
-	if len(parts) == 0 {
-		// Root is all we need.
-		return r.data, true
-	}
-	n, ok := r.data.isNode()
-	if !ok {
-		// No node, but path needs it.
-		return nil, false
-	}
-	nr, ok := n.at(parts)
-	if !ok {
-		// Not found.
-		return nil, false
-	}
-	// Found noder.
-	return nr, true
-}
-
-// process tells the root node to start processing.
-func (r *root) process(path []string, processor ValueProcessor) error {
-	return r.data.process(path, r.separator, processor)
-}
 
 //--------------------
 // NODE AND LEAF
 //--------------------
 
-// noder lets a value or node tell if it is a node.
+// noder defines common interface of node and leaf.
 type noder interface {
 	// isNode checks if the value is a node and
 	// returns it type-safe. Otherwise nil and false
