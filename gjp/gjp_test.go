@@ -193,6 +193,33 @@ func TestBool(t *testing.T) {
 	assert.Equal(bv, true)
 }
 
+// TestQuery tests querying a document.
+func TestQuery(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	pvs, err := doc.Query("Z/*")
+	assert.Nil(err)
+	assert.Length(pvs, 0)
+	pvs, err = doc.Query("*")
+	assert.Nil(err)
+	assert.Length(pvs, 27)
+	pvs, err = doc.Query("A")
+	assert.Nil(err)
+	assert.Length(pvs, 1)
+	pvs, err = doc.Query("B/*")
+	assert.Nil(err)
+	assert.Length(pvs, 24)
+	pvs, err = doc.Query("B/[01]/*")
+	assert.Nil(err)
+	assert.Length(pvs, 18)
+	pvs, err = doc.Query("B/[01]/*A")
+	assert.Nil(err)
+	assert.Length(pvs, 4)
+}
+
 // TestBuilding tests the creation of documents.
 func TestBuilding(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)

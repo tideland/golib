@@ -19,7 +19,7 @@ import (
 )
 
 //--------------------
-// NODE AND LEAF
+// NODER
 //--------------------
 
 // noder defines common interface of node and leaf.
@@ -45,6 +45,10 @@ type noder interface {
 	// process processes one leaf or node.
 	process(path []string, separator string, processor ValueProcessor) error
 }
+
+//--------------------
+// LEAF
+//--------------------
 
 // leaf represents a leaf in a JSON document tree.It
 // contains the value.
@@ -114,6 +118,10 @@ func (l *leaf) rawValue() interface{} {
 func (l *leaf) process(path []string, separator string, processor ValueProcessor) error {
 	return processor(strings.Join(path, separator), &value{l.raw, l.raw != nil})
 }
+
+//--------------------
+// NODE
+//--------------------
 
 // node represents one JSON object or array.
 type node map[string]noder

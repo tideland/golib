@@ -120,7 +120,17 @@ func (d *document) Clear() {
 
 // Query implements Document.
 func (d *document) Query(pattern string) (PathValues, error) {
-	return nil, nil
+	pvs := PathValues{}
+	err := d.Process(func(path string, value Value) error {
+		if stringex.Matches(pattern, path, false) {
+			pvs = append(pvs, PathValue{
+				Path:  path,
+				Value: value,
+			})
+		}
+		return nil
+	})
+	return pvs, err
 }
 
 // Process implements Document.
