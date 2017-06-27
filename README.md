@@ -59,11 +59,11 @@ to the content by path and value converters to native types.
 
 ### Identifier
 
-Identifier generation, like UUIDs or composed values.
+Identifier generation, like UUIDs (v1, v3, v4, v5) or composed values.
 
 ### Logger
 
-Flexible logging.
+Logging with different levels to different backends and powerful extensions.
 
 ### Loop
 
