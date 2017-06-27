@@ -267,6 +267,10 @@ func TestBuilding(t *testing.T) {
 	nv := doc.ValueAt("a/d/1/z").IsUndefined()
 	assert.True(nv)
 
+	pvs, err := doc.Query("*x")
+	assert.Nil(err)
+	assert.Length(pvs, 1)
+
 	// Now provoke errors.
 	err = doc.SetValueAt("a", "stupid")
 	assert.Logf("test error 1: %v", err)
