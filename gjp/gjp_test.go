@@ -218,6 +218,17 @@ func TestQuery(t *testing.T) {
 	pvs, err = doc.Query("B/[01]/*A")
 	assert.Nil(err)
 	assert.Length(pvs, 4)
+	pvs, err = doc.Query("*/S/*")
+	assert.Nil(err)
+	assert.Length(pvs, 8)
+	pvs, err = doc.Query("*/S/3")
+	assert.Nil(err)
+	assert.Length(pvs, 1)
+
+	pvs, err = doc.Query("A")
+	assert.Nil(err)
+	assert.Equal(pvs[0].Path, "A")
+	assert.Equal(pvs[0].Value.AsString(""), "Level One")
 }
 
 // TestBuilding tests the creation of documents.
