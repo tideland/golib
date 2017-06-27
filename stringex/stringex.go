@@ -65,7 +65,10 @@ func SplitMap(s, sep string, m func(p string) (string, bool)) []string {
 // MATCHER
 //--------------------
 
-// Matches checks if the pattern matches a given value.
+// Matches checks if the pattern matches a given value. Here
+// ? matches one char, * a group of chars, [any] any of these
+// chars, and [0-9] any of this char range. The latter can
+// be negotiated with [^abc] and \ escapes the pattern chars.
 func Matches(pattern, value string, ignoreCase bool) bool {
 	patternRunes := append([]rune(pattern), '\u0000')
 	patternLen := len(patternRunes) - 1

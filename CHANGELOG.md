@@ -4,6 +4,8 @@
 
 - Added *WaitTested()* to *audit.Assertion*
 - Added *Builder* to *gjp*
+- Added *Matches()* to *stringex*
+- Added *Query()* to *gjp.Document*
 
 ## 2017-05-24
 
