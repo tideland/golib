@@ -77,10 +77,9 @@ func TestSplitFilter(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			restore := assert.SetFailable(t)
+			defer assert.SetFailable(t)()
 			out := stringex.SplitFilter(test.in, test.sep, test.filter)
 			assert.Equal(out, test.out)
-			restore()
 		})
 	}
 }
@@ -142,10 +141,9 @@ func TestSplitMap(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			restore := assert.SetFailable(t)
+			defer assert.SetFailable(t)()
 			out := stringex.SplitMap(test.in, test.sep, test.mapper)
 			assert.Equal(out, test.out)
-			restore()
 		})
 	}
 }
@@ -236,10 +234,9 @@ func TestMatches(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			restore := assert.SetFailable(t)
+			defer assert.SetFailable(t)()
 			out := stringex.Matches(test.pattern, test.value, test.ignoreCase)
 			assert.Equal(out, test.out)
-			restore()
 		})
 	}
 }
