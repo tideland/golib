@@ -66,6 +66,11 @@ func MakeSigChan() chan interface{} {
 
 // Assertion defines the available test methods.
 type Assertion interface {
+	// SetFailable allows to change the failable possibly used inside
+	// a failer. This way a testing.T of a subtest can be injected. A
+	// restore function is returned.
+	SetFailable(f Failable) func()
+
 	// IncrCallstackOffset allows test libraries using the audit
 	// package internally to adjust the callstack offset. This
 	// way test output shows the correct location. Deferring
@@ -174,23 +179,38 @@ func NewAssertion(f Failer) Assertion {
 	}
 }
 
-// assertion implements the assertion interface.
+// assertion implements Assertion.
 type assertion struct {
 	Tester
 	failer Failer
 }
 
-// Logf implements the Assertion interface.
+// SetFailable implements Assertion.
+func (a *assertion) SetFailable(f Failable) func() {
+	tf, ok := a.failer.(*testingFailer)
+	if !ok {
+		// Nothing to do.
+		return func() {}
+	}
+	// It's a test assertion.
+	old := tf.failable
+	tf.failable = f
+	return func() {
+		tf.failable = old
+	}
+}
+
+// Logf implements Assertion.
 func (a *assertion) IncrCallstackOffset() func() {
 	return a.failer.IncrCallstackOffset()
 }
 
-// Logf implements the Assertion interface.
+// Logf implements Assertion.
 func (a *assertion) Logf(format string, args ...interface{}) {
 	a.failer.Logf(format, args...)
 }
 
-// True implements the Assertion interface.
+// True implements Assertion.
 func (a *assertion) True(obtained bool, msgs ...string) bool {
 	if !a.IsTrue(obtained) {
 		return a.failer.Fail(True, obtained, true, msgs...)
@@ -198,7 +218,7 @@ func (a *assertion) True(obtained bool, msgs ...string) bool {
 	return true
 }
 
-// False implements the Assertion interface.
+// False implements Assertion.
 func (a *assertion) False(obtained bool, msgs ...string) bool {
 	if a.IsTrue(obtained) {
 		return a.failer.Fail(False, obtained, false, msgs...)
@@ -206,7 +226,7 @@ func (a *assertion) False(obtained bool, msgs ...string) bool {
 	return true
 }
 
-// Nil implements the Assertion interface.
+// Nil implements Assertion.
 func (a *assertion) Nil(obtained interface{}, msgs ...string) bool {
 	if !a.IsNil(obtained) {
 		return a.failer.Fail(Nil, obtained, nil, msgs...)
@@ -214,7 +234,7 @@ func (a *assertion) Nil(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// NotNil implements the Assertion interface.
+// NotNil implements Assertion.
 func (a *assertion) NotNil(obtained interface{}, msgs ...string) bool {
 	if a.IsNil(obtained) {
 		return a.failer.Fail(NotNil, obtained, nil, msgs...)
@@ -222,7 +242,7 @@ func (a *assertion) NotNil(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// Equal implements the Assertion interface.
+// Equal implements Assertion.
 func (a *assertion) Equal(obtained, expected interface{}, msgs ...string) bool {
 	if !a.IsEqual(obtained, expected) {
 		return a.failer.Fail(Equal, obtained, expected, msgs...)
@@ -230,7 +250,7 @@ func (a *assertion) Equal(obtained, expected interface{}, msgs ...string) bool {
 	return true
 }
 
-// Different implements the Assertion interface.
+// Different implements Assertion.
 func (a *assertion) Different(obtained, expected interface{}, msgs ...string) bool {
 	if a.IsEqual(obtained, expected) {
 		return a.failer.Fail(Different, obtained, expected, msgs...)
@@ -238,7 +258,7 @@ func (a *assertion) Different(obtained, expected interface{}, msgs ...string) bo
 	return true
 }
 
-// Contents implements the Assertion interface.
+// Contents implements Assertion.
 func (a *assertion) Contents(part, full interface{}, msgs ...string) bool {
 	contains, err := a.Contains(part, full)
 	if err != nil {
@@ -250,7 +270,7 @@ func (a *assertion) Contents(part, full interface{}, msgs ...string) bool {
 	return true
 }
 
-// About implements the Assertion interface.
+// About implements Assertion.
 func (a *assertion) About(obtained, expected, extent float64, msgs ...string) bool {
 	if !a.IsAbout(obtained, expected, extent) {
 		return a.failer.Fail(About, obtained, expected, msgs...)
@@ -258,7 +278,7 @@ func (a *assertion) About(obtained, expected, extent float64, msgs ...string) bo
 	return true
 }
 
-// Range implements the Assertion interface.
+// Range implements Assertion.
 func (a *assertion) Range(obtained, low, high interface{}, msgs ...string) bool {
 	expected := &lowHigh{low, high}
 	inRange, err := a.IsInRange(obtained, low, high)
@@ -271,7 +291,7 @@ func (a *assertion) Range(obtained, low, high interface{}, msgs ...string) bool 
 	return true
 }
 
-// Substring implements the Assertion interface.
+// Substring implements Assertion.
 func (a *assertion) Substring(obtained, full string, msgs ...string) bool {
 	if !a.IsSubstring(obtained, full) {
 		return a.failer.Fail(Substring, obtained, full, msgs...)
@@ -279,7 +299,7 @@ func (a *assertion) Substring(obtained, full string, msgs ...string) bool {
 	return true
 }
 
-// Case implements the Assertion interface.
+// Case implements Assertion.
 func (a *assertion) Case(obtained string, upperCase bool, msgs ...string) bool {
 	if !a.IsCase(obtained, upperCase) {
 		if upperCase {
@@ -290,7 +310,7 @@ func (a *assertion) Case(obtained string, upperCase bool, msgs ...string) bool {
 	return true
 }
 
-// Match implements the Assertion interface.
+// Match implements Assertion.
 func (a *assertion) Match(obtained, regex string, msgs ...string) bool {
 	matches, err := a.IsMatching(obtained, regex)
 	if err != nil {
@@ -302,7 +322,7 @@ func (a *assertion) Match(obtained, regex string, msgs ...string) bool {
 	return true
 }
 
-// ErrorMatch implements the Assertion interface.
+// ErrorMatch implements Assertion.
 func (a *assertion) ErrorMatch(obtained error, regex string, msgs ...string) bool {
 	if obtained == nil {
 		return a.failer.Fail(ErrorMatch, nil, regex, "error is nil")
@@ -317,7 +337,7 @@ func (a *assertion) ErrorMatch(obtained error, regex string, msgs ...string) boo
 	return true
 }
 
-// Implementor implements the Assertion interface.
+// Implementor implements Assertion.
 func (a *assertion) Implementor(obtained, expected interface{}, msgs ...string) bool {
 	implements, err := a.IsImplementor(obtained, expected)
 	if err != nil {
@@ -329,7 +349,7 @@ func (a *assertion) Implementor(obtained, expected interface{}, msgs ...string) 
 	return implements
 }
 
-// Assignable implements the Assertion interface.
+// Assignable implements Assertion.
 func (a *assertion) Assignable(obtained, expected interface{}, msgs ...string) bool {
 	if !a.IsAssignable(obtained, expected) {
 		return a.failer.Fail(Assignable, obtained, expected, msgs...)
@@ -337,7 +357,7 @@ func (a *assertion) Assignable(obtained, expected interface{}, msgs ...string) b
 	return true
 }
 
-// Unassignable implements the Assertion interface.
+// Unassignable implements Assertion.
 func (a *assertion) Unassignable(obtained, expected interface{}, msgs ...string) bool {
 	if a.IsAssignable(obtained, expected) {
 		return a.failer.Fail(Unassignable, obtained, expected, msgs...)
@@ -345,7 +365,7 @@ func (a *assertion) Unassignable(obtained, expected interface{}, msgs ...string)
 	return true
 }
 
-// Empty implements the Assertion interface.
+// Empty implements Assertion.
 func (a *assertion) Empty(obtained interface{}, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
@@ -358,7 +378,7 @@ func (a *assertion) Empty(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// NotEmpty implements the Assertion interface.
+// NotEmpty implements Assertion.
 func (a *assertion) NotEmpty(obtained interface{}, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
@@ -371,7 +391,7 @@ func (a *assertion) NotEmpty(obtained interface{}, msgs ...string) bool {
 	return true
 }
 
-// Length implements the Assertion interface.
+// Length implements Assertion.
 func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) bool {
 	length, err := a.Len(obtained)
 	if err != nil {
@@ -383,7 +403,7 @@ func (a *assertion) Length(obtained interface{}, expected int, msgs ...string) b
 	return true
 }
 
-// Panics implements the Assertion interface.
+// Panics implements Assertion.
 func (a *assertion) Panics(pf func(), msgs ...string) bool {
 	if !a.HasPanic(pf) {
 		return a.failer.Fail(Panics, ValueDescription(pf), nil, msgs...)
@@ -391,7 +411,7 @@ func (a *assertion) Panics(pf func(), msgs ...string) bool {
 	return true
 }
 
-// PathExists implements the Assertion interface.
+// PathExists implements Assertion.
 func (a *assertion) PathExists(obtained string, msgs ...string) bool {
 	valid, err := a.IsValidPath(obtained)
 	if err != nil {
@@ -403,7 +423,7 @@ func (a *assertion) PathExists(obtained string, msgs ...string) bool {
 	return true
 }
 
-// Wait implements the Assertion interface.
+// Wait implements Assertion.
 func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout time.Duration, msgs ...string) bool {
 	select {
 	case obtained := <-sigc:
@@ -416,7 +436,7 @@ func (a *assertion) Wait(sigc <-chan interface{}, expected interface{}, timeout 
 	}
 }
 
-// WaitTested implements the Assertion interface.
+// WaitTested implements Assertion.
 func (a *assertion) WaitTested(sigc <-chan interface{}, tester func(interface{}) error, timeout time.Duration, msgs ...string) bool {
 	select {
 	case obtained := <-sigc:
@@ -427,7 +447,7 @@ func (a *assertion) WaitTested(sigc <-chan interface{}, tester func(interface{})
 	}
 }
 
-// Retry implements the Assertion interface.
+// Retry implements Assertion.
 func (a *assertion) Retry(rf func() bool, retries int, pause time.Duration, msgs ...string) bool {
 	start := time.Now()
 	for r := 0; r < retries; r++ {
@@ -441,7 +461,7 @@ func (a *assertion) Retry(rf func() bool, retries int, pause time.Duration, msgs
 	return a.failer.Fail(Retry, info, "successful call", msgs...)
 }
 
-// Fail implements the Assertion interface.
+// Fail implements Assertion.
 func (a *assertion) Fail(msgs ...string) bool {
 	return a.failer.Fail(Fail, nil, nil, msgs...)
 }

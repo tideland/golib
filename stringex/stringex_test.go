@@ -75,11 +75,12 @@ func TestSplitFilter(t *testing.T) {
 			[]string{"/a/b/c/"},
 		},
 	}
-	for i, test := range tests {
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Logf("splitfilter %d: %s", i, test.name)
+			restore := assert.SetFailable(t)
 			out := stringex.SplitFilter(test.in, test.sep, test.filter)
 			assert.Equal(out, test.out)
+			restore()
 		})
 	}
 }
@@ -139,11 +140,12 @@ func TestSplitMap(t *testing.T) {
 			[]string{"/A/B/C/"},
 		},
 	}
-	for i, test := range tests {
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Logf("splitmap %d: %s", i, test.name)
+			restore := assert.SetFailable(t)
 			out := stringex.SplitMap(test.in, test.sep, test.mapper)
 			assert.Equal(out, test.out)
+			restore()
 		})
 	}
 }
@@ -232,11 +234,12 @@ func TestMatches(t *testing.T) {
 			false,
 		},
 	}
-	for i, test := range tests {
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Logf("matches %d: %s", i, test.name)
+			restore := assert.SetFailable(t)
 			out := stringex.Matches(test.pattern, test.value, test.ignoreCase)
 			assert.Equal(out, test.out)
+			restore()
 		})
 	}
 }
