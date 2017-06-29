@@ -451,15 +451,21 @@ func TestValidationAssertion(t *testing.T) {
 	}
 }
 
-// TestSetFailable ...
+// TestSetFailable tests the setting of the failable
+// to the one of a sub-test.
 func TestSetFailable(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
 	failingAssert := failingAssertion(t)
 
 	t.Run("success", func(t *testing.T) {
-
+		defer successfulAssert.SetFailable(t)()
+		successfulAssert.True(true)
 	})
 
+	t.Run("fail", func(t *testing.T) {
+		defer failingAssert.SetFailable(t)()
+		failingAssert.True(false)
+	})
 }
 
 //--------------------
