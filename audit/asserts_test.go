@@ -451,6 +451,17 @@ func TestValidationAssertion(t *testing.T) {
 	}
 }
 
+// TestSetFailable ...
+func TestSetFailable(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	t.Run("success", func(t *testing.T) {
+
+	})
+
+}
+
 //--------------------
 // META FAILER
 //--------------------
