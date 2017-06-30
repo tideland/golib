@@ -67,8 +67,16 @@ func MakeSigChan() chan interface{} {
 // Assertion defines the available test methods.
 type Assertion interface {
 	// SetFailable allows to change the failable possibly used inside
-	// a failer. This way a testing.T of a subtest can be injected. A
+	// a failer. This way a testing.T of a sub-test can be injected. A
 	// restore function is returned.
+	//
+	//     t.Run(name, func(t *testing.T)) {
+	//         defer assert.SetFailable(t)()
+	//         ...
+	//     })
+	//
+	// This way the returned restorer function will be called when
+	// leaving the sub-test.
 	SetFailable(f Failable) func()
 
 	// IncrCallstackOffset allows test libraries using the audit
