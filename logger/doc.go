@@ -7,6 +7,20 @@
 
 // Package logger of the Tideland Go Library provides a flexible way
 // to log information with different levels and on different backends.
+//
+// The levels are Debug, Info, Warning, Error, Critical, and Fatal.
+// Here logger.Debugf() also logs information about file name, function
+// name, and line number while logger.Fatalf() may end the program
+// depending on the set FatalExiterFunc.
+//
+// Multiple backend may be set. The StandardLogger writes to an
+// io.Writer (initially os.Stdout), the GoLogger uses the Go log
+// package, and the SysLogger uses the Go syslog package on the
+// according operating systems.
+//
+// Changes to the standard behavior can be made with logger.SetLevel(),
+// logger.SetLogger(), and logger.SetFatalExiter(). Own logger
+// backends and exiter can be defined.
 package logger
 
 // EOF

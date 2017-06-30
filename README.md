@@ -14,13 +14,15 @@ and extended into the repository
 
 I hope you like them. ;)
 
+[![GitHub release](https://img.shields.io/github/release/tideland/golib.svg)](https://github.com/tideland/golib)
+[![GitHub license](https://img.shields.io/badge/license-New%20BSD-blue.svg)](https://raw.githubusercontent.com/tideland/golib/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/tideland/golib?status.svg)](https://godoc.org/github.com/tideland/golib)
 [![Sourcegraph](https://sourcegraph.com/github.com/tideland/golib/-/badge.svg)](https://sourcegraph.com/github.com/tideland/golib?badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tideland/golib)](https://goreportcard.com/report/github.com/tideland/golib)
 
 ## Version
 
-Version 4.23.0
+Version 4.24.0
 
 ## Packages
 
@@ -57,11 +59,11 @@ to the content by path and value converters to native types.
 
 ### Identifier
 
-Identifier generation, like UUIDs or composed values.
+Identifier generation, like UUIDs (v1, v3, v4, v5) or composed values.
 
 ### Logger
 
-Flexible logging.
+Logging with different levels to different backends and powerful extensions.
 
 ### Loop
 

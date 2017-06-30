@@ -12,6 +12,7 @@ package gjp
 //--------------------
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -21,6 +22,8 @@ import (
 
 // Value contains one JSON value.
 type Value interface {
+	fmt.Stringer
+
 	// IsUndefined returns if this value is undefined.
 	IsUndefined() bool
 
@@ -142,7 +145,7 @@ func (v *value) AsBool(dv bool) bool {
 }
 
 // Equals implements Value.
-func (v *value)	Equals(to Value) bool {
+func (v *value) Equals(to Value) bool {
 	vto, ok := to.(*value)
 	if !ok {
 		return false
@@ -151,6 +154,14 @@ func (v *value)	Equals(to Value) bool {
 		return false
 	}
 	return v.raw == vto.raw
+}
+
+// STring implements fmt.Stringer.
+func (v *value) String() string {
+	if v.IsUndefined() {
+		return "null"
+	}
+	return fmt.Sprintf("%v", v.raw)
 }
 
 // EOF

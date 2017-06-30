@@ -13,8 +13,6 @@ package gjp
 
 import (
 	"encoding/json"
-	"strconv"
-	"strings"
 
 	"github.com/tideland/golib/errors"
 	"github.com/tideland/golib/stringex"
@@ -24,17 +22,37 @@ import (
 // DOCUMENT
 //--------------------
 
+// PathValue is the combination of path and value.
+type PathValue struct {
+	Path  string
+	Value Value
+}
+
+// PathValues contains a number of path/value combinations.
+type PathValues []PathValue
+
 // ValueProcessor describes a function for the processing of
 // values while iterating over a document.
 type ValueProcessor func(path string, value Value) error
 
 // Document represents one JSON document.
 type Document interface {
+	json.Marshaler
+
 	// Length returns the number of elements for the given path.
 	Length(path string) int
 
+	// SetValueAt sets the value at the given path.
+	SetValueAt(path string, value interface{}) error
+
 	// ValueAt returns the addressed value.
 	ValueAt(path string) Value
+
+	// Clear removes the so far build document data.
+	Clear()
+
+	// Query allows to find pathes matching a given pattern.
+	Query(pattern string) (PathValues, error)
 
 	// Process iterates over a document and processes its values.
 	// There's no order, so nesting into an embedded document or
@@ -49,7 +67,7 @@ type document struct {
 }
 
 // Parse reads a raw document and returns it as
-// accessable document.
+// accessible document.
 func Parse(data []byte, separator string) (Document, error) {
 	var raw interface{}
 	err := json.Unmarshal(data, &raw)
@@ -60,6 +78,13 @@ func Parse(data []byte, separator string) (Document, error) {
 		separator: separator,
 		root:      rawToNoder(raw),
 	}, nil
+}
+
+// NewDocument creates a new empty document.
+func NewDocument(separator string) Document {
+	return &document{
+		separator: separator,
+	}
 }
 
 // Length implements Document.
@@ -77,15 +102,59 @@ func (d *document) Length(path string) int {
 	return 1
 }
 
+// SetValueAt implements Document.
+func (d *document) SetValueAt(path string, value interface{}) error {
+	return d.setValueAt(path, value)
+}
+
 // ValueAt implements Document.
 func (d *document) ValueAt(path string) Value {
 	raw, ok := d.valueAt(path)
 	return &value{raw, ok && raw != nil}
 }
 
+// Clear implements Document.
+func (d *document) Clear() {
+	d.root = nil
+}
+
+// Query implements Document.
+func (d *document) Query(pattern string) (PathValues, error) {
+	pvs := PathValues{}
+	err := d.Process(func(path string, value Value) error {
+		if stringex.Matches(pattern, path, false) {
+			pvs = append(pvs, PathValue{
+				Path:  path,
+				Value: value,
+			})
+		}
+		return nil
+	})
+	return pvs, err
+}
+
 // Process implements Document.
 func (d *document) Process(processor ValueProcessor) error {
 	return d.root.process([]string{}, d.separator, processor)
+}
+
+// MarshalJSON implements json.Marshaler.
+func (d *document) MarshalJSON() ([]byte, error) {
+	raw := noderToRaw(d.root)
+	return json.Marshal(raw)
+}
+
+// setValueAt sets a value at a given path. If needed it's created.
+func (d *document) setValueAt(path string, value interface{}) error {
+	nr, err := d.ensureNoderAt(path)
+	if err != nil {
+		return errors.Annotate(err, ErrSetting, errorMessages, path)
+	}
+	err = nr.setValue(value)
+	if err != nil {
+		return errors.Annotate(err, ErrSetting, errorMessages, path)
+	}
+	return nil
 }
 
 // valueAt retrieves the data at a given path.
@@ -104,8 +173,32 @@ func (d *document) valueAt(path string) (interface{}, bool) {
 	return nr.value(), true
 }
 
+// ensureNoderAt ensures and returns a noder at a given path.
+func (d *document) ensureNoderAt(path string) (noder, error) {
+	parts := stringex.SplitMap(path, d.separator, func(p string) (string, bool) {
+		if p == "" {
+			return "", false
+		}
+		return p, true
+	})
+	// Check if data has been initialized.
+	if d.root == nil {
+		if len(parts) == 0 {
+			d.root = &leaf{}
+		} else {
+			d.root = node{}
+		}
+	}
+	// Now let the root handle the parts.
+	return d.root.ensureNoderAt(parts...)
+}
+
 // noderAt retrieves the noder at a given path.
 func (d *document) noderAt(path string) (noder, bool) {
+	if d.root == nil {
+		// No data yet.
+		return nil, false
+	}
 	parts := stringex.SplitMap(path, d.separator, func(p string) (string, bool) {
 		if p == "" {
 			return "", false
@@ -128,124 +221,6 @@ func (d *document) noderAt(path string) (noder, bool) {
 	}
 	// Found noder.
 	return nr, true
-}
-
-//--------------------
-// NODE AND LEAF
-//--------------------
-
-// noder lets a value or node tell if it is a node.
-type noder interface {
-	// isNode checks if the value is a node and
-	// returns it type-safe. Otherwise nil and false
-	// are returned.
-	isNode() (node, bool)
-
-	// value returns the raw value of a node.
-	value() interface{}
-
-	// process processes one leaf or node.
-	process(path []string, separator string, processor ValueProcessor) error
-}
-
-// leaf represents a leaf in a JSON document tree.It
-// contains the value.
-type leaf struct {
-	raw interface{}
-}
-
-// isNode implements noder.
-func (l leaf) isNode() (node, bool) {
-	switch rt := l.raw.(type) {
-	case node:
-		return rt, true
-	case map[string]interface{}:
-		n := node{}
-		for k, v := range rt {
-			n[k] = rawToNoder(v)
-		}
-		return n, true
-	case []interface{}:
-		n := node{}
-		for i, v := range rt {
-			n[strconv.Itoa(i)] = rawToNoder(v)
-		}
-		return n, true
-	default:
-		return nil, false
-	}
-}
-
-// value implements noder.
-func (l leaf) value() interface{} {
-	return l.raw
-}
-
-// process implements noder.
-func (l leaf) process(path []string, separator string, processor ValueProcessor) error {
-	return processor(strings.Join(path, separator), &value{l.raw, l.raw != nil})
-}
-
-// node represents one JSON object or array.
-type node map[string]noder
-
-// isNode implements noder.
-func (n node) isNode() (node, bool) {
-	return n, true
-}
-
-// value implements noder.
-func (n node) value() interface{} {
-	return n
-}
-
-// process implements noder.
-func (n node) process(path []string, separator string, processor ValueProcessor) error {
-	for nk, nn := range n {
-		np := append(path, nk)
-		err := nn.process(np, separator, processor)
-		if err != nil {
-			ps := strings.Join(np, separator)
-			return errors.Annotate(err, ErrProcessing, errorMessages, ps)
-		}
-	}
-	return nil
-}
-
-// at returns the noder at the given path or
-// nil and false.
-func (n node) at(path []string) (noder, bool) {
-	lp := len(path)
-	if lp == 0 {
-		// End of path.
-		return n, true
-	}
-	nr, ok := n[path[0]]
-	if !ok {
-		// Path part not found.
-		return nil, false
-	}
-	nn, ok := nr.isNode()
-	if ok {
-		// Continue recursively.
-		return nn.at(path[1:])
-	}
-	if lp > 1 {
-		// Reached value before end of path.
-		return nil, false
-	}
-	// We're done.
-	return nr, true
-}
-
-// rawToNoder conerts the raw interface into a
-// noder which may be a node or a value.
-func rawToNoder(raw interface{}) noder {
-	l := leaf{raw}
-	if n, ok := l.isNode(); ok {
-		return n
-	}
-	return l
 }
 
 // EOF

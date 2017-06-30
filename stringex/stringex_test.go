@@ -75,9 +75,9 @@ func TestSplitFilter(t *testing.T) {
 			[]string{"/a/b/c/"},
 		},
 	}
-	for i, test := range tests {
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Logf("splitfilter %d: %s", i, test.name)
+			defer assert.SetFailable(t)()
 			out := stringex.SplitFilter(test.in, test.sep, test.filter)
 			assert.Equal(out, test.out)
 		})
@@ -139,10 +139,103 @@ func TestSplitMap(t *testing.T) {
 			[]string{"/A/B/C/"},
 		},
 	}
-	for i, test := range tests {
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Logf("splitmap %d: %s", i, test.name)
+			defer assert.SetFailable(t)()
 			out := stringex.SplitMap(test.in, test.sep, test.mapper)
+			assert.Equal(out, test.out)
+		})
+	}
+}
+
+// TestMatches tests matching string.
+func TestMatches(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tests := []struct {
+		name       string
+		pattern    string
+		value      string
+		ignoreCase bool
+		out        bool
+	}{
+		{
+			"equal pattern and string without wildcards",
+			"quick brown fox",
+			"quick brown fox",
+			true,
+			true,
+		}, {
+			"unequal pattern and string without wildcards",
+			"quick brown fox",
+			"lazy dog",
+			true,
+			false,
+		}, {
+			"matching pattern with one question mark",
+			"quick brown f?x",
+			"quick brown fox",
+			true,
+			true,
+		}, {
+			"matching pattern with one asterisk",
+			"quick*fox",
+			"quick brown fox",
+			true,
+			true,
+		}, {
+			"matching pattern with char group",
+			"quick brown f[ao]x",
+			"quick brown fox",
+			true,
+			true,
+		}, {
+			"not-matching pattern with char group",
+			"quick brown f[eiu]x",
+			"quick brown fox",
+			true,
+			false,
+		}, {
+			"matching pattern with char range",
+			"quick brown f[a-u]x",
+			"quick brown fox",
+			true,
+			true,
+		}, {
+			"not-matching pattern with char range",
+			"quick brown f[^a-u]x",
+			"quick brown fox",
+			true,
+			false,
+		}, {
+			"matching pattern with char group not ignoring care",
+			"quick * F[aeiou]x",
+			"quick * Fox",
+			false,
+			true,
+		}, {
+			"not-matching pattern with char group not ignoring care",
+			"quick * F[aeiou]x",
+			"quick * fox",
+			false,
+			false,
+		}, {
+			"matching pattern with escape",
+			"quick \\* f\\[o\\]x",
+			"quick * f[o]x",
+			true,
+			true,
+		}, {
+			"not-matching pattern with escape",
+			"quick \\* f\\[o\\]x",
+			"quick brown fox",
+			true,
+			false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer assert.SetFailable(t)()
+			out := stringex.Matches(test.pattern, test.value, test.ignoreCase)
 			assert.Equal(out, test.out)
 		})
 	}

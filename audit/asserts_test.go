@@ -261,7 +261,7 @@ func TestAssertEmpty(t *testing.T) {
 }
 
 // TestAssertNotEmpty tests the NotEmpty() assertion.
-func TestAsserNotEmpty(t *testing.T) {
+func TestAssertNotEmpty(t *testing.T) {
 	successfulAssert := successfulAssertion(t)
 	failingAssert := failingAssertion(t)
 
@@ -329,6 +329,38 @@ func TestAssertWait(t *testing.T) {
 		sigc <- true
 	}()
 	failingAssert.Wait(sigc, true, 100*time.Millisecond, "should timeout")
+}
+
+// TestAssertWaitTested tests the wait tested testing.
+func TestAssertWaitTested(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+	tester := func(v interface{}) error {
+		b, ok := v.(bool)
+		if !ok || b == false {
+			return errors.New("illegal value")
+		}
+		return nil
+	}
+
+	sigc := audit.MakeSigChan()
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		sigc <- true
+	}()
+	successfulAssert.WaitTested(sigc, tester, 100*time.Millisecond, "should be true")
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		sigc <- false
+	}()
+	failingAssert.WaitTested(sigc, tester, 100*time.Millisecond, "should be false")
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		sigc <- true
+	}()
+	failingAssert.WaitTested(sigc, tester, 100*time.Millisecond, "should timeout")
 }
 
 // TestAssertRetry tests the retry testing.
@@ -403,20 +435,37 @@ func TestValidationAssertion(t *testing.T) {
 	details := failures.Details()
 	fn, l, f := details[0].Location()
 	tt := details[0].Test()
-	if fn != "asserts_test.go" || l != 389 || f != "TestValidationAssertion" {
-		t.Errorf("wrong location of first detail")
+	if fn != "asserts_test.go" || l != 421 || f != "TestValidationAssertion" {
+		t.Errorf("wrong location of first detail: %d", l)
 	}
 	if tt != audit.True {
-		t.Errorf("wrong test type of first detail")
+		t.Errorf("wrong test type of first detail: %v", tt)
 	}
 	fn, l, f = details[1].Location()
 	tt = details[1].Test()
-	if fn != "asserts_test.go" || l != 390 || f != "TestValidationAssertion" {
-		t.Errorf("wrong location of second detail")
+	if fn != "asserts_test.go" || l != 422 || f != "TestValidationAssertion" {
+		t.Errorf("wrong location of second detail: %d", l)
 	}
 	if tt != audit.Equal {
-		t.Errorf("wrong test type of second detail")
+		t.Errorf("wrong test type of second detail: %v", tt)
 	}
+}
+
+// TestSetFailable tests the setting of the failable
+// to the one of a sub-test.
+func TestSetFailable(t *testing.T) {
+	successfulAssert := successfulAssertion(t)
+	failingAssert := failingAssertion(t)
+
+	t.Run("success", func(t *testing.T) {
+		defer successfulAssert.SetFailable(t)()
+		successfulAssert.True(true)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		defer failingAssert.SetFailable(t)()
+		failingAssert.True(false)
+	})
 }
 
 //--------------------

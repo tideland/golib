@@ -14,11 +14,32 @@
 //     if err != nil {
 //         ...
 //     }
-//     name := doc.ValueAsString("name", "")
-//     street := doc.ValueAsString("address/street", "unknown")
+//     name := doc.ValueAt("name").AsString("")
+//     street := doc.ValueAAt("address/street").AsString("unknown")
 //
-// After reading this from a file, reader, or string the number of users
-// can be retrieved with a default value of 10 by calling
+// The value passed to AsString() and the others are default values if
+// there's none at the path. Another way is to create an empty document
+// with
+//
+//     doc := gjp.NewDocument("::")
+//
+// Here and at parsed documents values can be set with
+//
+//     err := doc.SetValueAt("a/b/3/c", 4711)
+//
+// Additionally values of the document can be processed using
+//
+//     err := doc.Process(func(path string, value gjp.Value) error {
+//         ...
+//     })
+//
+// Sometimes one is more interested in the differences between two
+// documents. Here
+//
+//     diff, err := gjp.Compare(firstDoc, secondDoc, "/")
+//
+// privides a gjp.Diff instance which helps to compare individual
+// paths of the two document.
 package gjp
 
 // EOF

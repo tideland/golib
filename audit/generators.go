@@ -20,6 +20,29 @@ import (
 )
 
 //--------------------
+// CONSTANTS
+//--------------------
+
+// patterns is used by the pattern generator and contains the
+// runes for a defined pattern identifier.
+var patterns = map[rune]string{
+	'0': "0123456789",
+	'1': "123456789",
+	'o': "01234567",
+	'O': "01234567",
+	'h': "0123456789abcdef",
+	'H': "0123456789ABCDEF",
+	'a': "abcdefghijklmnopqrstuvwxyz",
+	'A': "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	'c': "bcdfghjklmnpqrstvwxyz",
+	'C': "BCDFGHJKLMNPQRSTVWXYZ",
+	'v': "aeiou",
+	'V': "AEIOU",
+	'z': "abcdefghijklmnopqrstuvwxyz0123456789",
+	'Z': "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+}
+
+//--------------------
 // HELPERS
 //--------------------
 
@@ -236,33 +259,9 @@ func (g *Generator) Pattern(pattern string) string {
 		}
 		// Escaped mode.
 		ar := pr
-		switch pr {
-		case '0':
-			ar = g.OneRuneOf("0123456789")
-		case '1':
-			ar = g.OneRuneOf("123456789")
-		case 'o', 'O':
-			ar = g.OneRuneOf("01234567")
-		case 'h':
-			ar = g.OneRuneOf("0123456789abcdef")
-		case 'H':
-			ar = g.OneRuneOf("0123456789ABCDEF")
-		case 'a':
-			ar = g.OneRuneOf("abcdefghijklmnopqrstuvwxyz")
-		case 'A':
-			ar = g.OneRuneOf("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-		case 'c':
-			ar = g.OneRuneOf("bcdfghjklmnpqrstvwxyz")
-		case 'C':
-			ar = g.OneRuneOf("BCDFGHJKLMNPQRSTVWXYZ")
-		case 'v':
-			ar = g.OneRuneOf("aeiou")
-		case 'V':
-			ar = g.OneRuneOf("AEIOU")
-		case 'z':
-			ar = g.OneRuneOf("abcdefghijklmnopqrstuvwxyz0123456789")
-		case 'Z':
-			ar = g.OneRuneOf("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+		runes, ok := patterns[pr]
+		if ok {
+			ar = g.OneRuneOf(runes)
 		}
 		result = append(result, ar)
 		escaped = false

@@ -193,6 +193,123 @@ func TestBool(t *testing.T) {
 	assert.Equal(bv, true)
 }
 
+// TestQuery tests querying a document.
+func TestQuery(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	pvs, err := doc.Query("Z/*")
+	assert.Nil(err)
+	assert.Length(pvs, 0)
+	pvs, err = doc.Query("*")
+	assert.Nil(err)
+	assert.Length(pvs, 27)
+	pvs, err = doc.Query("A")
+	assert.Nil(err)
+	assert.Length(pvs, 1)
+	pvs, err = doc.Query("B/*")
+	assert.Nil(err)
+	assert.Length(pvs, 24)
+	pvs, err = doc.Query("B/[01]/*")
+	assert.Nil(err)
+	assert.Length(pvs, 18)
+	pvs, err = doc.Query("B/[01]/*A")
+	assert.Nil(err)
+	assert.Length(pvs, 4)
+	pvs, err = doc.Query("*/S/*")
+	assert.Nil(err)
+	assert.Length(pvs, 8)
+	pvs, err = doc.Query("*/S/3")
+	assert.Nil(err)
+	assert.Length(pvs, 1)
+
+	pvs, err = doc.Query("A")
+	assert.Nil(err)
+	assert.Equal(pvs[0].Path, "A")
+	assert.Equal(pvs[0].Value.AsString(""), "Level One")
+}
+
+// TestBuilding tests the creation of documents.
+func TestBuilding(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	// Most simple document.
+	doc := gjp.NewDocument("/")
+	err := doc.SetValueAt("", "foo")
+	assert.Nil(err)
+
+	sv := doc.ValueAt("").AsString("bar")
+	assert.Equal(sv, "foo")
+
+	// Positive cases.
+	doc = gjp.NewDocument("/")
+	err = doc.SetValueAt("/a/b/x", 1)
+	assert.Nil(err)
+	err = doc.SetValueAt("/a/b/y", true)
+	assert.Nil(err)
+	err = doc.SetValueAt("/a/c", "quick brown fox")
+	assert.Nil(err)
+	err = doc.SetValueAt("/a/d/0/z", 47.11)
+	assert.Nil(err)
+	err = doc.SetValueAt("/a/d/1/z", nil)
+	assert.Nil(err)
+
+	iv := doc.ValueAt("a/b/x").AsInt(0)
+	assert.Equal(iv, 1)
+	bv := doc.ValueAt("a/b/y").AsBool(false)
+	assert.Equal(bv, true)
+	sv = doc.ValueAt("a/c").AsString("")
+	assert.Equal(sv, "quick brown fox")
+	fv := doc.ValueAt("a/d/0/z").AsFloat64(8.15)
+	assert.Equal(fv, 47.11)
+	nv := doc.ValueAt("a/d/1/z").IsUndefined()
+	assert.True(nv)
+
+	pvs, err := doc.Query("*x")
+	assert.Nil(err)
+	assert.Length(pvs, 1)
+
+	// Now provoke errors.
+	err = doc.SetValueAt("a", "stupid")
+	assert.Logf("test error 1: %v", err)
+	assert.ErrorMatch(err, ".*corrupt.*")
+	err = doc.SetValueAt("a/b/x/y", "stupid")
+	assert.Logf("test error 2: %v", err)
+	assert.ErrorMatch(err, ".*leaf to node.*")
+
+	// Legally change values.
+	err = doc.SetValueAt("/a/b/x", 2)
+	assert.Nil(err)
+	iv = doc.ValueAt("a/b/x").AsInt(0)
+	assert.Equal(iv, 2)
+}
+
+// TestMarshalJSON tests building a JSON document again.
+func TestMarshalJSON(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+
+	// Compare input and output.
+	bsIn, _ := createDocument(assert)
+	parsedDoc, err := gjp.Parse(bsIn, "/")
+	assert.Nil(err)
+	bsOut, err := parsedDoc.MarshalJSON()
+	assert.Nil(err)
+	assert.Equal(bsOut, bsIn)
+
+	// Now create a built one.
+	builtDoc := gjp.NewDocument("/")
+	err = builtDoc.SetValueAt("/a/2/x", 1)
+	assert.Nil(err)
+	err = builtDoc.SetValueAt("/a/4/y", true)
+	assert.Nil(err)
+	bsIn = []byte(`{"a":[null,null,{"x":1},null,{"y":true}]}`)
+	bsOut, err = builtDoc.MarshalJSON()
+	assert.Nil(err)
+	assert.Equal(bsOut, bsIn)
+}
+
 //--------------------
 // HELPERS
 //--------------------
@@ -312,4 +429,5 @@ func createCompareDocument(assert audit.Assertion) []byte {
 	assert.Nil(err)
 	return bs
 }
+
 // EOF
