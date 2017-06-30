@@ -1,6 +1,6 @@
 # Tideland Go Library
 
-## 2017-06-XX
+## 2017-06-30
 
 - Added *WaitTested()* to *audit.Assertion*
 - Added *SetFailable()* to *audit.Assertion* to be used in sub-tests
