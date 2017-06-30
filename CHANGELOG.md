@@ -3,6 +3,7 @@
 ## 2017-06-XX
 
 - Added *WaitTested()* to *audit.Assertion*
+- Added *SetFailable()* to *audit.Assertion* to be used in sub-tests
 - Added *Builder* to *gjp*
 - Added *Matches()* to *stringex*
 - Added *Query()* to *gjp.Document*
