@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/stringex"
 )
 
@@ -71,6 +72,9 @@ type document struct {
 func Parse(data []byte, separator string) (Document, error) {
 	var raw interface{}
 	err := json.Unmarshal(data, &raw)
+
+	logger.Errorf("RAW: %#v", raw)
+
 	if err != nil {
 		return nil, errors.Annotate(err, ErrUnmarshalling, errorMessages)
 	}

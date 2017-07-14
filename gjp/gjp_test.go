@@ -120,11 +120,17 @@ func TestCompare(t *testing.T) {
 
 	// Special case of empty lists.
 	first = []byte(`{}`)
-	second = []byte(`{"foo":{}}`)
+	second = []byte(`{"a":[],"b":{},"c":null}`)
+
+	sdocParsed, err := gjp.Parse(second, "/")
+	assert.Nil(err)
+	sdocMarshalled, err := sdocParsed.MarshalJSON()
+	assert.Nil(err)
+	assert.Equal(string(sdocMarshalled), string(second))
 
 	diff, err = gjp.Compare(first, second, "/")
 	assert.Nil(err)
-	assert.Length(diff.Differences(), 1)
+	assert.Length(diff.Differences(), 3)
 }
 
 // TestString tests retrieving values as strings.

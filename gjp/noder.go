@@ -24,10 +24,15 @@ import (
 
 // noder defines common interface of node and leaf.
 type noder interface {
-	// isNode checks if the value is a node and
+	// isObject checks if the value is an object and
 	// returns it type-safe. Otherwise nil and false
 	// are returned.
-	isNode() (node, bool)
+	isObject() (object, bool)
+
+	// isArray checks if the value is an array and
+	// returns it type-safe. Otherwise nil and false
+	// are returned.
+	isArray() (array, bool)
 
 	// ensureNoderAt ensures that the passed parts
 	// exist as noder.
@@ -56,26 +61,31 @@ type leaf struct {
 	raw interface{}
 }
 
-// isNode implements noder.
-func (l *leaf) isNode() (node, bool) {
+// isObject implements noder.
+func (l *leaf) isObject() (object, bool) {
 	switch rt := l.raw.(type) {
-	case node:
+	case object:
 		return rt, true
 	case map[string]interface{}:
-		n := node{}
+		o := object{}
 		for k, v := range rt {
-			n[k] = rawToNoder(v)
+			o[k] = rawToNoder(v)
 		}
-		return n, true
+		return o, true
 	case []interface{}:
-		n := node{}
-		for i, v := range rt {
-			n[strconv.Itoa(i)] = rawToNoder(v)
+		a := array{}
+		for _, v := range rt {
+			a = append(a, rawToNoder(v))
 		}
-		return n, true
+		return a, true
 	default:
 		return nil, false
 	}
+}
+
+// isArray implements noder.
+func (l *leaf) isArray() (array, bool) {
+	return nil, false
 }
 
 // ensureNoderAt ensures the existing of a leaf noder
@@ -120,98 +130,72 @@ func (l *leaf) process(path []string, separator string, processor ValueProcessor
 }
 
 //--------------------
-// NODE
+// OBJECT
 //--------------------
 
-// node represents one JSON object or array.
-type node map[string]noder
+// object represents one JSON object.
+type object map[string]noder
 
-// isNode implements noder.
-func (n node) isNode() (node, bool) {
-	return n, true
+// isObject implements noder.
+func (o object) isObject() (object, bool) {
+	return o, true
+}
+
+// isArray implements noder.
+func (o object) isArray() (array, bool) {
+	return nil, false
 }
 
 // ensureNoderAt ensures the existing of a leaf noder
 // based on the path parts.
-func (n node) ensureNoderAt(parts ...string) (noder, error) {
+func (o object) ensureNoderAt(parts ...string) (noder, error) {
 	switch len(parts) {
 	case 0:
-		// Addressing this node.
+		// Addressing this object.
 		return nil, errors.New(ErrNodeToLeaf, errorMessages)
 	case 1:
 		// Last part.
-		pnoder := n[parts[0]]
+		pnoder := o[parts[0]]
 		if pnoder == nil {
-			n[parts[0]] = &leaf{}
+			o[parts[0]] = &leaf{}
 		}
-		return n[parts[0]], nil
+		return o[parts[0]], nil
 	default:
 		// More to come.
-		pnoder := n[parts[0]]
+		pnoder := o[parts[0]]
 		if pnoder == nil {
-			n[parts[0]] = node{}
+			o[parts[0]] = object{}
 		}
-		return n[parts[0]].ensureNoderAt(parts[1:]...)
+		return o[parts[0]].ensureNoderAt(parts[1:]...)
 	}
 }
 
 // setValue implements noder.
-func (n node) setValue(value interface{}) error {
+func (o object) setValue(value interface{}) error {
 	return errors.New(ErrCorrupting, errorMessages)
 }
 
 // value implements noder.
-func (n node) value() interface{} {
-	return n
+func (o object) value() interface{} {
+	return o
 }
 
 // rawValue implements noder.
-func (n node) rawValue() interface{} {
-	isArray := func() (int, bool) {
-		max := -1
-		for key := range n {
-			idx, err := strconv.Atoi(key)
-			if err != nil {
-				return 0, false
-			}
-			if idx > max {
-				max = idx
-			}
-		}
-		return max, true
-	}
-	// Check for array or object.
-	max, ok := isArray()
-	if ok {
-		raw := []interface{}{}
-		for i := 0; i <= max; i++ {
-			key := strconv.Itoa(i)
-			value, ok := n[key]
-			if ok {
-				// Value is set.
-				raw = append(raw, value.rawValue())
-			} else {
-				// Value is unset.
-				raw = append(raw, nil)
-			}
-		}
-		return raw
-	}
-	// Standard json object.
+func (o object) rawValue() interface{} {
 	raw := map[string]interface{}{}
-	for key, value := range n {
+	for key, value := range o {
 		raw[key] = value.rawValue()
 	}
 	return raw
 }
 
 // process implements noder.
-func (n node) process(path []string, separator string, processor ValueProcessor) error {
-	for nk, nn := range n {
-		np := append(path, nk)
-		err := nn.process(np, separator, processor)
+func (o object) process(path []string, separator string, processor ValueProcessor) error {
+	for ok, on := range o {
+		op := append(path, ok)
+		err := on.process(op, separator, processor)
 		if err != nil {
-			ps := strings.Join(np, separator)
+			ps := strings.Join(op, separator)
 			return errors.Annotate(err, ErrProcessing, errorMessages, ps)
 		}
 	}
@@ -220,29 +204,143 @@ func (n node) process(path []string, separator string, processor ValueProcessor)
 
 // at returns the noder at the given path or
 // nil and false.
-func (n node) at(path []string) (noder, bool) {
+func (o object) at(path []string) (noder, bool) {
 	lp := len(path)
 	if lp == 0 {
 		// End of path.
-		return n, true
+		return o, true
 	}
-	nr, ok := n[path[0]]
+	pzero, ok := o[path[0]]
 	if !ok {
 		// Path part not found.
 		return nil, false
 	}
-	nn, ok := nr.isNode()
-	if ok {
-		// Continue recursively.
-		return nn.at(path[1:])
+	if ozero, ok := pzero.isObject(); ok {
+		// Object, continue recursively.
+		return ozero.at(path[1:])
+	} else if azero, ok := pzero.isArray(); ok {
+		// Array, continue recursively.
+		return azero.at(path[1:])
 	}
 	if lp > 1 {
 		// Reached value before end of path.
 		return nil, false
 	}
 	// We're done.
-	return nr, true
+	return pzero, true
 }
+
+//--------------------
+// ARRAY
+//--------------------
+
+// array represents one JSON array.
+type array []noder
+
+// isObject implements noder.
+func (a array) isObject() (object, bool) {
+	return nil, false
+}
+
+// isArray implements noder.
+func (a array) isArray() (array, bool) {
+	return a, true
+}
+
+// ensureNoderAt ensures the existing of a leaf noder
+// based on the path parts.
+func (a array) ensureNoderAt(parts ...string) (noder, error) {
+	plen := len(parts)
+	if plen == 0 {
+		// Addressing this array.
+		return nil, errors.New(ErrNodeToLeaf, errorMessages)
+	}
+	index, err := strconv.Atoi(parts[0])
+	if err != nil {
+		// TODO 2017-07-14 Mue Need different error
+		return nil, errors.Annotate(err, ErrNodeToLeaf, errorMessages)
+	}
+	if index >= len(a) {
+		// TODO 2017-07-14 Mue Enhance array.
+	}
+	if plen == 1 {
+		pnoder := a[index]
+		if pnoder == nil {
+			a[index] = &leaf{}
+		}
+		return a[index], nil
+	}
+	// More to come.
+	pnoder := a[index]
+	if pnoder == nil {
+		a[index] = object{}
+	}
+	return a[index].ensureNoderAt(parts[1:]...)
+}
+
+// setValue implements noder.
+func (a array) setValue(value interface{}) error {
+	return errors.New(ErrCorrupting, errorMessages)
+}
+
+// value implements noder.
+func (a array) value() interface{} {
+	return a
+}
+
+// rawValue implements noder.
+func (a array) rawValue() interface{} {
+	raw := []interface{}{}
+	for _, value := range a {
+		raw = append(raw, value.rawValue())
+	}
+	return raw
+}
+
+// process implements noder.
+func (a array) process(path []string, separator string, processor ValueProcessor) error {
+	for ok, on := range o {
+		op := append(path, ok)
+		err := on.process(op, separator, processor)
+		if err != nil {
+			ps := strings.Join(op, separator)
+			return errors.Annotate(err, ErrProcessing, errorMessages, ps)
+		}
+	}
+	return nil
+}
+
+// at returns the noder at the given path or
+// nil and false.
+func (o object) at(path []string) (noder, bool) {
+	lp := len(path)
+	if lp == 0 {
+		// End of path.
+		return o, true
+	}
+	pzero, ok := o[path[0]]
+	if !ok {
+		// Path part not found.
+		return nil, false
+	}
+	if ozero, ok := pzero.isObject(); ok {
+		// Object, continue recursively.
+		return ozero.at(path[1:])
+	} else if azero, ok := pzero.isArray(); ok {
+		// Array, continue recursively.
+		return azero.at(path[1:])
+	}
+	if lp > 1 {
+		// Reached value before end of path.
+		return nil, false
+	}
+	// We're done.
+	return pzero, true
+}
+
+//--------------------
+// CONVERTING
+//--------------------
 
 // rawToNoder conerts the raw interface into a
 // noder which may be a node or a value.
