@@ -117,6 +117,14 @@ func TestCompare(t *testing.T) {
 		svs := sv.AsString("<undefined>")
 		assert.Different(fvs, svs, path)
 	}
+
+	// Special case of empty lists.
+	first = []byte(`{}`)
+	second = []byte(`{"foo":{}}`)
+
+	diff, err = gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 1)
 }
 
 // TestString tests retrieving values as strings.
