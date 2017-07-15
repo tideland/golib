@@ -1,4 +1,4 @@
-// Tideland Go Library - Generic JSON Parser - Value
+// Tideland Go Library - Generic JSON Processing - Value
 //
 // Copyright (C) 2017 Frank Mueller / Tideland / Oldenburg / Germany
 //

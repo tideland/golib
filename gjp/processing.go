@@ -1,4 +1,4 @@
-// Tideland Go Library - Generic JSON Processor - Noder
+// Tideland Go Library - Generic JSON Processor - Processing
 //
 // Copyright (C) 2017 Frank Mueller / Tideland / Oldenburg / Germany
 //
@@ -19,36 +19,86 @@ import (
 )
 
 //--------------------
-// NODER
+// PROCESSING FUNCTIONS
 //--------------------
 
-// noder defines common interface of node and leaf.
-type noder interface {
-	// isObject checks if the value is an object and
-	// returns it type-safe. Otherwise nil and false
-	// are returned.
-	isObject() (object, bool)
+// isObject checks if the raw is an object and returns it
+// type-safe. Otherwise nil and false are returned.
+func isObject(raw interface{}) (map[string]interface{}, bool) {
+	return raw.(map[string]interface{})
+}
 
-	// isArray checks if the value is an array and
-	// returns it type-safe. Otherwise nil and false
-	// are returned.
-	isArray() (array, bool)
+// isArray checks if the raw is an array and returns it
+// type-safe. Otherwise nil and false are returned.
+func isArray(raw interface{}) ([]interface{}, bool) {
+	return nil, raw.([]interface{})
+}
 
-	// ensureNoderAt ensures that the passed parts
-	// exist as noder.
-	ensureNoderAt(parts ...string) (noder, error)
+// valueAt returns the value at the path parts.
+func valueAt(raw interface{}, parts ...string) (interface{}, error) {
+	length := len(parts)
+	if length == 0 {
+		// End of the parts.
+		return raw, nil
+	}
+	// Further access depends on type.
+	part := parts[0]
+	if o, ok := isObject(raw); ok {
+		// JSON object.
+		field, ok := o[part]
+		if !ok {
+			return nil, errors.Annotate(err, ErrInvalidPart, errorMessages, part)
+		}
+		return valueAt(field, parts[1:])
+	}
+	if a, ok := isArray(value); ok {
+		// JSON array.
+		index, err := strconv.Atoi(part)
+		if err != nil || index >= len(a) {
+			return nil, errors.Annotate(err, ErrInvalidPart, errorMessages, part)
+		}
+		return valueAt(a[index], parts[1:])
+	}
+	// Parts left but field value.
+	return nil, errors.New(ErrPathTooLong, errorMessages)
+}
 
-	// setValue sets the value of the node.
-	setValue(value interface{}) error
+// setValueAt sets the value at the path parts.
+func setValueAt(raw, value interface{}, parts ...string) error {
+	length := len(parts)
+	if length == 0 {
+		// End of the parts.
+		return errors.New(ErrSetting, errorMessages)
+	}
+	part := parts[length-1]
+	parent, err := valueAt(raw, parts[:length-1]...)
+	if err != nil {
+		return errors.Annotate(err, ErrSetting, errorMessages, part)
+	}
+	// Check type of parent.
+	if o, ok := isObject(parent); ok {
+		// JSON object.
+		o[part] = value
+		return nil
+	}
+	if a, ok := isArray(parent); ok {
+		// JSON array.
+		index, err := strconv.Atoi(part)
+		if err != nil {
+			return errors.Annotate(err, ErrInvalidPart, errorMessages, part)
+		}
+		if index >= len(a) {
+			// TODO 2017-07-15 Mue Extend the array.
+		}
+		a[index] = value
+		return nil
+	}
+	return errors.New(ErrSetting, errorMessages, part)
+}
 
-	// value returns the value of a node.
-	value() interface{}
-
-	// rawValue returns the raw value of a node for marshalling.
-	rawValue() interface{}
-
-	// process processes one leaf or node.
-	process(path []string, separator string, processor ValueProcessor) error
+// process processes one leaf or node.
+func process(raw interface{}, path []string, separator string, processor ValueProcessor) error {
+	return nil
 }
 
 //--------------------

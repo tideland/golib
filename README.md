@@ -22,7 +22,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.24.0
+Version 4.24.1
 
 ## Packages
 
@@ -52,10 +52,11 @@ of templates.
 
 Atom and RSS feed client.
 
-### Generic JSON Parser
+### Generic JSON Processor
 
 Instead of unmarshalling a JSON into a struct parse it and provide access
-to the content by path and value converters to native types.
+to the content by path and value converters to native types. Also processing
+and comparing is possible.
 
 ### Identifier
 

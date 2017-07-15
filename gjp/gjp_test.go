@@ -1,4 +1,4 @@
-// Tideland Go Library - Generic JSON Parser - Unit Tests
+// Tideland Go Library - Generic JSON Processor - Unit Tests
 //
 // Copyright (C) 2017 Frank Mueller / Tideland / Oldenburg / Germany
 //

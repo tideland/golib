@@ -1,4 +1,4 @@
-// Tideland Go Library - Generic JSON Parser - Difference
+// Tideland Go Library - Generic JSON Processor - Difference
 //
 // Copyright (C) 2017 Frank Mueller / Tideland / Oldenburg / Germany
 //

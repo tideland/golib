@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2017-07-13
+
+- Renamed the generic JSON parser to generic JSON processor
+
 ## 2017-06-30
 
 - Added *WaitTested()* to *audit.Assertion*
