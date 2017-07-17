@@ -65,14 +65,29 @@ func valueAt(raw interface{}, parts ...string) (interface{}, error) {
 // setValueAt sets the value at the path parts.
 func setValueAt(raw, value interface{}, parts ...string) (interface{}, error) {
 	parent := raw
-	set := func(node interface{}, head string, tail ...string) error {
+	ht := func(ps []string) (string, []string) {
+		switch len(ps) {
+		case 0:
+			return "", []string{}
+		case 1:
+			return ps[0], []string{}
+		default:
+			return ps[0], ps[1:]
+		}
+	}
+	set := func(node interface{}, head string, tail []string) error {
 		if head == "" {
 			// End of the game.
 			return nil
 		}
 		if o, ok := isObject(node); ok {
 			// JSON object.
-
+			if len(tail) == 0 {
+				o[head] = value
+				return nil
+			}
+			h, t := ht(tail)
+			return set(o[head], h, t)
 		}
 		if a, ok := isArray(node); ok {
 			// JSON array.
