@@ -14,8 +14,9 @@ package gjp
 import (
 	"encoding/json"
 
+	"strings"
+
 	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/stringex"
 )
 
@@ -64,23 +65,20 @@ type Document interface {
 // document implements Document.
 type document struct {
 	separator string
-	root      noder
+	root      interface{}
 }
 
 // Parse reads a raw document and returns it as
 // accessible document.
 func Parse(data []byte, separator string) (Document, error) {
-	var raw interface{}
-	err := json.Unmarshal(data, &raw)
-
-	logger.Errorf("RAW: %#v", raw)
-
+	var root interface{}
+	err := json.Unmarshal(data, &root)
 	if err != nil {
 		return nil, errors.Annotate(err, ErrUnmarshalling, errorMessages)
 	}
 	return &document{
 		separator: separator,
-		root:      rawToNoder(raw),
+		root:      root,
 	}, nil
 }
 
@@ -93,15 +91,18 @@ func NewDocument(separator string) Document {
 
 // Length implements Document.
 func (d *document) Length(path string) int {
-	nr, ok := d.noderAt(path)
-	if !ok {
-		// Noder not found.
+	n, err := valueAt(d.root, splitPath(path, d.separator))
+	if err != nil {
 		return -1
 	}
-	// Check if node or value.
-	n, ok := nr.isNode()
+	// Check if object or array.
+	o, ok := isObject(n)
 	if ok {
-		return len(n)
+		return len(o)
+	}
+	a, ok := isArray(n)
+	if ok {
+		return len(a)
 	}
 	return 1
 }
@@ -113,8 +114,8 @@ func (d *document) SetValueAt(path string, value interface{}) error {
 
 // ValueAt implements Document.
 func (d *document) ValueAt(path string) Value {
-	raw, ok := d.valueAt(path)
-	return &value{raw, ok && raw != nil}
+	n, err := valueAt(d.root, splitPath(path, d.separator))
+	return &value{n, err == nil}
 }
 
 // Clear implements Document.
@@ -139,92 +140,28 @@ func (d *document) Query(pattern string) (PathValues, error) {
 
 // Process implements Document.
 func (d *document) Process(processor ValueProcessor) error {
-	return d.root.process([]string{}, d.separator, processor)
+	return process(d.root, []string{}, d.separator, processor)
 }
 
 // MarshalJSON implements json.Marshaler.
 func (d *document) MarshalJSON() ([]byte, error) {
-	raw := noderToRaw(d.root)
-	return json.Marshal(raw)
+	return json.Marshal(d.root)
 }
 
 // setValueAt sets a value at a given path. If needed it's created.
 func (d *document) setValueAt(path string, value interface{}) error {
-	nr, err := d.ensureNoderAt(path)
-	if err != nil {
-		return errors.Annotate(err, ErrSetting, errorMessages, path)
-	}
-	err = nr.setValue(value)
-	if err != nil {
-		return errors.Annotate(err, ErrSetting, errorMessages, path)
-	}
-	return nil
+	parts := strings.Split(path, d.separator)
+	return setValueAt(d.root, value, parts)
 }
 
 // valueAt retrieves the data at a given path.
 func (d *document) valueAt(path string) (interface{}, bool) {
-	nr, ok := d.noderAt(path)
-	if !ok {
-		// Noder not found.
+	parts := strings.Split(path, d.separator)
+	n, err := valueAt(d.root, parts)
+	if err != nil {
 		return nil, false
 	}
-	_, ok = nr.isNode()
-	if ok {
-		// We need a value.
-		return nil, false
-	}
-	// Found our value.
-	return nr.value(), true
-}
-
-// ensureNoderAt ensures and returns a noder at a given path.
-func (d *document) ensureNoderAt(path string) (noder, error) {
-	parts := stringex.SplitMap(path, d.separator, func(p string) (string, bool) {
-		if p == "" {
-			return "", false
-		}
-		return p, true
-	})
-	// Check if data has been initialized.
-	if d.root == nil {
-		if len(parts) == 0 {
-			d.root = &leaf{}
-		} else {
-			d.root = node{}
-		}
-	}
-	// Now let the root handle the parts.
-	return d.root.ensureNoderAt(parts...)
-}
-
-// noderAt retrieves the noder at a given path.
-func (d *document) noderAt(path string) (noder, bool) {
-	if d.root == nil {
-		// No data yet.
-		return nil, false
-	}
-	parts := stringex.SplitMap(path, d.separator, func(p string) (string, bool) {
-		if p == "" {
-			return "", false
-		}
-		return p, true
-	})
-	if len(parts) == 0 {
-		// Root is all we need.
-		return d.root, true
-	}
-	n, ok := d.root.isNode()
-	if !ok {
-		// No node, but path needs it.
-		return nil, false
-	}
-	nr, ok := n.at(parts)
-	if !ok {
-		// Not found.
-		return nil, false
-	}
-	// Found noder.
-	return nr, true
+	return n, true
 }
 
 // EOF

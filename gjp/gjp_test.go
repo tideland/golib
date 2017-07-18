@@ -353,11 +353,11 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 		A: "Level One",
 		B: []*levelTwo{
 			&levelTwo{
-				A: "Level Two - A",
+				A: "Level Two - 0",
 				B: 100,
 				C: true,
 				D: &levelThree{
-					A: "Level Three",
+					A: "Level Three - 0",
 					B: 10.1,
 				},
 				S: []string{
@@ -369,11 +369,11 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 				},
 			},
 			&levelTwo{
-				A: "Level Two - B",
+				A: "Level Two - 1",
 				B: 200,
 				C: false,
 				D: &levelThree{
-					A: "Level Three",
+					A: "Level Three - 1",
 					B: 20.2,
 				},
 				S: []string{
@@ -383,11 +383,11 @@ func createDocument(assert audit.Assertion) ([]byte, *levelOne) {
 				},
 			},
 			&levelTwo{
-				A: "Level Two - C",
+				A: "Level Two - 2",
 				B: 300,
 				C: true,
 				D: &levelThree{
-					A: "Level Three",
+					A: "Level Three - 2",
 					B: 30.3,
 				},
 			},

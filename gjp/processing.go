@@ -15,42 +15,62 @@ import (
 	"strconv"
 
 	"github.com/tideland/golib/errors"
+	"github.com/tideland/golib/stringex"
 )
 
 //--------------------
 // PROCESSING FUNCTIONS
 //--------------------
 
+// splitPath splits and cleans the path into parts.
+func splitPath(path, separator string) []string {
+	return stringex.SplitFilter(path, separator, func(part string) bool {
+		return part != ""
+	})
+}
+
+// isValue checks if the raw is a value and returns it
+// type-safe. Otherwise nil and false are returned.
+func isValue(raw interface{}) (interface{}, bool) {
+	v, ok := raw.(interface{})
+	return v, ok
+}
+
 // isObject checks if the raw is an object and returns it
 // type-safe. Otherwise nil and false are returned.
 func isObject(raw interface{}) (map[string]interface{}, bool) {
-	return raw.(map[string]interface{})
+	o, ok := raw.(map[string]interface{})
+	return o, ok
 }
 
 // isArray checks if the raw is an array and returns it
 // type-safe. Otherwise nil and false are returned.
 func isArray(raw interface{}) ([]interface{}, bool) {
-	return nil, raw.([]interface{})
+	a, ok := raw.([]interface{})
+	return a, ok
 }
 
 // valueAt returns the value at the path parts.
-func valueAt(raw interface{}, parts ...string) (interface{}, error) {
+func valueAt(node interface{}, parts []string) (interface{}, error) {
 	length := len(parts)
 	if length == 0 {
 		// End of the parts.
-		return raw, nil
+		return node, nil
 	}
-	// Further access depends on type.
+	// Further access depends on part content and type.
 	part := parts[0]
-	if o, ok := isObject(raw); ok {
+	if part == "" {
+		return node, nil
+	}
+	if o, ok := isObject(node); ok {
 		// JSON object.
 		field, ok := o[part]
 		if !ok {
-			return nil, errors.Annotate(err, ErrInvalidPart, errorMessages, part)
+			return nil, errors.New(ErrInvalidPart, errorMessages, part)
 		}
 		return valueAt(field, parts[1:])
 	}
-	if a, ok := isArray(value); ok {
+	if a, ok := isArray(node); ok {
 		// JSON array.
 		index, err := strconv.Atoi(part)
 		if err != nil || index >= len(a) {
@@ -63,40 +83,55 @@ func valueAt(raw interface{}, parts ...string) (interface{}, error) {
 }
 
 // setValueAt sets the value at the path parts.
-func setValueAt(raw, value interface{}, parts ...string) (interface{}, error) {
-	parent := raw
-	ht := func(ps []string) (string, []string) {
-		switch len(ps) {
-		case 0:
-			return "", []string{}
-		case 1:
-			return ps[0], []string{}
-		default:
-			return ps[0], ps[1:]
-		}
+func setValueAt(root, value interface{}, parts []string) error {
+	h, t := ht(parts)
+	return setNodeValueAt(root, nil, value, h, t)
+}
+
+// ht retrieves head and tail from parts.
+func ht(parts []string) (string, []string) {
+	switch len(parts) {
+	case 0:
+		return "", []string{}
+	case 1:
+		return parts[0], []string{}
+	default:
+		return parts[0], parts[1:]
 	}
-	set := func(node interface{}, head string, tail []string) error {
-		if head == "" {
-			// End of the game.
+}
+
+// setNodeValueAt is used recursively by setValueAt().
+func setNodeValueAt(node, parent, value interface{}, head string, tail []string) error {
+	if head == "" {
+		// End of the game.
+		return errors.New(ErrInvalidPath, errorMessages)
+	}
+	if o, ok := isObject(node); ok {
+		// JSON object.
+		_, ok := isValue(o[head])
+		if len(tail) == 0 && ok {
+			o[head] = value
 			return nil
 		}
-		if o, ok := isObject(node); ok {
-			// JSON object.
-			if len(tail) == 0 {
-				o[head] = value
-				return nil
-			}
-			h, t := ht(tail)
-			return set(o[head], h, t)
-		}
-		if a, ok := isArray(node); ok {
-			// JSON array.
-			npart, err := strconv.Atoi(part)
-			if err != nil {
-				return errors.Annotate(err, ErrInvalidPart, errorMessages, part)
-			}
-		}
+		h, t := ht(tail)
+		return setNodeValueAt(o[head], o, value, h, t)
 	}
+	if a, ok := isArray(node); ok {
+		// JSON array.
+		index, err := strconv.Atoi(head)
+		// TODO Mue 2017-07-18 Mue Extend array if too small.
+		if err != nil || index >= len(a) {
+			return errors.New(ErrInvalidPart, errorMessages, head)
+		}
+		_, ok := isValue(a[index])
+		if len(tail) == 0 && ok {
+			a[index] = value
+			return nil
+		}
+		h, t := ht(tail)
+		return setNodeValueAt(a[index], a, value, h, t)
+	}
+	return errors.New(ErrInvalidPath, errorMessages)
 }
 
 // process processes one leaf or node.
