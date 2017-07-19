@@ -260,14 +260,19 @@ func TestBuilding(t *testing.T) {
 	// Positive cases.
 	doc = gjp.NewDocument("/")
 	err = doc.SetValueAt("/a/b/x", 1)
+	assert.Logf("ABX: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/b/y", true)
+	assert.Logf("ABY: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/c", "quick brown fox")
+	assert.Logf("AC: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/d/0/z", 47.11)
+	assert.Logf("AD0C: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/d/1/z", nil)
+	assert.Logf("AD1C: %v", doc)
 	assert.Nil(err)
 
 	iv := doc.ValueAt("a/b/x").AsInt(0)
@@ -287,6 +292,7 @@ func TestBuilding(t *testing.T) {
 
 	// Now provoke errors.
 	err = doc.SetValueAt("a", "stupid")
+	assert.Logf("A STUPID: %v", doc)
 	assert.Logf("test error 1: %v", err)
 	assert.ErrorMatch(err, ".*corrupt.*")
 	err = doc.SetValueAt("a/b/x/y", "stupid")

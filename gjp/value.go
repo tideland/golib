@@ -51,7 +51,7 @@ type value struct {
 
 // IsUndefined implements Value.
 func (v *value) IsUndefined() bool {
-	return !v.ok
+	return v.raw == nil || !v.ok
 }
 
 // AsString implements Value.

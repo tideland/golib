@@ -26,14 +26,16 @@ const (
 	ErrInvalidPart
 	ErrInvalidPath
 	ErrPathTooLong
+	ErrProcessing
 )
 
 var errorMessages = errors.Messages{
 	ErrUnmarshalling:   "cannot unmarshal document",
 	ErrInvalidDocument: "invalid %s document, no internal implementation",
 	ErrInvalidPart:     "invalid part '%s' of the path",
-	ErrInvalidPath:     "invalid path",
+	ErrInvalidPath:     "invalid path '%s'",
 	ErrPathTooLong:     "path is too long",
+	ErrProcessing:      "cannot process path '%s'",
 }
 
 // EOF

@@ -14,8 +14,6 @@ package gjp
 import (
 	"encoding/json"
 
-	"strings"
-
 	"github.com/tideland/golib/errors"
 	"github.com/tideland/golib/stringex"
 )
@@ -109,7 +107,13 @@ func (d *document) Length(path string) int {
 
 // SetValueAt implements Document.
 func (d *document) SetValueAt(path string, value interface{}) error {
-	return d.setValueAt(path, value)
+	parts := splitPath(path, d.separator)
+	root, err := setValueAt(d.root, value, parts)
+	if err != nil {
+		return err
+	}
+	d.root = root
+	return nil
 }
 
 // ValueAt implements Document.
@@ -146,22 +150,6 @@ func (d *document) Process(processor ValueProcessor) error {
 // MarshalJSON implements json.Marshaler.
 func (d *document) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.root)
-}
-
-// setValueAt sets a value at a given path. If needed it's created.
-func (d *document) setValueAt(path string, value interface{}) error {
-	parts := strings.Split(path, d.separator)
-	return setValueAt(d.root, value, parts)
-}
-
-// valueAt retrieves the data at a given path.
-func (d *document) valueAt(path string) (interface{}, bool) {
-	parts := strings.Split(path, d.separator)
-	n, err := valueAt(d.root, parts)
-	if err != nil {
-		return nil, false
-	}
-	return n, true
 }
 
 // EOF
