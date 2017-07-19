@@ -34,6 +34,9 @@ func splitPath(path, separator string) []string {
 // isValue checks if the raw is a value and returns it
 // type-safe. Otherwise nil and false are returned.
 func isValue(raw interface{}) (interface{}, bool) {
+    if raw == nil {
+        return raw, true
+    }
 	_, ook := isObject(raw)
 	_, aok := isArray(raw)
 	if ook || aok {
@@ -63,26 +66,26 @@ func valueAt(node interface{}, parts []string) (interface{}, error) {
 		// End of the parts.
 		return node, nil
 	}
-	// Further access depends on part content and type.
-	part := parts[0]
-	if part == "" {
+	// Further access depends on part content node and type.
+	head, tail := ht(parts)
+	if head == "" {
 		return node, nil
 	}
 	if o, ok := isObject(node); ok {
 		// JSON object.
-		field, ok := o[part]
+		field, ok := o[head]
 		if !ok {
-			return nil, errors.New(ErrInvalidPart, errorMessages, part)
+			return nil, errors.New(ErrInvalidPart, errorMessages, head)
 		}
-		return valueAt(field, parts[1:])
+		return valueAt(field, tail)
 	}
 	if a, ok := isArray(node); ok {
 		// JSON array.
-		index, err := strconv.Atoi(part)
+		index, err := strconv.Atoi(head)
 		if err != nil || index >= len(a) {
-			return nil, errors.Annotate(err, ErrInvalidPart, errorMessages, part)
+			return nil, errors.Annotate(err, ErrInvalidPart, errorMessages, head)
 		}
-		return valueAt(a[index], parts[1:])
+		return valueAt(a[index], tail)
 	}
 	// Parts left but field value.
 	return nil, errors.New(ErrPathTooLong, errorMessages)
