@@ -1,5 +1,9 @@
 # Tideland Go Library
 
+## 2017-07-20
+
+- Fixed GJP handling of empty objects and arrays
+
 ## 2017-07-13
 
 - Renamed the generic JSON parser to generic JSON processor
