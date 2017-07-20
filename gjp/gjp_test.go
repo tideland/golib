@@ -13,6 +13,7 @@ package gjp_test
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -23,6 +24,30 @@ import (
 //--------------------
 // TESTS
 //--------------------
+
+// TestParseError tests the returned error in case of
+// an invalid document.
+func TestParseError(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs := []byte(`abc{def`)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(doc)
+	assert.ErrorMatch(err, `.*cannot unmarshal document.*`)
+}
+
+// TestClear tests to clear a document.
+func TestClear(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	bs, _ := createDocument(assert)
+
+	doc, err := gjp.Parse(bs, "/")
+	assert.Nil(err)
+	doc.Clear()
+	doc.SetValueAt("/", "foo")
+	foo := doc.ValueAt("/").AsString("<undefined>")
+	assert.Equal(foo, "foo")
+}
 
 // TestLength tests retrieving values as strings.
 func TestLength(t *testing.T) {
@@ -54,7 +79,7 @@ func TestProcessing(t *testing.T) {
 	count := 0
 	processor := func(path string, value gjp.Value) error {
 		count++
-		assert.Logf("path %d  =>  %q = %q", count, path, value.AsString("<undefined>"))
+		assert.Logf("path %02d  =>  %-10q = %q", count, path, value.AsString("<undefined>"))
 		return nil
 	}
 
@@ -63,6 +88,12 @@ func TestProcessing(t *testing.T) {
 	err = doc.Process(processor)
 	assert.Nil(err)
 	assert.Equal(count, 27)
+
+	processor = func(path string, value gjp.Value) error {
+		return errors.New("ouch")
+	}
+	err = doc.Process(processor)
+	assert.ErrorMatch(err, `.*ouch.*`)
 }
 
 // TestSeparator tests using different separators.
@@ -102,12 +133,19 @@ func TestCompare(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
 	first, _ := createDocument(assert)
 	second := createCompareDocument(assert)
+	firstDoc, err := gjp.Parse(first, "/")
+	assert.Nil(err)
+	secondDoc, err := gjp.Parse(second, "/")
+	assert.Nil(err)
 
 	diff, err := gjp.Compare(first, first, "/")
 	assert.Nil(err)
 	assert.Length(diff.Differences(), 0)
 
 	diff, err = gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 12)
+	diff, err = gjp.CompareDocuments(firstDoc, secondDoc, "/")
 	assert.Nil(err)
 	assert.Length(diff.Differences(), 12)
 
@@ -117,6 +155,14 @@ func TestCompare(t *testing.T) {
 		svs := sv.AsString("<second undefined>")
 		assert.Different(fvs, svs, path)
 	}
+
+	first, err = diff.FirstDocument().MarshalJSON()
+	assert.Nil(err)
+	second, err = diff.SecondDocument().MarshalJSON()
+	assert.Nil(err)
+	diff, err = gjp.Compare(first, second, ":")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 12)
 
 	// Special case of empty arrays, objects, and null.
 	first = []byte(`{}`)
@@ -132,10 +178,20 @@ func TestCompare(t *testing.T) {
 	assert.Nil(err)
 	assert.Length(diff.Differences(), 4)
 
+	first = []byte(`[]`)
+	diff, err = gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 4)
+
 	first = []byte(`["A", "B", "C"]`)
 	diff, err = gjp.Compare(first, second, "/")
 	assert.Nil(err)
-	assert.Length(diff.Differences(), 7)
+	assert.Length(diff.Differences(), 6)
+
+	first = []byte(`"foo"`)
+	diff, err = gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 4)
 }
 
 // TestString tests retrieving values as strings.
