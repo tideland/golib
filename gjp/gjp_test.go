@@ -113,12 +113,12 @@ func TestCompare(t *testing.T) {
 
 	for _, path := range diff.Differences() {
 		fv, sv := diff.DifferenceAt(path)
-		fvs := fv.AsString("<undefined>")
-		svs := sv.AsString("<undefined>")
+		fvs := fv.AsString("<first undefined>")
+		svs := sv.AsString("<second undefined>")
 		assert.Different(fvs, svs, path)
 	}
 
-	// Special case of empty lists.
+	// Special case of empty arrays, objects, and null.
 	first = []byte(`{}`)
 	second = []byte(`{"a":[],"b":{},"c":null}`)
 
@@ -130,7 +130,12 @@ func TestCompare(t *testing.T) {
 
 	diff, err = gjp.Compare(first, second, "/")
 	assert.Nil(err)
-	assert.Length(diff.Differences(), 3)
+	assert.Length(diff.Differences(), 4)
+
+	first = []byte(`["A", "B", "C"]`)
+	diff, err = gjp.Compare(first, second, "/")
+	assert.Nil(err)
+	assert.Length(diff.Differences(), 7)
 }
 
 // TestString tests retrieving values as strings.
@@ -220,16 +225,16 @@ func TestQuery(t *testing.T) {
 	pvs, err = doc.Query("*")
 	assert.Nil(err)
 	assert.Length(pvs, 27)
-	pvs, err = doc.Query("A")
+	pvs, err = doc.Query("/A")
 	assert.Nil(err)
 	assert.Length(pvs, 1)
-	pvs, err = doc.Query("B/*")
+	pvs, err = doc.Query("/B/*")
 	assert.Nil(err)
 	assert.Length(pvs, 24)
-	pvs, err = doc.Query("B/[01]/*")
+	pvs, err = doc.Query("/B/[01]/*")
 	assert.Nil(err)
 	assert.Length(pvs, 18)
-	pvs, err = doc.Query("B/[01]/*A")
+	pvs, err = doc.Query("/B/[01]/*A")
 	assert.Nil(err)
 	assert.Length(pvs, 4)
 	pvs, err = doc.Query("*/S/*")
@@ -239,9 +244,9 @@ func TestQuery(t *testing.T) {
 	assert.Nil(err)
 	assert.Length(pvs, 1)
 
-	pvs, err = doc.Query("A")
+	pvs, err = doc.Query("/A")
 	assert.Nil(err)
-	assert.Equal(pvs[0].Path, "A")
+	assert.Equal(pvs[0].Path, "/A")
 	assert.Equal(pvs[0].Value.AsString(""), "Level One")
 }
 
@@ -260,19 +265,14 @@ func TestBuilding(t *testing.T) {
 	// Positive cases.
 	doc = gjp.NewDocument("/")
 	err = doc.SetValueAt("/a/b/x", 1)
-	assert.Logf("ABX: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/b/y", true)
-	assert.Logf("ABY: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/c", "quick brown fox")
-	assert.Logf("AC: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/d/0/z", 47.11)
-	assert.Logf("AD0C: %v", doc)
 	assert.Nil(err)
 	err = doc.SetValueAt("/a/d/1/z", nil)
-	assert.Logf("AD1C: %v", doc)
 	assert.Nil(err)
 
 	iv := doc.ValueAt("a/b/x").AsInt(0)
@@ -292,12 +292,9 @@ func TestBuilding(t *testing.T) {
 
 	// Now provoke errors.
 	err = doc.SetValueAt("a", "stupid")
-	assert.Logf("A STUPID: %v", doc)
-	assert.Logf("test error 1: %v", err)
 	assert.ErrorMatch(err, ".*corrupt.*")
 	err = doc.SetValueAt("a/b/x/y", "stupid")
-	assert.Logf("test error 2: %v", err)
-	assert.ErrorMatch(err, ".*leaf to node.*")
+	assert.ErrorMatch(err, ".*corrupt.*")
 
 	// Legally change values.
 	err = doc.SetValueAt("/a/b/x", 2)
@@ -411,11 +408,11 @@ func createCompareDocument(assert audit.Assertion) []byte {
 		A: "Level One",
 		B: []*levelTwo{
 			&levelTwo{
-				A: "Level Two - A",
+				A: "Level Two - 0",
 				B: 100,
 				C: true,
 				D: &levelThree{
-					A: "Level Three",
+					A: "Level Three - 0",
 					B: 10.1,
 				},
 				S: []string{
@@ -427,11 +424,11 @@ func createCompareDocument(assert audit.Assertion) []byte {
 				},
 			},
 			&levelTwo{
-				A: "Level Two - B",
+				A: "Level Two - 1",
 				B: 300,
 				C: false,
 				D: &levelThree{
-					A: "Level Three",
+					A: "Level Three - 1",
 					B: 99.9,
 				},
 				S: []string{

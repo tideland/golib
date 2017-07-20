@@ -11,9 +11,7 @@ package gjp
 // IMPORTS
 //--------------------
 
-import (
-	"github.com/tideland/golib/errors"
-)
+import "github.com/tideland/golib/errors"
 
 //--------------------
 // DIFFERENCE

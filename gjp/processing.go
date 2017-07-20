@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/tideland/golib/errors"
-	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/stringex"
 )
 
@@ -34,9 +33,9 @@ func splitPath(path, separator string) []string {
 // isValue checks if the raw is a value and returns it
 // type-safe. Otherwise nil and false are returned.
 func isValue(raw interface{}) (interface{}, bool) {
-    if raw == nil {
-        return raw, true
-    }
+	if raw == nil {
+		return raw, true
+	}
 	_, ook := isObject(raw)
 	_, aok := isArray(raw)
 	if ook || aok {
@@ -119,18 +118,21 @@ func setNodeValueAt(node, value interface{}, head string, tail []string) (interf
 	if o, ok := isObject(node); ok {
 		// JSON object.
 		_, ok := isValue(o[head])
-		logger.Infof("HEAD %q OK %v OHEAD %v", head, ok, o[head])
-		if len(tail) == 0 && ok {
-			logger.Infof("OHEAD %v VALUE %v", o[head], value)
+		switch {
+		case !ok && len(tail) == 0:
+			return nil, errors.New(ErrCorruptingDocument, errorMessages)
+		case ok && o[head] != nil && len(tail) > 0:
+			return nil, errors.New(ErrCorruptingDocument, errorMessages)
+		case ok && len(tail) == 0:
 			o[head] = value
-			return o[head], nil
+		default:
+			h, t := ht(tail)
+			subnode, err := setNodeValueAt(o[head], value, h, t)
+			if err != nil {
+				return nil, err
+			}
+			o[head] = subnode
 		}
-		h, t := ht(tail)
-		subnode, err := setNodeValueAt(o[head], value, h, t)
-		if err != nil {
-			return nil, err
-		}
-		o[head] = subnode
 		return o, nil
 	}
 	if a, ok := isArray(node); ok {
@@ -141,16 +143,21 @@ func setNodeValueAt(node, value interface{}, head string, tail []string) (interf
 		}
 		a = ensureArray(a, index+1)
 		_, ok := isValue(a[index])
-		if len(tail) == 0 && ok {
+		switch {
+		case !ok && len(tail) == 0:
+			return nil, errors.New(ErrCorruptingDocument, errorMessages)
+		case ok && a[index] != nil && len(tail) > 0:
+			return nil, errors.New(ErrCorruptingDocument, errorMessages)
+		case ok && len(tail) == 0:
 			a[index] = value
-			return a[index], nil
+		default:
+			h, t := ht(tail)
+			subnode, err := setNodeValueAt(a[index], value, h, t)
+			if err != nil {
+				return nil, err
+			}
+			a[index] = subnode
 		}
-		h, t := ht(tail)
-		subnode, err := setNodeValueAt(a[index], value, h, t)
-		if err != nil {
-			return nil, err
-		}
-		a[index] = subnode
 		return a, nil
 	}
 	return nil, errors.New(ErrInvalidPath, errorMessages, head)
@@ -205,29 +212,43 @@ func ensureArray(a []interface{}, l int) []interface{} {
 
 // process processes node recursively.
 func process(node interface{}, parts []string, separator string, processor ValueProcessor) error {
+	mkerr := func(err error, ps []string) error {
+		return errors.Annotate(err, ErrProcessing, errorMessages, pathify(ps, separator))
+	}
 	// First check objects and arrays.
 	if o, ok := isObject(node); ok {
+		if len(o) == 0 {
+			// Empty object.
+			return processor(pathify(parts, separator), &value{o, nil})
+		}
 		for field, subnode := range o {
 			fieldparts := append(parts, field)
 			if err := process(subnode, fieldparts, separator, processor); err != nil {
-				path := strings.Join(fieldparts, separator)
-				return errors.Annotate(err, ErrProcessing, errorMessages, path)
+				return mkerr(err, parts)
 			}
 		}
 		return nil
 	}
 	if a, ok := isArray(node); ok {
+		if len(a) == 0 {
+			// Empty array.
+			return processor(pathify(parts, separator), &value{a, nil})
+		}
 		for index, subnode := range a {
 			indexparts := append(parts, strconv.Itoa(index))
 			if err := process(subnode, indexparts, separator, processor); err != nil {
-				path := strings.Join(indexparts, separator)
-				return errors.Annotate(err, ErrProcessing, errorMessages, path)
+				return mkerr(err, parts)
 			}
 		}
 		return nil
 	}
 	// Reached a value at the end.
-	return processor(strings.Join(parts, separator), &value{node, true})
+	return processor(pathify(parts, separator), &value{node, nil})
+}
+
+// pathify creates a path out of parts and separator.
+func pathify(parts []string, separator string) string {
+	return separator + strings.Join(parts, separator)
 }
 
 // EOF

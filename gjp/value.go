@@ -13,6 +13,7 @@ package gjp
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 )
 
@@ -24,7 +25,7 @@ import (
 type Value interface {
 	fmt.Stringer
 
-	// IsUndefined returns if this value is undefined.
+	// IsUndefined returns true if this value is undefined.
 	IsUndefined() bool
 
 	// AsString returns the value as string.
@@ -46,12 +47,12 @@ type Value interface {
 // value implements Value.
 type value struct {
 	raw interface{}
-	ok  bool
+	err error
 }
 
 // IsUndefined implements Value.
 func (v *value) IsUndefined() bool {
-	return v.raw == nil || !v.ok
+	return v.raw == nil
 }
 
 // AsString implements Value.
@@ -150,13 +151,15 @@ func (v *value) Equals(to Value) bool {
 	if !ok {
 		return false
 	}
-	if v.ok != vto.ok {
-		return false
+	if vv, ok := isValue(v.raw); ok {
+		if vtov, ok := isValue(vto.raw); ok {
+			return vv == vtov
+		}
 	}
-	return v.raw == vto.raw
+	return reflect.DeepEqual(v.raw, vto.raw)
 }
 
-// STring implements fmt.Stringer.
+// String implements fmt.Stringer.
 func (v *value) String() string {
 	if v.IsUndefined() {
 		return "null"

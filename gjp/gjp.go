@@ -119,7 +119,7 @@ func (d *document) SetValueAt(path string, value interface{}) error {
 // ValueAt implements Document.
 func (d *document) ValueAt(path string) Value {
 	n, err := valueAt(d.root, splitPath(path, d.separator))
-	return &value{n, err == nil}
+	return &value{n, err}
 }
 
 // Clear implements Document.

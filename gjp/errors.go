@@ -23,6 +23,7 @@ import (
 const (
 	ErrUnmarshalling = iota + 1
 	ErrInvalidDocument
+	ErrCorruptingDocument
 	ErrInvalidPart
 	ErrInvalidPath
 	ErrPathTooLong
@@ -30,12 +31,13 @@ const (
 )
 
 var errorMessages = errors.Messages{
-	ErrUnmarshalling:   "cannot unmarshal document",
-	ErrInvalidDocument: "invalid %s document, no internal implementation",
-	ErrInvalidPart:     "invalid part '%s' of the path",
-	ErrInvalidPath:     "invalid path '%s'",
-	ErrPathTooLong:     "path is too long",
-	ErrProcessing:      "cannot process path '%s'",
+	ErrUnmarshalling:      "cannot unmarshal document",
+	ErrInvalidDocument:    "invalid %s document, no internal implementation",
+	ErrCorruptingDocument: "setting value would corrupt document",
+	ErrInvalidPart:        "invalid part '%s' of the path",
+	ErrInvalidPath:        "invalid path '%s'",
+	ErrPathTooLong:        "path is too long",
+	ErrProcessing:         "cannot process path '%s'",
 }
 
 // EOF
