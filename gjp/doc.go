@@ -16,7 +16,7 @@
 //         ...
 //     }
 //     name := doc.ValueAt("name").AsString("")
-//     street := doc.ValueAAt("address/street").AsString("unknown")
+//     street := doc.ValueAt("address/street").AsString("unknown")
 //
 // The value passed to AsString() and the others are default values if
 // there's none at the path. Another way is to create an empty document
