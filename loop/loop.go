@@ -219,7 +219,7 @@ func goLoop(lf LoopFunc, rf RecoverFunc, o Observable, s *sentinel, d string) *l
 		l.owner = l
 	}
 	// Start the loop.
-	logger.Infof("loop %q starts", l)
+	l.logf(false, "loop %q starts", l)
 	go l.run()
 	<-l.startedC
 	return l
@@ -264,7 +264,7 @@ func (l *loop) Restart() error {
 	l.stopC = make(chan struct{})
 	l.doneC = make(chan struct{})
 	// Restart the goroutine.
-	logger.Infof("loop %q restarts", l)
+	l.logf(false, "loop %q restarts", l)
 	go l.run()
 	<-l.startedC
 	return nil
@@ -366,7 +366,7 @@ func (l *loop) checkTermination(reason interface{}) {
 		if l.err != nil {
 			l.status = Stopping
 		} else {
-			logger.Infof("loop %q recovered", l)
+			l.logf(false, "loop %q recovered", l)
 		}
 	}
 }
@@ -399,9 +399,21 @@ func (l *loop) finalizeTermination() {
 		}
 	}
 	if l.err != nil {
-		logger.Errorf("loop %q stopped with error: %v", l, l.err)
+		l.logf(true, "loop %q stopped with error: %v", l, l.err)
 	} else {
-		logger.Infof("loop %q stopped", l)
+		l.logf(false, "loop %q stopped", l)
+	}
+}
+
+// log writes information or error only if the loop has a description.
+func (l *loop) logf(isError bool, format string, a ...interface{}) {
+	if l.descr == "" {
+		return
+	}
+	if isError {
+		logger.Errorf(format, a...)
+	} else {
+		logger.Infof(format, a...)
 	}
 }
 
