@@ -67,24 +67,25 @@ type FilterFunc func(level LogLevel, info, msg string) bool
 
 // Log control variables.
 var (
-	logMutex       sync.RWMutex
+	logMux         sync.RWMutex
 	logLevel       LogLevel        = LevelInfo
+	logBackend     Logger          = NewStandardLogger(os.Stdout)
 	logFatalExiter FatalExiterFunc = OsFatalExiter
 	logFilter      FilterFunc
 )
 
 // Level returns the current log level.
 func Level() LogLevel {
-	logMutex.Lock()
-	defer logMutex.Unlock()
+	logMux.Lock()
+	defer logMux.Unlock()
 	return logLevel
 }
 
 // SetLevel switches to a new log level and returns
 // the current one.
 func SetLevel(level LogLevel) LogLevel {
-	logMutex.Lock()
-	defer logMutex.Unlock()
+	logMux.Lock()
+	defer logMux.Unlock()
 	current := logLevel
 	switch {
 	case level <= LevelDebug:
@@ -103,8 +104,8 @@ func SetLevel(level LogLevel) LogLevel {
 // be set to lower-case. The function is intended to be used
 // when then log level is read out of a configuration.
 func SetLevelString(levelstr string) LogLevel {
-	logMutex.Lock()
-	defer logMutex.Unlock()
+	logMux.Lock()
+	defer logMux.Unlock()
 	current := logLevel
 	switch strings.ToLower(levelstr) {
 	case "debug":
@@ -123,11 +124,18 @@ func SetLevelString(levelstr string) LogLevel {
 	return current
 }
 
+// SetLogger sets a new logger.
+func SetLogger(l Logger) {
+	logMux.Lock()
+	defer logMux.Unlock()
+	logBackend = l
+}
+
 // SetFatalExiter sets the fatal exiter function and
 // returns the current one.
 func SetFatalExiter(fef FatalExiterFunc) FatalExiterFunc {
-	logMutex.Lock()
-	defer logMutex.Unlock()
+	logMux.Lock()
+	defer logMux.Unlock()
 	current := logFatalExiter
 	logFatalExiter = fef
 	return current
@@ -136,8 +144,8 @@ func SetFatalExiter(fef FatalExiterFunc) FatalExiterFunc {
 // SetFilter sets the global output filter and returns
 // the current one.
 func SetFilter(ff FilterFunc) FilterFunc {
-	logMutex.Lock()
-	defer logMutex.Unlock()
+	logMux.Lock()
+	defer logMux.Unlock()
 	current := logFilter
 	logFilter = ff
 	return current
@@ -146,8 +154,8 @@ func SetFilter(ff FilterFunc) FilterFunc {
 // UnsetFilter removes the global output folter and
 // returns the current one.
 func UnsetFilter() FilterFunc {
-	logMutex.Lock()
-	defer logMutex.Unlock()
+	logMux.Lock()
+	defer logMux.Unlock()
 	current := logFilter
 	logFilter = nil
 	return current
@@ -159,8 +167,8 @@ func UnsetFilter() FilterFunc {
 
 // Debugf logs a message at debug level.
 func Debugf(format string, args ...interface{}) {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	if logLevel <= LevelDebug {
 		info := retrieveCallInfo().verboseFormat()
 		msg := fmt.Sprintf(format, args...)
@@ -173,8 +181,8 @@ func Debugf(format string, args ...interface{}) {
 
 // Infof logs a message at info level.
 func Infof(format string, args ...interface{}) {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	if logLevel <= LevelInfo {
 		info := retrieveCallInfo().shortFormat()
 		msg := fmt.Sprintf(format, args...)
@@ -187,8 +195,8 @@ func Infof(format string, args ...interface{}) {
 
 // Warningf logs a message at warning level.
 func Warningf(format string, args ...interface{}) {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	if logLevel <= LevelWarning {
 		info := retrieveCallInfo().shortFormat()
 		msg := fmt.Sprintf(format, args...)
@@ -201,8 +209,8 @@ func Warningf(format string, args ...interface{}) {
 
 // Errorf logs a message at error level.
 func Errorf(format string, args ...interface{}) {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	if logLevel <= LevelError {
 		info := retrieveCallInfo().shortFormat()
 		msg := fmt.Sprintf(format, args...)
@@ -215,8 +223,8 @@ func Errorf(format string, args ...interface{}) {
 
 // Criticalf logs a message at critical level.
 func Criticalf(format string, args ...interface{}) {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	if logLevel <= LevelCritical {
 		info := retrieveCallInfo().verboseFormat()
 		msg := fmt.Sprintf(format, args...)
@@ -232,8 +240,8 @@ func Criticalf(format string, args ...interface{}) {
 // function, which by default means exiting the application
 // with error code -1.
 func Fatalf(format string, args ...interface{}) {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	info := retrieveCallInfo().verboseFormat()
 	msg := fmt.Sprintf(format, args...)
 
@@ -242,7 +250,7 @@ func Fatalf(format string, args ...interface{}) {
 }
 
 //--------------------
-// LOGGER
+// LOGGER INTERFACE
 //--------------------
 
 // Logger is the interface for different logger backends.
@@ -266,21 +274,17 @@ type Logger interface {
 	Fatal(info, msg string)
 }
 
-// logger references the used application logger.
-var logBackend Logger = NewStandardLogger(os.Stdout)
-
-// SetLogger sets a new logger.
-func SetLogger(l Logger) {
-	logBackend = l
-}
-
 // defaultTimeFormat controls how the timestamp of the standard
 // logger is printed by default.
 const defaultTimeFormat = "2006-01-02 15:04:05 Z07:00"
 
-// StandardLogger is a simple logger writing to the given writer. Beside
+//--------------------
+// STANDARD LOGGER
+//--------------------
+
+// standardLogger is a simple logger writing to the given writer. Beside
 // the output it doesn't handle the levels differently.
-type StandardLogger struct {
+type standardLogger struct {
 	mutex      sync.Mutex
 	out        io.Writer
 	timeFormat string
@@ -289,7 +293,7 @@ type StandardLogger struct {
 // NewTimeformatLogger creates a logger writing to the passed
 // output and with the time formatted with the passed time format.
 func NewTimeformatLogger(out io.Writer, timeFormat string) Logger {
-	return &StandardLogger{
+	return &standardLogger{
 		out:        out,
 		timeFormat: timeFormat,
 	}
@@ -301,38 +305,38 @@ func NewStandardLogger(out io.Writer) Logger {
 	return NewTimeformatLogger(out, defaultTimeFormat)
 }
 
-// Debug is specified on the Logger interface.
-func (sl *StandardLogger) Debug(info, msg string) {
+// Debug implements Logger.
+func (sl *standardLogger) Debug(info, msg string) {
 	sl.writeLog("DEBUG", info, msg)
 }
 
-// Info is specified on the Logger interface.
-func (sl *StandardLogger) Info(info, msg string) {
+// Info implements Logger.
+func (sl *standardLogger) Info(info, msg string) {
 	sl.writeLog("INFO", info, msg)
 }
 
-// Warning is specified on the Logger interface.
-func (sl *StandardLogger) Warning(info, msg string) {
+// Warning implements Logger.
+func (sl *standardLogger) Warning(info, msg string) {
 	sl.writeLog("WARNING", info, msg)
 }
 
-// Error is specified on the Logger interface.
-func (sl *StandardLogger) Error(info, msg string) {
+// Error implements Logger.
+func (sl *standardLogger) Error(info, msg string) {
 	sl.writeLog("ERROR", info, msg)
 }
 
-// Critical is specified on the Logger interface.
-func (sl *StandardLogger) Critical(info, msg string) {
+// Critical implements Logger.
+func (sl *standardLogger) Critical(info, msg string) {
 	sl.writeLog("CRITICAL", info, msg)
 }
 
-// Fatal is specified on the Logger interface.
-func (sl *StandardLogger) Fatal(info, msg string) {
+// Fatal implements Logger.
+func (sl *standardLogger) Fatal(info, msg string) {
 	sl.writeLog("FATAL", info, msg)
 }
 
-// writeLog writes the concrete log output.
-func (sl *StandardLogger) writeLog(level, info, msg string) {
+// writeLog writes the log output.
+func (sl *standardLogger) writeLog(level, info, msg string) {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
 
@@ -346,43 +350,103 @@ func (sl *StandardLogger) writeLog(level, info, msg string) {
 	io.WriteString(sl.out, "\n")
 }
 
-// GoLogger just uses the standard go log package.
-type GoLogger struct{}
+// goLogger just uses the standard go log package.
+type goLogger struct{}
 
 // NewGoLogger returns a logger implementation using the
 // Go log package.
 func NewGoLogger() Logger {
-	return &GoLogger{}
+	return &goLogger{}
 }
 
 // Debug is specified on the Logger interface.
-func (gl *GoLogger) Debug(info, msg string) {
+func (gl *goLogger) Debug(info, msg string) {
 	log.Println("[DEBUG]", info, msg)
 }
 
 // Info is specified on the Logger interface.
-func (gl *GoLogger) Info(info, msg string) {
+func (gl *goLogger) Info(info, msg string) {
 	log.Println("[INFO]", info, msg)
 }
 
 // Warning is specified on the Logger interface.
-func (gl *GoLogger) Warning(info, msg string) {
+func (gl *goLogger) Warning(info, msg string) {
 	log.Println("[WARNING]", info, msg)
 }
 
 // Error is specified on the Logger interface.
-func (gl *GoLogger) Error(info, msg string) {
+func (gl *goLogger) Error(info, msg string) {
 	log.Println("[ERROR]", info, msg)
 }
 
 // Critical is specified on the Logger interface.
-func (gl *GoLogger) Critical(info, msg string) {
+func (gl *goLogger) Critical(info, msg string) {
 	log.Println("[CRITICAL]", info, msg)
 }
 
 // Fatal is specified on the Logger interface.
-func (gl *GoLogger) Fatal(info, msg string) {
+func (gl *goLogger) Fatal(info, msg string) {
 	log.Println("[FATAL]", info, msg)
+}
+
+// testLogger simply collects logs to be evaluated inside of tests.
+type testLogger struct {
+	mux  sync.Mutex
+	logs []string
+}
+
+func NewTestLogger() (Logger, func() []string) {
+	tl := &testLogger{}
+	fetch := func() []string {
+		tl.mux.Lock()
+		defer tl.mux.Unlock()
+		logs := tl.logs
+		tl.logs = nil
+		return logs
+	}
+	return tl, fetch
+}
+
+// Debug implements Logger.
+func (tl *testLogger) Debug(info, msg string) {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.logs = append(tl.logs, "[DEBUG] "+info+" "+msg)
+}
+
+// Info implements Logger.
+func (tl *testLogger) Info(info, msg string) {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.logs = append(tl.logs, "[INFO] "+info+" "+msg)
+}
+
+// Warning implements Logger.
+func (tl *testLogger) Warning(info, msg string) {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.logs = append(tl.logs, "[WARNING] "+info+" "+msg)
+}
+
+// Error implements Logger.
+func (tl *testLogger) Error(info, msg string) {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.logs = append(tl.logs, "[ERROR] "+info+" "+msg)
+}
+
+// Critical implements Logger.
+func (tl *testLogger) Critical(info, msg string) {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.logs = append(tl.logs, "[CRITICAL] "+info+" "+msg)
+}
+
+// Fatal implements Logger.
+func (tl *testLogger) Fatal(info, msg string) {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.logs = append(tl.logs, "[FATAL] "+info+" "+msg)
 }
 
 //--------------------
@@ -436,8 +500,8 @@ func retrieveCallInfo() *callInfo {
 // shallLog is used inside the logging functions to check if
 // logging is wanted.
 func shallLog(level LogLevel, info, msg string) bool {
-	logMutex.RLock()
-	defer logMutex.RUnlock()
+	logMux.RLock()
+	defer logMux.RUnlock()
 	if logFilter == nil {
 		return true
 	}
