@@ -30,25 +30,26 @@ func TestGetSetLevel(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	ownLogger := &testLogger{}
-	logger.SetLogger(ownLogger)
+	tl, fetch := logger.NewTestLogger()
+	logger.SetLogger(tl)
+
 	logger.SetLevel(logger.LevelDebug)
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 5)
 
-	ownLogger = &testLogger{}
-	logger.SetLogger(ownLogger)
+	assert.Length(fetch(), 5)
+
 	logger.SetLevel(logger.LevelError)
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 2)
+
+	assert.Length(fetch(), 2)
 }
 
 // TestGetSetLevelString tests the setting of the
@@ -58,35 +59,35 @@ func TestGetSetLevelString(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	ownLogger := &testLogger{}
-	logger.SetLogger(ownLogger)
+	tl, fetch := logger.NewTestLogger()
+	logger.SetLogger(tl)
+
 	logger.SetLevelString("dEbUg")
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 5)
 
-	ownLogger = &testLogger{}
-	logger.SetLogger(ownLogger)
+	assert.Length(fetch(), 5)
+
 	logger.SetLevelString("error")
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 2)
 
-	ownLogger = &testLogger{}
-	logger.SetLogger(ownLogger)
+	assert.Length(fetch(), 2)
+
 	logger.SetLevelString("dont-know-what-you-mean")
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 2)
+
+	assert.Length(fetch(), 2)
 }
 
 // TestFiltering tests the filtering of the logging.
@@ -95,8 +96,9 @@ func TestFiltering(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	ownLogger := &testLogger{}
-	logger.SetLogger(ownLogger)
+	tl, fetch := logger.NewTestLogger()
+	logger.SetLogger(tl)
+
 	logger.SetLevel(logger.LevelDebug)
 	logger.SetFilter(func(level logger.LogLevel, info, msg string) bool {
 		return level >= logger.LevelWarning && level <= logger.LevelError
@@ -107,18 +109,18 @@ func TestFiltering(t *testing.T) {
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 3)
+
+	assert.Length(fetch(), 3)
 
 	logger.UnsetFilter()
 
-	ownLogger = &testLogger{}
-	logger.SetLogger(ownLogger)
 	logger.Debugf("Debug.")
 	logger.Infof("Info.")
 	logger.Warningf("Warning.")
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
-	assert.Length(ownLogger.logs, 5)
+
+	assert.Length(fetch(), 5)
 }
 
 // TestGoLogger tests logging with the go logger.
@@ -157,76 +159,26 @@ func TestSysLogger(t *testing.T) {
 	logger.Criticalf("Critical.")
 }
 
-// TestOwnLogger tests logging with an own logger.
-func TestOwnLogger(t *testing.T) {
-	assert := audit.NewTestingAssertion(t, true)
-	ownLogger := &testLogger{}
-	level := logger.Level()
-	defer logger.SetLevel(level)
-
-	logger.SetLevel(logger.LevelDebug)
-	logger.SetLogger(ownLogger)
-
-	logger.Debugf("Debug.")
-	logger.Infof("Info.")
-	logger.Warningf("Warning.")
-	logger.Errorf("Error.")
-	logger.Criticalf("Critical.")
-
-	assert.Length(ownLogger.logs, 5)
-}
-
 // TestFatalExit tests the call of the fatal exiter after a
 // fatal error log.
 func TestFatalExit(t *testing.T) {
 	assert := audit.NewTestingAssertion(t, true)
-	ownLogger := &testLogger{}
 	level := logger.Level()
 	defer logger.SetLevel(level)
+
+	tl, fetch := logger.NewTestLogger()
+	logger.SetLogger(tl)
 
 	exited := false
 	fatalExiter := func() {
 		exited = true
 	}
 
-	logger.SetLogger(ownLogger)
 	logger.SetFatalExiter(fatalExiter)
 
 	logger.Fatalf("fatal")
-	assert.Length(ownLogger.logs, 1)
+	assert.Length(fetch(), 1)
 	assert.True(exited)
-}
-
-//--------------------
-// LOGGER
-//--------------------
-
-type testLogger struct {
-	logs []string
-}
-
-func (tl *testLogger) Debug(info, msg string) {
-	tl.logs = append(tl.logs, "[DEBUG] "+info+" "+msg)
-}
-
-func (tl *testLogger) Info(info, msg string) {
-	tl.logs = append(tl.logs, "[INFO] "+info+" "+msg)
-}
-
-func (tl *testLogger) Warning(info, msg string) {
-	tl.logs = append(tl.logs, "[WARNING] "+info+" "+msg)
-}
-
-func (tl *testLogger) Error(info, msg string) {
-	tl.logs = append(tl.logs, "[ERROR] "+info+" "+msg)
-}
-
-func (tl *testLogger) Critical(info, msg string) {
-	tl.logs = append(tl.logs, "[CRITICAL] "+info+" "+msg)
-}
-
-func (tl *testLogger) Fatal(info, msg string) {
-	tl.logs = append(tl.logs, "[FATAL] "+info+" "+msg)
 }
 
 // EOF
