@@ -1,8 +1,14 @@
 # Tideland Go Library
 
+## 2017-09-09
+
+- Fixed a *GJP* documentation typo
+- Added a *TestLogger* to be used in unit tests
+- Changed *Loop* to not log anymore if no description is given
+
 ## 2017-07-20
 
-- Fixed GJP handling of empty objects and arrays
+- Fixed *GJP* handling of empty objects and arrays
 
 ## 2017-07-13
 
