@@ -13,10 +13,12 @@
 // name, and line number while logger.Fatalf() may end the program
 // depending on the set FatalExiterFunc.
 //
-// Multiple backend may be set. The StandardLogger writes to an
-// io.Writer (initially os.Stdout), the GoLogger uses the Go log
-// package, and the SysLogger uses the Go syslog package on the
-// according operating systems.
+// Different backends may be set. The standard logger writes to an
+// io.Writer (initially os.Stdout), the go logger uses the Go log
+// package, and the sys logger uses the Go syslog package on the
+// according operating systems. For testing the test logger exists.
+// When created also a fetch function is return. It returns the
+// logged strings which can be used inside of tests then.
 //
 // Changes to the standard behavior can be made with logger.SetLevel(),
 // logger.SetLogger(), and logger.SetFatalExiter(). Own logger

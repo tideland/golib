@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/tideland/golib/audit"
+	"github.com/tideland/golib/logger"
 	"github.com/tideland/golib/loop"
 )
 
@@ -24,9 +25,8 @@ import (
 // CONSTANTS
 //--------------------
 
-var (
-	timeout time.Duration = 5 * time.Second
-)
+// timeout is the waitng time for events from inside of loops.
+var timeout time.Duration = 5 * time.Second
 
 //--------------------
 // TESTS
@@ -46,6 +46,42 @@ func TestSimpleStop(t *testing.T) {
 	status, _ := l.Error()
 
 	assert.Equal(loop.Stopped, status, "loop is stopped")
+}
+
+// TestLogging tests running a loop without logging.
+func TestLogging(t *testing.T) {
+	assert := audit.NewTestingAssertion(t, true)
+	tl := logger.NewTestLogger()
+	ol := logger.SetLogger(tl)
+	defer logger.SetLogger(ol)
+
+	// With description, so logging.
+	bundle := newChannelBundle()
+	l := loop.Go(makeSimpleLF(bundle), "logger")
+
+	assert.Wait(bundle.startedc, true, timeout)
+	assert.Nil(l.Stop(), "no error after simple stop")
+	assert.Wait(bundle.donec, true, timeout)
+
+	status, _ := l.Error()
+
+	assert.Equal(loop.Stopped, status, "loop is stopped")
+	assert.Length(tl, 2)
+	tl.Reset()
+
+	// Without description, so no logging.
+	bundle = newChannelBundle()
+	l = loop.Go(makeSimpleLF(bundle))
+
+	assert.Wait(bundle.startedc, true, timeout)
+	assert.Nil(l.Stop(), "no error after simple stop")
+	assert.Wait(bundle.donec, true, timeout)
+
+	status, _ = l.Error()
+
+	assert.Equal(loop.Stopped, status, "loop is stopped")
+	assert.Length(tl, 0)
+	tl.Reset()
 }
 
 // TestSimpleRestart tests restarting when not stopped and
@@ -227,7 +263,6 @@ func TestDescription(t *testing.T) {
 
 	assert.Equal(s.String(), "one")
 	assert.Equal(lA.String(), "two::three::four")
-	assert.Match(lB.String(), "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	assert.Nil(s.Stop())
 }
