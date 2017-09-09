@@ -210,10 +210,6 @@ func goLoop(lf LoopFunc, rf RecoverFunc, o Observable, s *sentinel, d string) *l
 		owner:    o,
 		sentinel: s,
 	}
-	// Check description.
-	if l.descr == "" {
-		l.descr = identifier.NewUUID().String()
-	}
 	// Check owner, at least we should own ourself.
 	if l.owner == nil {
 		l.owner = l
