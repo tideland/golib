@@ -22,7 +22,7 @@ I hope you like them. ;)
 
 ## Version
 
-Version 4.24.1
+Version 4.24.2
 
 ## Packages
 
