@@ -30,8 +30,9 @@ func TestGetSetLevel(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	tl, fetch := logger.NewTestLogger()
-	logger.SetLogger(tl)
+	tl := logger.NewTestLogger()
+	ol := logger.SetLogger(tl)
+	defer logger.SetLogger(ol)
 
 	logger.SetLevel(logger.LevelDebug)
 	logger.Debugf("Debug.")
@@ -40,7 +41,8 @@ func TestGetSetLevel(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 5)
+	assert.Length(tl, 5)
+	tl.Reset()
 
 	logger.SetLevel(logger.LevelError)
 	logger.Debugf("Debug.")
@@ -49,7 +51,8 @@ func TestGetSetLevel(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 2)
+	assert.Length(tl, 2)
+	tl.Reset()
 }
 
 // TestGetSetLevelString tests the setting of the
@@ -59,8 +62,9 @@ func TestGetSetLevelString(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	tl, fetch := logger.NewTestLogger()
-	logger.SetLogger(tl)
+	tl := logger.NewTestLogger()
+	ol := logger.SetLogger(tl)
+	defer logger.SetLogger(ol)
 
 	logger.SetLevelString("dEbUg")
 	logger.Debugf("Debug.")
@@ -69,7 +73,8 @@ func TestGetSetLevelString(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 5)
+	assert.Length(tl, 5)
+	tl.Reset()
 
 	logger.SetLevelString("error")
 	logger.Debugf("Debug.")
@@ -78,7 +83,8 @@ func TestGetSetLevelString(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 2)
+	assert.Length(tl, 2)
+	tl.Reset()
 
 	logger.SetLevelString("dont-know-what-you-mean")
 	logger.Debugf("Debug.")
@@ -87,7 +93,8 @@ func TestGetSetLevelString(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 2)
+	assert.Length(tl, 2)
+	tl.Reset()
 }
 
 // TestFiltering tests the filtering of the logging.
@@ -96,8 +103,9 @@ func TestFiltering(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	tl, fetch := logger.NewTestLogger()
-	logger.SetLogger(tl)
+	tl := logger.NewTestLogger()
+	ol := logger.SetLogger(tl)
+	defer logger.SetLogger(ol)
 
 	logger.SetLevel(logger.LevelDebug)
 	logger.SetFilter(func(level logger.LogLevel, info, msg string) bool {
@@ -110,7 +118,8 @@ func TestFiltering(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 3)
+	assert.Length(tl, 3)
+	tl.Reset()
 
 	logger.UnsetFilter()
 
@@ -120,7 +129,8 @@ func TestFiltering(t *testing.T) {
 	logger.Errorf("Error.")
 	logger.Criticalf("Critical.")
 
-	assert.Length(fetch(), 5)
+	assert.Length(tl, 5)
+	tl.Reset()
 }
 
 // TestGoLogger tests logging with the go logger.
@@ -166,8 +176,9 @@ func TestFatalExit(t *testing.T) {
 	level := logger.Level()
 	defer logger.SetLevel(level)
 
-	tl, fetch := logger.NewTestLogger()
-	logger.SetLogger(tl)
+	tl := logger.NewTestLogger()
+	ol := logger.SetLogger(tl)
+	defer logger.SetLogger(ol)
 
 	exited := false
 	fatalExiter := func() {
@@ -177,8 +188,9 @@ func TestFatalExit(t *testing.T) {
 	logger.SetFatalExiter(fatalExiter)
 
 	logger.Fatalf("fatal")
-	assert.Length(fetch(), 1)
+	assert.Length(tl, 1)
 	assert.True(exited)
+	tl.Reset()
 }
 
 // EOF

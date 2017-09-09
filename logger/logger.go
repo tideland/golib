@@ -125,10 +125,12 @@ func SetLevelString(levelstr string) LogLevel {
 }
 
 // SetLogger sets a new logger.
-func SetLogger(l Logger) {
+func SetLogger(l Logger) Logger {
 	logMux.Lock()
 	defer logMux.Unlock()
+	old := logBackend
 	logBackend = l
+	return old
 }
 
 // SetFatalExiter sets the fatal exiter function and
@@ -389,64 +391,101 @@ func (gl *goLogger) Fatal(info, msg string) {
 	log.Println("[FATAL]", info, msg)
 }
 
-// testLogger simply collects logs to be evaluated inside of tests.
-type testLogger struct {
-	mux  sync.Mutex
-	logs []string
+// TestLogger extends the Logger interface with methods to retrieve
+// and reset the collected data.
+type TestLogger interface {
+	Logger
+
+	// Len returns the number of collected entries.
+	Len() int
+
+	// Entries returns the collected entries.
+	Entries() []string
+
+	// Reset clears the collected entries.
+	Reset()
 }
 
-func NewTestLogger() (Logger, func() []string) {
-	tl := &testLogger{}
-	fetch := func() []string {
-		tl.mux.Lock()
-		defer tl.mux.Unlock()
-		logs := tl.logs
-		tl.logs = nil
-		return logs
-	}
-	return tl, fetch
+// testLogger simply collects logs to be evaluated inside of tests.
+type testLogger struct {
+	mux     sync.Mutex
+	entries []string
+}
+
+// NewTestLogger returns a special logger for testing.
+func NewTestLogger() TestLogger {
+	return &testLogger{}
 }
 
 // Debug implements Logger.
 func (tl *testLogger) Debug(info, msg string) {
 	tl.mux.Lock()
 	defer tl.mux.Unlock()
-	tl.logs = append(tl.logs, "[DEBUG] "+info+" "+msg)
+	entry := fmt.Sprintf("%d [DEBUG] %s %s", time.Now().UnixNano(), info, msg)
+	tl.entries = append(tl.entries, entry)
 }
 
 // Info implements Logger.
 func (tl *testLogger) Info(info, msg string) {
 	tl.mux.Lock()
 	defer tl.mux.Unlock()
-	tl.logs = append(tl.logs, "[INFO] "+info+" "+msg)
+	entry := fmt.Sprintf("%d [INFO] %s %s", time.Now().UnixNano(), info, msg)
+	tl.entries = append(tl.entries, entry)
 }
 
 // Warning implements Logger.
 func (tl *testLogger) Warning(info, msg string) {
 	tl.mux.Lock()
 	defer tl.mux.Unlock()
-	tl.logs = append(tl.logs, "[WARNING] "+info+" "+msg)
+	entry := fmt.Sprintf("%d [WARNING] %s %s", time.Now().UnixNano(), info, msg)
+	tl.entries = append(tl.entries, entry)
 }
 
 // Error implements Logger.
 func (tl *testLogger) Error(info, msg string) {
 	tl.mux.Lock()
 	defer tl.mux.Unlock()
-	tl.logs = append(tl.logs, "[ERROR] "+info+" "+msg)
+	entry := fmt.Sprintf("%d [ERROR] %s %s", time.Now().UnixNano(), info, msg)
+	tl.entries = append(tl.entries, entry)
 }
 
 // Critical implements Logger.
 func (tl *testLogger) Critical(info, msg string) {
 	tl.mux.Lock()
 	defer tl.mux.Unlock()
-	tl.logs = append(tl.logs, "[CRITICAL] "+info+" "+msg)
+	entry := fmt.Sprintf("%d [CRITICAL] %s %s", time.Now().UnixNano(), info, msg)
+	tl.entries = append(tl.entries, entry)
 }
 
 // Fatal implements Logger.
 func (tl *testLogger) Fatal(info, msg string) {
 	tl.mux.Lock()
 	defer tl.mux.Unlock()
-	tl.logs = append(tl.logs, "[FATAL] "+info+" "+msg)
+	entry := fmt.Sprintf("%d [CRITICAL] %s %s", time.Now().UnixNano(), info, msg)
+	tl.entries = append(tl.entries, entry)
+}
+
+// Len implements TestLogger.
+func (tl *testLogger) Len() int {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	return len(tl.entries)
+}
+
+// Entries implements TestLogger.
+func (tl *testLogger) Entries() []string {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	entries := make([]string, len(tl.entries))
+	copy(entries, tl.entries)
+	return entries
+}
+
+// Reset implements TestLogger.
+func (tl *testLogger) Reset() {
+	tl.mux.Lock()
+	defer tl.mux.Unlock()
+	tl.entries = nil
 }
 
 //--------------------
